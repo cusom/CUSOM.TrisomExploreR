@@ -189,7 +189,7 @@ CorrelatesManager <- R6::R6Class(
           significanceVariable = `-log10pvalue`,
           significanceGroup =  significanceGroup,
           text = text,
-          key = AnalyteID,
+          key = Analyte,
           color = color,
           shape = shape,
           plotName = ""

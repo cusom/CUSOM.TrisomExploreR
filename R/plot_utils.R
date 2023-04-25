@@ -11,12 +11,12 @@ toggle_GSEA_volcano_plot_trace <- function(session, ns, plot_name = "VolcanoPlot
   shinyjs::runjs(glue::glue('clearSelectedKeys("{plotName}");'))
 
   if (action == "add") {
- 
-    shinyjs::runjs(glue::glue('cloneTraceByKeys("{plotName}","{r6$GSEAAnalytes}","{r6$GSEATraceName}", true);'))
+
+    shinyjs::runjs(glue::glue('cloneTraceByKeys("{plotName}","{r6$GSEAAnalytes}","{r6$GSEATraceName}");'))
 
     shinyjs::runjs(glue::glue('isolateTraceVisibility("{plotName}","{r6$GSEATraceName}");'))
 
-  } 
+  }
 
 }
 
