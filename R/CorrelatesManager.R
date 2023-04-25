@@ -12,6 +12,7 @@ CorrelatesManager <- R6::R6Class(
     FoldChangeVar = "CorrelationValue",
     SignificanceVariable = "-log10pvalue",
 
+    Study = "",
     QueryPlatform = "",
     ComparisonPlatform = "",
     Experiment = "",

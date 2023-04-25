@@ -38,6 +38,15 @@ correlates_inputs_ui <- function(id, input_config) {
         id = NS(id, "scrollableOptions"),
         style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        shinyjs::hidden(
+          shinyWidgets::prettyRadioButtons(
+            inputId = ns("Study"),
+            label = "",
+            choiceNames = "NA",
+            choiceValues = "NA",
+            selected = "NA"
+          )
+        ),
         shinyWidgets::prettyRadioButtons(
           inputId = ns("QueryPlatform"),
           label = "1) Select Query Platform",
@@ -315,7 +324,9 @@ correlates_inputs_server <- function(id, r6, remoteDB, localDB) {
     ns <- session$ns
 
     TrisomExploreR::bind_events(
-      ids = c("QueryPlatform",
+      ids = c(
+        "Study",
+        "QueryPlatform",
         "Experiment",
         "QueryAnalyte",
         "ComparisonPlatform",
@@ -378,11 +389,11 @@ correlates_inputs_server <- function(id, r6, remoteDB, localDB) {
 
 
 
-  
 
-    
 
- 
+
+
+
 
 
 
