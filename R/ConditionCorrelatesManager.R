@@ -1,0 +1,620 @@
+#' @export
+ConditionCorrelatesManager <- R6::R6Class(
+  "ConditionCorrelatesManager",
+  private = list(),
+  public = list(
+    applicationName = NULL,
+    namespace = NULL,
+    remoteDB = NULL,
+    localDB = NULL,
+
+    analysisVariable = "HasConditionFlag",
+    analysisVariableLabel = "History of Co-Occuruing Condition(s)",
+    FoldChangeVar = "log2FoldChange",
+    SignificanceVariable = "-log10pvalue",
+
+    Platform = "",
+    Experiment = "",
+    QueryAnalyte = "",
+    Analyte = NULL,
+    MinComorbitityMembership = -1,
+    Sex = NULL,
+    Age = NULL,
+    StatTest = NULL,
+    Covariates = NULL,
+    AdjustmentMethod = NULL,
+    AnalytePlotStatAnnotation = NULL,
+    AnalyteData = NULL,
+    ParticipantComorbidities = NULL,
+    ComorbiditySummary = NULL,
+    Comorbidities = NULL,
+
+    VolcanoSummaryData = NULL,
+    VolcanoSummaryDataXAxisLabel = "",
+    VolcanoSummaryDataYAxisLabel = "",
+    VolcanoSummaryMaxFoldChange = 0,
+    VolcanoPlotTitle = "",
+    volcanoTopAnnotationLabel = "",
+    volcanoPlotExpectedTraceCount = 3,
+    VolcanoSummaryDataFoldChangeFilter = NULL,
+    volcanoMultiSelectText = "",
+
+    HeatmapData = NULL,
+    BoxplotData = NULL,
+
+    initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
+      self$applicationName <- applicationName
+      self$remoteDB <- remoteDB
+      self$localDB <- localDB
+    },
+
+    getQueryAnalytes = function() {
+      return(
+        self$remoteDB$getQuery(
+          "EXEC [shiny].[GetAnalytesByPlatformExperiment] ?, ?"
+          ,tibble::tibble(
+            "Platform" = self$Platform,
+            "ExperimentID" = self$Experiment
+          )
+        ) |>
+          dplyr::arrange(Analyte)
+      )
+    },
+
+    getVolcanoSummaryData = function() {
+
+      self$ParticipantComorbidities <- self$getParticipantComorbiditiesByExperimentAnalyte(self$Experiment,self$QueryAnalyte)
+
+      self$ComorbiditySummary <- self$getComorbidtySummary(self$ParticipantComorbidities, self$MinComorbitityMembership)
+
+      self$Comorbidities <- self$ParticipantComorbidities |>
+        dplyr::inner_join(self$ComorbiditySummary, by = "Condition") |>
+        dplyr::select(-Condition) |>
+        dplyr::rename("Condition" = label)
+
+      self$VolcanoSummaryData <- self$Comorbidities |>
+        dplyr::mutate(
+          HasConditionFlag = factor(HasConditionFlag),
+          HasConditionFlag = forcats::fct_relevel(HasConditionFlag, "No")
+        ) |>
+        dplyr::select(LabID, "Analyte" = Condition, log2MeasuredValue, HasConditionFlag, !!self$Covariates) |>
+        CUSOMShinyHelpers::getStatTestByKeyGroup(
+          id = LabID,
+          key = Analyte,
+          response = log2MeasuredValue,
+          independentVariable = HasConditionFlag,
+          baselineLabel = "No",
+          testMethod = self$StatTest,
+          adjustmentMethod = self$AdjustmentMethod,
+          covariates = self$Covariates
+        ) |>
+        dplyr::mutate(
+          formattedPValue = unlist(purrr::pmap(.l = list(p.value,p.value.adjustment.method), CUSOMShinyHelpers::formatPValue)),
+          text = glue::glue('Condition: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}<br /><i>Click to see corresponding Sina Plot</i>')
+        ) |>
+        dplyr::ungroup()
+
+      self$AnalyteData <- self$VolcanoSummaryData |>
+        dplyr::select(Analyte, log2FoldChange, `-log10pvalue`, text) |>
+        dplyr::arrange(-log2FoldChange) |>
+        dplyr::mutate(
+          Analyte = forcats::fct_inorder(Analyte),
+          "Analysis" = "T21 v Comorbidities"
+        ) |>
+        dplyr::top_n(30, wt = abs(log2FoldChange))
+
+      self$VolcanoPlotTitle <- glue::glue("Effect of {self$analysisVariableLabel} on all {self$analytesLabel}")
+      self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$log2FoldChange))
+      self$VolcanoSummaryDataXAxisLabel <- "log<sub>2</sub>(Fold Change)"
+      self$VolcanoSummaryDataYAxisLabel <- glue::glue("-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})")
+
+    },
+    getFormattedVolcanoSummaryData = function(.data) {
+
+      adjustedInd <- self$AdjustmentMethod != "none"
+      pValueLabel <- ifelse(adjustedInd,"q-value","p-value")
+      log10pValueLabel <- ifelse(adjustedInd,"-log<sub>10</sub>(q-value)","-log<sub>10</sub>(p-value)")
+
+      oldNames = c("Analyte", "No","Yes", "log2FoldChange", "p.value.adjustment.method", "p.value.original", "FoldChange", "p.value", "-log10pvalue", "lmFormula")
+      newNames = c("Condition", "Without History of Condition","With History of Condition", "log<sub>2</sub>(Fold Change)", "adjustment method", "p-value (original)", "Fold Change", pValueLabel, log10pValueLabel,"model")
+
+      .data |>
+        dplyr::rename_with(~ newNames, all_of(oldNames)) |>
+        dplyr::select(-c(pvalueCutoff,formattedPValue,text,ivs))
+
+    },
+    getParticipantComorbiditiesByExperimentAnalyte = function(Experiment,QueryAnalyte) {
+
+      dataframe <- self$remoteDB$getQuery(
+        "EXEC [shiny].[GetDataByExperimentAnalyte] ?, ?"
+        ,tibble::tibble(
+          "ExperimentID" = Experiment,
+          "Analyte" = QueryAnalyte
+        )
+      ) |>
+        dplyr::mutate(
+          log2MeasuredValue = ifelse(MeasuredValue == 0, 0, log2(MeasuredValue)),
+          log2Measurement = glue::glue("log<sub>2</sub>({Measurement})")
+        ) |>
+        dplyr::rename(record_id = Record_ID) |>
+        dplyr::inner_join(
+          self$localDB$getQuery(
+            "SELECT * FROM ParticipantConditions"
+            ) |>
+            dplyr::mutate(HasConditionFlag = ifelse(HasCondition == 'True', 1, ifelse(HasCondition == 'False', 0, NA))) |>
+            dplyr::select(record_id, Condition, HasCondition, HasConditionFlag) |>
+            dplyr::group_by(record_id, Condition) |>
+            dplyr::summarise(HasConditionFlag = sum(HasConditionFlag),.groups = 'drop') |>
+            dplyr::mutate(HasConditionFlag = ifelse(HasConditionFlag > 0, "Yes", "No")) |>
+            tidyr::drop_na()
+          , by = "record_id"
+        ) |>
+        dplyr::inner_join(
+          self$localDB$getQuery(
+            "SELECT * FROM ParticipantEncounter"
+            ) |>
+            dplyr::inner_join(
+              self$localDB$getQuery(
+                "SELECT * FROM AllParticipants"
+              ),
+              by = "record_id"
+            ) |>
+            ###### LIMIT TO ONLY T21 #############
+            dplyr::filter(Karyotype == "Trisomy 21") |>
+            dplyr::select(record_id, LabID, Sex, "Age" = AgeAtTimeOfVisit),
+          by = c("record_id","LabID")
+        )
+
+      return(dataframe)
+
+    },
+    getComorbidtySummary = function(.data,MinComorbitityMembership) {
+
+      dataframe <- .data |>
+        dplyr::group_by(Condition, HasConditionFlag) |>
+        dplyr::summarise(n = dplyr::n_distinct(record_id), .groups = "drop") |>
+        tidyr::pivot_wider(id_cols = Condition, names_from = HasConditionFlag, values_from = n, values_fill = 0) |>
+        dplyr::inner_join(
+          self$localDB$getQuery(
+            "SELECT * FROM ParticipantConditions"
+            ) |>
+            dplyr::select(Condition,ConditionCensorshipAgeGroup) |>
+            dplyr::distinct() |>
+            dplyr::mutate(ConditionCensorshipAgeGroup = ifelse(is.na(ConditionCensorshipAgeGroup),"Age > 0",ConditionCensorshipAgeGroup)),
+          by = "Condition"
+        ) |>
+        dplyr::mutate(
+          #total = `No` + `Yes`,
+          min = ifelse(`No` <= `Yes`,`No`,`Yes`),
+          incompleteFlag = dplyr::case_when(`No` == 0 ~ 1, `Yes` == 0 ~ 1, TRUE ~ 0),
+          ### REMOVING AGE CENSOR FOR NOW...
+          label = glue::glue("{Condition} ({`Yes`}:{`No`})")
+          #label = glue("{Condition} ({`Yes`}:{`No`}) [{ConditionCensorshipAgeGroup}]")
+        ) |>
+        dplyr::filter(
+          incompleteFlag == 0,
+          min > MinComorbitityMembership
+        ) |>
+        dplyr::select(-c(ConditionCensorshipAgeGroup))
+
+      return(dataframe)
+
+    },
+    getVolcanoPlot = function(.data, ns) {
+
+      .data <- .data |>
+        dplyr::mutate(
+          shape = "circle",
+          selectedPoint = 0
+        )
+
+      a <- .data |>
+        CUSOMShinyHelpers::getVolcanoAnnotations(
+          foldChangeVar = log2FoldChange,
+          significanceVariable = `-log10pvalue`,
+          selected = selectedPoint,
+          arrowLabelTextVar = Analyte,
+          upRegulatedText = "Up in those with History of Condition",
+          includeThresholdLabel = FALSE
+        )
+
+      p <- .data |>
+        CUSOMShinyHelpers::addSignificanceGroup(
+          foldChangeVar = log2FoldChange,
+          significanceVariable = `-log10pvalue`,
+          adjustedInd = a$parameters$adjustedInd,
+          significanceThreshold = a$parameters$significanceThresholdTransformed,
+          originalSignificanceThreshold = a$parameters$significanceThreshold
+        ) |>
+        CUSOMShinyHelpers::getVolcanoPlot(
+          foldChangeVariable = log2FoldChange,
+          significanceVariable = `-log10pvalue`,
+          significanceGroup = significanceGroup,
+          text = text,
+          key = Analyte,
+          color = color,
+          shape = shape,
+          plotName = ""
+        ) |>
+        plotly::layout(
+          showlegend = TRUE,
+          legend = list(
+            orientation = 'h',
+            itemclick = "toggleothers",
+            itemsizing = "constant",
+            valign = "middle",
+            xanchor = "center",
+            x = 0.5,
+            y = -0.12,
+            title = list(
+              text = "",
+              side = "left",
+              font = list(
+                family = "Arial",
+                color = "rgb(58, 62, 65)",
+                size = 14
+              )
+            ),
+            font = list(
+              family = "Arial",
+              color = "rgb(58, 62, 65)",
+              size = 14
+            )
+          ),
+          title = list(
+            text = HTML(glue::glue("Inpact of {self$QueryAnalyte} on all Co-Occuring Conditions")),
+            font = list(
+              family = "Arial",
+              color = "rgb(58, 62, 65)",
+              size = 18
+            ),
+            pad = list(
+              t = 10,
+              l = 5
+            ),
+            x = 0,
+            xanchor = "left",
+            xref = "container",
+            y = 1
+          ),
+          xaxis = list(
+            title = list(
+              text = glue::glue("log<sub>2</sub>(Fold Change)"),
+              standoff = 0,
+              font = list(
+                family = "Arial",
+                color = "rgb(58, 62, 65)",
+                size = 14
+              )
+            ),
+            tickfont = list(
+              family = "Arial",
+              color = "rgb(58, 62, 65)",
+              size = 10
+            ),
+            fixedrange = FALSE
+          ),
+          yaxis = list(
+            title = list(
+              text = glue::glue("-log<sub>10</sub>({ifelse(a$parameters$adjustedInd,\"q-value \",\"p-value \")})"),
+              font = list(
+                family = "Arial",
+                color = "rgb(58, 62, 65)",
+                size = 14
+              )
+            ),
+            tickfont = list(
+              family = "Arial",
+              color = "rgb(58, 62, 65)",
+              size = 10
+            ),
+            fixedrange = FALSE
+          ),
+          annotations = c(a$annotations, a$arrow),
+          margin = list( t = 75)
+        ) |>
+        plotly::config(
+          displayModeBar = TRUE,
+          displaylogo = FALSE,
+          toImageButtonOptions = list(
+            format = "svg",
+            filename = glue::glue('{self$applicationName} - Volcano Plot {format(Sys.time(),"%Y%m%d_%H%M%S")}'),
+            width = NULL,
+            height = NULL
+          ),
+          modeBarButtons = list(
+            #list(plotlyCustomIcons$VolcanoPlotTutorial),
+            # list("select2d"),
+            # list("lasso2d"),
+            list("zoom2d"),
+            list("zoomIn2d"),
+            list("zoomOut2d"),
+            list("resetScale2d"),
+            list("toImage")
+          )
+        ) |> htmlwidgets::onRender('
+            function(el) {
+              el.scrollIntoView({behavior: "smooth", block: "end", inline: "nearest"});
+            }'
+        )
+
+      p$x$source <- ns("VolcanoPlot")
+
+      return(p)
+
+    },
+    getHeatmapPlot = function(.data, ns) {
+
+      limit <- .data |>
+        dplyr::pull(log2FoldChange) |>
+        abs() |>
+        max() |>
+        plyr::round_any(0.01, f = ceiling)
+
+      long_data <- .data |>
+        dplyr::select(name = Analyte, variable = Analysis, value = log2FoldChange) |>
+        dplyr::arrange(desc(value))
+
+      self$HeatmapData <- long_data |>
+        dplyr::select("Analyte" = name, z = value) |>
+        dplyr::arrange(z) |>
+        dplyr::mutate(r = dplyr::row_number())
+
+      p <- heatmaply::heatmaply(
+        long_data = long_data,
+        dendrogram = "none",
+        xlab = "",
+        ylab = "",
+        key = ~ name,
+        showticklabels = c(FALSE, TRUE),
+        main = HTML(glue::glue("Fold Change with {self$analysisVariableLabel}")),
+        margins = c(60, 100, 40, 20),
+        subplot_widths = 0.65,
+        yaxis_width = 10,
+        grid_color = "white",
+        grid_width = 0.001,
+        titleX = TRUE,
+        limits = c(-limit, limit),
+        col = RColorBrewer::brewer.pal(11, "RdBu") |> rev(),
+        scale_fill_gradient_fun = circlize::colorRamp2(
+          seq(-limit, limit, length.out = 11),
+          RColorBrewer::brewer.pal(11, "RdBu") |> rev()
+        ),
+        key.title = "log<sub>2</sub>(Fold Change)",
+        branches_lwd = 0.1,
+        fontsize_row = 10,
+        fontsize_col = 1,
+        heatmap_layers = theme(axis.line = element_blank()),
+        plot_method = "plotly",
+        colorbar_len = 0.5,
+        colorbar_yanchor = "middle",
+        colorbar_ypos = 0.5,
+        custom_hovertext = as.matrix(
+          .data$text
+        )
+      ) |>
+        plotly::colorbar(
+          tick0 = -limit,
+          dtick = limit
+        ) |>
+        plotly::layout(
+          title = list(
+            text = HTML(glue::glue("Fold Change with {self$analysisVariableLabel}")),
+            font = list(
+              family = "Arial",
+              color = "rgb(58, 62, 65)",
+              size = 18
+            ),
+            pad = list(
+              t = 10,
+              l = 5
+            ),
+            x = 0,
+            xanchor = "left",
+            xref = "container",
+            y = 1
+          ),
+          xaxis = list(
+            list(fixedrange = TRUE)
+          )
+        ) |>
+        plotly::config(
+          displayModeBar = TRUE,
+          displaylogo = FALSE,
+          toImageButtonOptions = list(
+            format = "svg",
+            filename = glue::glue('{self$applicationName} - Heatmap {format(Sys.time(),"%Y%m%d_%H%M%S")}'),
+            width = NULL,
+            height = NULL
+          ),
+          modeBarButtons = list(
+            list("toImage")
+          )
+        ) |>
+        htmlwidgets::onRender('
+            function(el) {
+              el.scrollIntoView({behavior: "smooth", block: "end", inline: "nearest"});
+            }'
+        )
+
+      p$x$source <- ns("HeatmapPlot")
+
+      return(p)
+    },
+    getFormattedAnalyteSummaryData = function() {
+
+      adjustedInd <- self$AdjustmentMethod != "none"
+      pValueLabel <- ifelse(adjustedInd,"q-value","p-value")
+      log10pValueLabel <- ifelse(adjustedInd,"-log<sub>10</sub>(q-value)","-log<sub>10</sub>(p-value)")
+
+      oldNames = c("Analyte", "No","Yes", "FoldChange","p.value.original", "p.value.adjustment.method","log2FoldChange", "p.value", "-log10pvalue","lmFormula")
+      newNames = c("Condition", "Without History of Condition","With History of Condition",  "Fold Change", "p-value (original)","adjustment method","log<sub>2</sub>(Fold Change)", pValueLabel, log10pValueLabel,"Model")
+
+      return(
+        self$HeatmapData |>
+          dplyr::select(Analyte) |>
+          dplyr::inner_join(
+            self$VolcanoSummaryData |>
+              dplyr::mutate(Analyte = factor(Analyte))
+            , by = "Analyte"
+          ) |>
+          dplyr::rename_with(~ newNames, all_of(oldNames)) |>
+          dplyr::select(-c(formattedPValue,text,ivs))
+      )
+
+    },
+    getBoxPlotData = function() {
+
+      self$BoxplotData <- self$Comorbidities |>
+        dplyr::filter(Condition == self$Analyte) |>
+        dplyr::mutate(
+          text = "",
+          highlightGroup = dplyr::case_when(
+            LabID %in% self$GroupA ~ "A",
+            LabID %in% self$GroupB ~ "B"
+          )
+        ) |>
+        dplyr::rowwise() |>
+        dplyr::mutate(isBaseline = ifelse(HasConditionFlag == "No", TRUE, FALSE)) |>
+        CUSOMShinyHelpers::addGroupCount(group = HasConditionFlag, addLineBreak = FALSE) |>
+        dplyr::select(-n) |>
+        dplyr::ungroup() |>
+        dplyr::mutate(
+          text = glue::glue("LabID: {LabID} <br />{log2Measurement}: {log2MeasuredValue}")
+        )
+
+      self$AnalytePlotStatAnnotation <- self$VolcanoSummaryData |>
+        dplyr::filter(Analyte == self$Analyte) |>
+        dplyr::ungroup() |>
+        dplyr::select(p.value,p.value.adjustment.method) |>
+        dplyr::mutate(formatted.p.value = CUSOMShinyHelpers::formatPValue(p.value,p.value.adjustment.method)) |>
+        dplyr::select(formatted.p.value)
+
+    },
+    getBoxPlot = function(.data, ns) {
+
+      groupBaselineLabel <- .data |>
+        dplyr::filter(isBaseline) |>
+        dplyr::select(HasConditionFlag) |>
+        dplyr::distinct() |>
+        dplyr::pull()
+
+      p <- .data |>
+        CUSOMShinyHelpers::getBoxPlotWithHighlightGroup(
+          key = LabID,
+          group = HasConditionFlag,
+          groupBaselineLabel = groupBaselineLabel,
+          value = log2MeasuredValue,
+          valueLabel = log2Measurement,
+          text = text,
+          highlightGroup = highlightGroup,
+          plotName = glue::glue("Condition")
+        ) |>
+        plotly::layout(
+          showlegend = TRUE,
+          legend = list(
+            orientation = 'h',
+            itemclick = "toggleothers",
+            itemsizing = "constant",
+            itemwidth = 30,
+            valign = "middle",
+            xanchor = "center",
+            x = 0.5,
+            y = -0.10,
+            title = list(
+              text = ""
+            )
+          ),
+          title = list(
+            text = HTML(glue::glue("{self$Platform} - {self$QueryAnalyte} - {self$Analyte}"))
+          ),
+          annotations = list(
+            list(
+              x = 0.5,
+              y = -0.07,
+              text = glue::glue("History of {self$Analyte}"),
+              xref = "paper",
+              yref = "paper",
+              axref = "x",
+              ayref = "y",
+              showarrow = FALSE,
+              ax = 0,
+              ay = 0,
+              font = list(
+                family = "Arial",
+                color = "rgb(58, 62, 65)",
+                size = 14
+              )
+            ),
+            list(
+              x = 0.5,
+              y = 1.025,
+              text = glue::glue("{self$AnalytePlotStatAnnotation}"),
+              xref = "paper",
+              yref = "paper",
+              axref = "x",
+              ayref = "y",
+              ax = 0,
+              ay = 0,
+              font = list(
+                family = "Arial",
+                color = "rgb(58, 62, 65)",
+                size = 12
+              )
+            ),
+            list(
+              x = 0.5,
+              y = 1,
+              xref = "x domain",
+              yref = "paper",
+              axref = "x domain",
+              ax = 1.5,
+              ay = 1,
+              showarrow = TRUE,
+              arrowcolor = "black",
+              arrowhead = 0,
+              arrowwidth = 0.9
+            )
+          ),
+          margin = list( t = 75)
+        ) |>
+        plotly::config(
+          displayModeBar = TRUE,
+          displaylogo = FALSE,
+          toImageButtonOptions = list(
+            format = "svg",
+            filename = glue::glue('{self$applicationName} - Plot {format(Sys.time(),"%Y%m%d_%H%M%S")}'),
+            width = NULL,
+            height = NULL
+          ),
+          modeBarButtons = list(
+            #list(plotlyCustomIcons$AnalytePlotTutorial),
+            # list("select2d"),
+            # list("lasso2d"),
+            list("toImage")
+            #list(plotlyCustomIcons$BoxplotCompareGroup),
+            #list(plotlyCustomIcons$BoxplotClear)
+          )
+        )
+
+      p$x$source <- ns("BoxPlot")
+
+      return(p)
+
+    },
+    getFormattedBoxplotData = function(.data) {
+
+      dataframe <- .data
+
+      measurement <- as.character(dataframe[1,'Measurement'])
+
+      return(
+        dataframe |>
+          dplyr::select("Platform" = Platform, "Study" = ExperimentStudyName, Analyte, LabID, Condition, HasConditionFlag, Sex, MeasuredValue) |>
+          dplyr::rename(`:=`(!!measurement, MeasuredValue)) |>
+          dplyr::arrange(Analyte)
+      )
+    }
+
+  )
+)
