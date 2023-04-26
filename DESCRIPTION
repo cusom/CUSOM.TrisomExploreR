@@ -1,31 +1,47 @@
 Package: TrisomExploreR
-Type: package
 Title: Common modules and logic for TrisomExplorer Applications
 Version: 0.1.0.9000
-Authors@R: c(
-    person("Kyle", "Bartsch",role = c("aut", "cre"), email = "kyle.bartsch@cuanschutz.edu")
-    )
-Description: Provides common components / modules / styling / JS utilized across multiple sets of TrisomExplorer applications. 
+Authors@R: 
+    person("Kyle", "Bartsch", , "kyle.bartsch@cuanschutz.edu", role = c("aut", "cre"))
+Description: Provides common components / modules / styling / JS utilized
+    across multiple sets of TrisomExplorer applications.
 License: MIT + file LICENSE
-Encoding: UTF-8
-LazyData: no
-Imports: 
-    shiny,
-    plotly,
-    CUSOMShinyHelpers,
-    dplyr,
-    tibble,
-    odbc,
-    DBI,
-    purrr,
-    DT,
-    shinydashboardPlus,
-    shinyjs,
-    gargoyle,
-    shinyTree,
-    shinyBS,
-    fgsea,
-    shinydashboard
-RoxygenNote: 7.2.3
 Depends: 
     R (>= 2.10)
+Imports: 
+    circlize,
+    CUSOMShinyHelpers,
+    DBI,
+    dplyr,
+    DT,
+    fgsea,
+    forcats,
+    gargoyle,
+    glue,
+    heatmaply,
+    htmlwidgets,
+    leaflet,
+    odbc,
+    plotly,
+    plyr,
+    purrr,
+    RColorBrewer,
+    RSQLite,
+    shiny,
+    shinyBS,
+    shinycustomloader,
+    shinydashboard,
+    shinydashboardPlus,
+    shinyjs,
+    shinyTree,
+    stringr,
+    tibble,
+    tidyr,
+    tigris,
+    waiter
+Remotes: 
+    cusom/CUSOM.ShinyHelpers
+biocViews:
+Encoding: UTF-8
+LazyData: no
+RoxygenNote: 7.2.3
