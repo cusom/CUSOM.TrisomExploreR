@@ -11,7 +11,7 @@ create_menu_items <- function(namespaces, ui_config) {
 }
 
 
-#' @import shinydashboard
+#' @importFrom shinydashboard menuItem
 #' @export
 create_menu_item <- function(id, ui_config) {
 

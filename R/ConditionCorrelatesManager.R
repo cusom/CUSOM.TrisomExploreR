@@ -1,3 +1,52 @@
+#' R6 Class to manage Condition Correlates Analysis 
+#' @description 
+#' Enables analysis of co-occuring conditions by chosen feature 
+#'  
+#' @field applicationName - string - name of application 
+#' @field namespace - string - namespace for this instance 
+#' @field remoteDB - R6 class to manage remote database queries 
+#' @field localDB - R6 class to manage local database queries  
+#' @field analysisVariable - string - target feature for analysis in this instance-namespace
+#' @field analysisVariableLabel - string - label for analysis variable 
+#' @field FoldChangeVar - string - name of variable indicating fold change or difference (log2FoldChange)
+#' @field SignificanceVariable - string - name of variable indiciating significance value (p-value)
+#' @field Platform - string vector - Platform values chosen for analysis 
+#' @field Experiment - string - chosen experimentID  
+#' @field QueryAnalyte - string - chosen Query Analyte 
+#' @field Analyte - string - chosen Comparison Analyte 
+#' @field MinComorbitityMembership - numeric - minimum number of records with matching condition(s) to include in analysis
+#' @field Sex - string vector - Sex values chosen for analysis 
+#' @field Age - numeric vector - Age values chosen fo analysis 
+#' @field StatTest - string - name of statistical test to apply for analysis (Linear Model, etc.)
+#' @field Covariates - string vector - names of features to include as covariates in Linear Model analysis
+#' @field AdjustmentMethod - string - name of multiple hypothesis correction method to apply to statistical output 
+#' @field AnalytePlotStatAnnotation - string - stat annotation to show above analyte plot
+#' @field AnalyteData - tibble - sample level data for chosen analyte(s)
+#' @field ParticipantComorbidities - tibble - Participant Comorbidity data
+#' @field ComorbiditySummary - tibble - 
+#' @field Comorbidities - character vector - chosen comborbidities
+#' @field VolcanoSummaryData - tibble - Fold Change summary data used for volcano plot
+#' @field VolcanoSummaryDataXAxisLabel - string - volcano plot x-axis
+#' @field VolcanoSummaryDataYAxisLabel - string - volcano plot y-axis
+#' @field VolcanoSummaryMaxFoldChange - numeric - maxiumum abs. value of fold change
+#' @field VolcanoPlotTitle - string - title to show above volcano plot
+#' @field volcanoTopAnnotationLabel - string - text to show above top annotations on volcano plot
+#' @field volcanoPlotExpectedTraceCount - numeric - number of base traces present in the active volcano plot (usually between 1 - 3)
+#' @field VolcanoSummaryDataFoldChangeFilter - depreciated?
+#' @field volcanoMultiSelectText - string - text to show below volcano plot when multiple analytes are chosen
+#' @field HeatmapData - tibble - data to use for heatmap plot when multiple analytes are chosen 
+#' @field BoxplotData - tibble - data to use for boxplot when a single anlayte is chosen
+#' @import dplyr
+#' @import tidyr
+#' @import purrr
+#' @import glue
+#' @import forcats
+#' @import plotly
+#' @import htmlwidgets
+#' @importFrom heatmaply heatmaply
+#' @importFrom RColorBrewer brewer.pal
+#' @importFrom circlize colorRamp2
+#' 
 #' @export
 ConditionCorrelatesManager <- R6::R6Class(
   "ConditionCorrelatesManager",
@@ -42,12 +91,23 @@ ConditionCorrelatesManager <- R6::R6Class(
     HeatmapData = NULL,
     BoxplotData = NULL,
 
+    #' @description
+    #' Create a new instance of ConditionCorrelatesManager object
+    #' @param applicationName string - applicationName
+    #' @param id string - namespace for this class 
+    #' @param namespace_config tibble - configuration values for this namespace instance of the object  
+    #' @param remoteDB R6 class to manage remote database queries 
+    #' @param localDB R6 class to manange local database queries  
+    #' @return A new `ConditionCorrelatesManager` object.
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
       self$applicationName <- applicationName
       self$remoteDB <- remoteDB
       self$localDB <- localDB
     },
 
+    #' @description
+    #' Retrieve list of query analytes for a given platform and experiment
+    #' @return tibble of analytes
     getQueryAnalytes = function() {
       return(
         self$remoteDB$getQuery(
@@ -61,6 +121,10 @@ ConditionCorrelatesManager <- R6::R6Class(
       )
     },
 
+    #' @description
+    #' Set Volcano Summary Data
+    #'  Also sets ParticipantComorbidities, ComorbiditySummary, Comborbidities, AnalyteData, and volcano plot properties
+    #' @return none
     getVolcanoSummaryData = function() {
 
       self$ParticipantComorbidities <- self$getParticipantComorbiditiesByExperimentAnalyte(self$Experiment,self$QueryAnalyte)
@@ -109,6 +173,11 @@ ConditionCorrelatesManager <- R6::R6Class(
       self$VolcanoSummaryDataYAxisLabel <- glue::glue("-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})")
 
     },
+
+    #' @description
+    #' Get formatted Volcano Summary Data for data table 
+    #' @param .data - tibble - data to be formatted
+    #' @return tibble 
     getFormattedVolcanoSummaryData = function(.data) {
 
       adjustedInd <- self$AdjustmentMethod != "none"
@@ -123,6 +192,12 @@ ConditionCorrelatesManager <- R6::R6Class(
         dplyr::select(-c(pvalueCutoff,formattedPValue,text,ivs))
 
     },
+
+    #' @description
+    #' Get Participant Comorbidities for a given experiment and analyte
+    #' @param Experiment - string 
+    #' @param QueryAnalyte - string
+    #' @return tibble 
     getParticipantComorbiditiesByExperimentAnalyte = function(Experiment,QueryAnalyte) {
 
       dataframe <- self$remoteDB$getQuery(
@@ -168,7 +243,13 @@ ConditionCorrelatesManager <- R6::R6Class(
       return(dataframe)
 
     },
-    getComorbidtySummary = function(.data,MinComorbitityMembership) {
+
+    #' @description
+    #' Get Comoborbidity Summary data - appends each comorbidity label with {positive} {negative} counts
+    #' @param .data - tibble - tibble of participant comborbidity data 
+    #' @param MinComorbitityMembership - numeric - minimum threshold of diagnosed to include in analysis
+    #' @return tibble 
+    getComorbidtySummary = function(.data, MinComorbitityMembership) {
 
       dataframe <- .data |>
         dplyr::group_by(Condition, HasConditionFlag) |>
@@ -200,6 +281,12 @@ ConditionCorrelatesManager <- R6::R6Class(
       return(dataframe)
 
     },
+
+    #' @description
+    #' Get Volcano Plot
+    #' @param .data - tibble - data for plot
+    #' @param ns - namespace for plot
+    #' @return plotly object 
     getVolcanoPlot = function(.data, ns) {
 
       .data <- .data |>
@@ -343,6 +430,12 @@ ConditionCorrelatesManager <- R6::R6Class(
       return(p)
 
     },
+
+    #' @description
+    #' Get Heatmap Plot
+    #' @param .data - tibble - data for plot
+    #' @param ns - namespace for plot
+    #' @return plotly object 
     getHeatmapPlot = function(.data, ns) {
 
       limit <- .data |>
@@ -441,6 +534,10 @@ ConditionCorrelatesManager <- R6::R6Class(
 
       return(p)
     },
+
+    #' @description
+    #' Get Formatted Analyte Summary data for data table
+    #' @return tibble
     getFormattedAnalyteSummaryData = function() {
 
       adjustedInd <- self$AdjustmentMethod != "none"
@@ -463,6 +560,10 @@ ConditionCorrelatesManager <- R6::R6Class(
       )
 
     },
+
+    #' @description
+    #' set data for boxplot
+    #' @return none
     getBoxPlotData = function() {
 
       self$BoxplotData <- self$Comorbidities |>
@@ -491,6 +592,12 @@ ConditionCorrelatesManager <- R6::R6Class(
         dplyr::select(formatted.p.value)
 
     },
+
+    #' @description
+    #' get boxplot
+    #' @param .data - tibble - data used for boxplot
+    #' @param ns - namespace to apply to plot
+    #' @return plotly object
     getBoxPlot = function(.data, ns) {
 
       groupBaselineLabel <- .data |>
@@ -602,6 +709,11 @@ ConditionCorrelatesManager <- R6::R6Class(
       return(p)
 
     },
+
+    #' @description
+    #' get formatted data for boxplot data table 
+    #' @param .data - tibble - data to format
+    #' @return tibble 
     getFormattedBoxplotData = function(.data) {
 
       dataframe <- .data

@@ -1,3 +1,15 @@
+#' R6 Class to manage Clincal Data Application  
+#' @description 
+#' Sets application-wide configurations, module configurations,
+#' analysis configurations and default input values
+#' @field app_config - list - application-wide configrations (applicationid, title, label, etc.)
+#' @field module_config - list - module-namespace configurations 
+#' @field analysis_config - list - namespace-specific analysis options / configurations
+#' @field input_config - list - application-wide default input values 
+#' @import dplyr
+#' @import tibble
+#' @import tidyr
+#' @import purrr
 #' @export
 ClinicalDataAppManager <- R6::R6Class(
   "ClinicalDataAppManager",
@@ -41,7 +53,13 @@ ClinicalDataAppManager <- R6::R6Class(
       ConditionClassData = NULL,
       PlatformExperiments = NULL
     ),
-
+    
+    #' @description
+    #' Create a new instance of a ClinicalDataAppManager object
+    #' @param ApplicationId string - ApplicationId 
+    #' @param remoteDB R6 class to manage remote database queries 
+    #' @param localDB R6 class to manange local database queries 
+    #' @return A new `ClinicalDataAppManager` object.
     initialize = function(ApplicationId, remoteDB, localDB){
 
       self$app_config$ApplicationId <- ApplicationId
@@ -110,7 +128,6 @@ ClinicalDataAppManager <- R6::R6Class(
         ,NULL
       )
 
-
       self$input_config$Enrollments <- localDB$getQuery(
         "SELECT Karyotype, count(1) as [ParticipantCount]
         FROM AllParticipants
@@ -149,7 +166,6 @@ ClinicalDataAppManager <- R6::R6Class(
         dplyr::arrange(SortOrder) |>
         dplyr::select(OMICSSampleAvailable) |>
         dplyr::pull()
-
 
       self$input_config$probandRelationships <- localDB$getQuery(
         "SELECT distinct ProbandRelationship

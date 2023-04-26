@@ -1,3 +1,40 @@
+#' R6 Class to manage Clincal Data Analysis 
+#' @description 
+#' R6 Class to manage all data analysis within various modules in the Clinical Data application
+#' @field applicationName - string - application name 
+#' @field namespace - string - namespace for this instance 
+#' @field remoteDB - R6 Class to manage remote database queries 
+#' @field localDB - R6 Class to manange local database queries 
+#' @field ParticipantEncounter - deprecated
+#' @field AllParticipants - deprecated
+#' @field AllN - numeric - count of all Participants
+#' @field Enrollments - tibble of counts of participants by Karyotype
+#' @field SamplesAvailable - deprecated
+#' @field ParticipantOMICSAvailable - deprecated
+#' @field Karyotypes - character vector - selected karotypes
+#' @field Sex - character vector - selected sexes 
+#' @field Age - numeric vector - selected ages 
+#' @field OmicsSamples - character vector - selected omics 
+#' @field Samples - character vector - selected samples
+#' @field ParticipantData - tibble of participant level data filtered from inputs
+#' @field ConditionClassData - tibble of condition class data 
+#' @field conditionClasses - character vector - selected condition classes
+#' @field conditions - character vector - selected conditions
+#' @field conditionClassCounts - tibble - counts of condition classes by Karyotype
+#' @field conditionClassSummary - tibble - summary counts of chosen condition classes by Karyotype
+#' @field conditionCounts - tibble - counts of conditions by Karyotype
+#' @field conditionSummary - tibble - summary counts of conditions by Karyotype
+#' @field ConditionClassSexCounts - tibble - counts of condition classes by Sex and Karyotype
+#' @field ConditionSexCounts - tibble - counts of conditions by Sex and Karyotype
+#' @field selectedAnnotationLevel - string - chosen annotation level for conditions - Condition Class vs Condition
+#' @field SelectedConditions - character vector - chosen condition classes or conditions
+#' @field upsetPlotData - tibble - wide-form matrix / data frame of condition counts vs. records 
+#' @import dplyr
+#' @import tibble
+#' @import tidyr
+#' @import plotly
+#' @import leaflet
+#' @importFrom tigris geo_join
 #' @export
 ClinicalDataAnalysisManager <- R6::R6Class(
   "ClinicalDataAnalysisManager",
@@ -38,7 +75,14 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     SelectedConditions = NULL,
     upsetPlotData = NULL,
 
-
+    #' @description
+    #' Create a new instance of a ClinicalDataAnalysisManager object
+    #' @param applicationName string - applicationName
+    #' @param id string - namespace for this class 
+    #' @param namespace_config tibble - configuration values for this namespace instance of the object  
+    #' @param remoteDB R6 class to manage remote database queries 
+    #' @param localDB R6 class to manange local database queries 
+    #' @return A new `ClinicalDataAnalysisManager` object.
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
 
       self$applicationName <- applicationName
@@ -89,6 +133,9 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' Get / set participant level data based on chosen filters
+    #' @return none
     getParticipantData = function() {
 
       participants <- self$localDB$getQuery(
@@ -125,6 +172,10 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' Get participant sex distribution plot
+    #' @param .data - tibble  
+    #' @return plotly object
     getSexesOverviewPlot = function(.data) {
 
       dataframe <- self$ParticipantData |>
@@ -236,6 +287,11 @@ ClinicalDataAnalysisManager <- R6::R6Class(
       return(p)
 
     },
+
+    #' @description
+    #' Get Age distribution plot
+    #' @param .data - tibble  
+    #' @return plotly object
     getAgeDistributionOverviewPlot = function(.data) {
 
       p <- self$ParticipantData |>
@@ -304,6 +360,11 @@ ClinicalDataAnalysisManager <- R6::R6Class(
        return(p)
 
     },
+
+    #' @description
+    #' Get Probands  plot
+    #' @param .data - tibble  
+    #' @return plotly object
     getProbandsPlot = function(.data) {
 
       p <- .data |>
@@ -384,6 +445,11 @@ ClinicalDataAnalysisManager <- R6::R6Class(
         )
 
     },
+
+    #' @description
+    #' Get Samples Availble plot
+    #' @param .data - tibble  
+    #' @return plotly object
     getSamplesAvailablePlot = function(.data) {
 
       dataframe <- .data |>
@@ -480,6 +546,11 @@ ClinicalDataAnalysisManager <- R6::R6Class(
       return(p)
 
     },
+
+    #' @description
+    #' Get OMICS Samples Availble plot
+    #' @param .data - tibble  
+    #' @return plotly object
     getOmicsSamplesAvailablePlot = function(.data) {
 
       p <- .data |>
@@ -571,6 +642,11 @@ ClinicalDataAnalysisManager <- R6::R6Class(
       return(p)
 
     },
+
+    #' @description
+    #' Get Race/Ethnicity plot
+    #' @param .data - tibble  
+    #' @return plotly object
     getRaceEthnicityPlot = function(.data) {
 
       RaceEthnicity <- .data |>
@@ -668,6 +744,11 @@ ClinicalDataAnalysisManager <- R6::R6Class(
       return(p)
 
     },
+
+    #' @description
+    #' Get Participants States plot
+    #' @param .data - tibble  
+    #' @return plotly object
     getParticipantStatesPlot = function(.data) {
 
       StatesGeo <- tigris::geo_join(
@@ -743,6 +824,9 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' set summary condition class counts tibble 
+    #' @return none
     updateSummaryConditionClassCounts = function() {
 
       if(!is.null(self$conditionClasses)) {
@@ -844,9 +928,17 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
       }
     },
+
+    #' @description
+    #' get summary condition class counts tibble 
+    #' @return tibble
     getConditionClassSummary = function() {
       return(self$conditionClassSummary)
     },
+
+    #' @description
+    #' set conditions counts tibble 
+    #' @return none
     updateConditions = function() {
 
       self$conditions <- self$ConditionClassData |>
@@ -883,6 +975,10 @@ ClinicalDataAnalysisManager <- R6::R6Class(
         dplyr::select(Condition,`Control %`,`Trisomy 21 %`)
 
     },
+
+    #' @description
+    #' set conditions summary counts tibble 
+    #' @return none
     updateSummaryConditionCounts = function() {
 
       # # #top level condition was chosen
@@ -980,6 +1076,10 @@ ClinicalDataAnalysisManager <- R6::R6Class(
         self$conditionSummary <- NULL
       }
     },
+
+    #' @description
+    #' set conditions class sex counts tibble 
+    #' @return none
     updateConditionClassSexCounts = function() {
       if(!is.null(self$conditionClasses)) {
 
@@ -1002,6 +1102,10 @@ ClinicalDataAnalysisManager <- R6::R6Class(
         self$ConditionClassSexCounts <- NULL
       }
     },
+
+    #' @description
+    #' set conditions sex counts tibble 
+    #' @return none
     updateConditionSexCounts = function() {
       if(!is.null(self$conditionClasses) & !is.null(self$conditions)) {
 
@@ -1039,9 +1143,14 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' get condition sex plot
+    #' @param .data tibble 
+    #' @param type - string - condition annotation level  
+    #' @return plotly object
     getGetConditionStackedSexPlot = function(.data, type = "Classes") {
 
-      if(type == "Classes"){
+      if (type == "Classes"){
         .data <- .data |>
           dplyr::filter(Sex != "total")
       }
@@ -1255,6 +1364,10 @@ ClinicalDataAnalysisManager <- R6::R6Class(
       return(p)
 
     },
+
+    #' @description
+    #' set condition upset plot data 
+    #' @return none
     update_upset_plot_data = function() {
 
       conditionData <- self$localDB$getQuery(
@@ -1297,6 +1410,10 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
 
     },
+
+    #' @description
+    #' reset condition upset plot data tibble to NULL states
+    #' @return none
     clear_upset_plot_data = function() {
       self$upsetPlotData <- NULL
     }
