@@ -5,7 +5,7 @@ Authors@R:
     person("Kyle", "Bartsch", , "kyle.bartsch@cuanschutz.edu", role = c("aut", "cre"))
 Description: Provides common components / modules / styling / JS utilized
     across multiple sets of TrisomExplorer applications.
-License: MIT + file LICENSE
+License: file LICENSE
 Depends: 
     R (>= 2.10)
 Imports: 
