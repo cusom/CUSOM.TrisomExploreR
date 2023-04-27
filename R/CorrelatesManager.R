@@ -1,4 +1,63 @@
-#' @export
+#' R6 Class to manage Correlates Analysis 
+#' @description 
+#' Enables analysis of cross-omics correlations 
+#' 
+#' @field applicationName - string - name of application 
+#' @field namespace - string - namespace for this instance 
+#' @field remoteDB - R6 class to manage remote database queries 
+#' @field localDB - R6 class to manage local database queries  
+#' @field analysisType - string - type of analysis for this instance/namespace
+#' @field FoldChangeVar - string - name of variable indicating fold change or difference (log2FoldChange)
+#' @field SignificanceVariable - string - name of variable indiciating significance value (p-value)
+#' @field Study - string - selected study
+#' @field QueryPlatform 
+#' @field ComparisonPlatform 
+#' @field Experiment - string - chosen experimentID  
+#' @field QueryAnalyte - string - chosen Query Analyte 
+#' @field Analyte - string - chosen Comparison Analyte 
+#' @field AnalyteSearchName - string - name of analyte used for external links
+#' @field CorrelationMeasureName - string - name of correlation measure used in analysis - `rho` or `Fold Change`
+#' @field Sex - string vector - Sex values chosen for analysis 
+#' @field Age - numeric vector - Age values chosen fo analysis 
+#' @field StatTest - string - name of statistical test to apply for analysis (Linear Model, etc.)
+#' @field Covariates - string vector - names of features to include as covariates in Linear Model analysis
+#' @field AdjustmentMethod - string - name of multiple hypothesis correction method to apply to statistical output 
+#' @field Adjusted - logical - whether the statistical test includes multiple hypothesis correction or not
+#' @field SignificanceLabel - string - if adjusted, `q-value`, otherwise `p-value`
+#' @field ComparisonAnalytePlotStatAnnotation - string - annotation label to show at top of volcano plot
+#' @field AnalyteData - tibble - sample level data for chosen analyte(s)
+#' @field AnalyteDataDownload - deprecated? 
+#' @field AnalytePlotMethod - string - type of plot to show for chosen analyte
+#' @field CorrelationAnalytePlotTitle - string - title to show for analyte plot
+#' @field QueryMeasurement - string - measurement used for query analyte sample level data
+#' @field ComparisonMeasurement - string - measurement used for comparison analyte sample level data
+#' @field QueryAnalyteLabel - string - label used for query analyte
+#' @field ComparisonAnalyteLabel - string - labe used for comparison analyte 
+#' @field VolcanoSummaryData - tibble - Fold Change summary data used for volcano plot
+#' @field VolcanoSummaryDataXAxisLabel - string - volcano plot x-axis
+#' @field VolcanoSummaryDataYAxisLabel - string - volcano plot y-axis
+#' @field VolcanoSummaryMaxFoldChange - numeric - maxiumum abs. value of fold change
+#' @field VolcanoPlotTitle - string - title to show above volcano plot
+#' @field volcanoPlotExpectedTraceCount - numeric - number of base traces present in the active volcano plot (usually between 1 - 3)
+#' @field HeatmapData - tibble - data to use for heatmap plot when multiple analytes are chosen 
+#' @field HeatmapText - string vector - text used for hover on heatmap plot
+#' @field HeatmapLimit - numeric - maxiumum abs correlation value used to determine upper/lower bounds of heatmap
+#' @field GSEAData - list of ranks, hallmarks, and gsea results
+#' @field GSEAAnalytes - character vector - matching analytes for for chosen GSEA pathway 
+#' @field GSEATraceName - string - name of chosen GSEA pathway 
+#' @field GSEAGenesetName - string - formatted version of GSEA Trace Name
+#' @field GSEAPathwayData - pathway specific data for chosen GSEA pathway
+#' @import dplyr
+#' @import tidyr
+#' @import tibble
+#' @import purrr
+#' @import glue
+#' @import plotly 
+#' @import htmlwidgets
+#' @importFrom plyr round_any
+#' @importFrom forcats fct_inorder
+#' @importFrom heatmaply heatmaply
+#' @export 
 CorrelatesManager <- R6::R6Class(
   "CorrelatesManager",
   private = list(),
@@ -56,6 +115,14 @@ CorrelatesManager <- R6::R6Class(
     GSEAGenesetName = "",
     GSEAPathwayData = NULL,
 
+    #' @description
+    #' Create a new instance of CorrelatesManager object
+    #' @param applicationName string - applicationName
+    #' @param id string - namespace for this class 
+    #' @param namespace_config tibble - configuration values for this namespace instance of the object  
+    #' @param remoteDB R6 class to manage remote database queries 
+    #' @param localDB R6 class to manange local database queries  
+    #' @return A new `CorrelatesManager` object.
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
 
       self$applicationName <- applicationName
@@ -67,6 +134,11 @@ CorrelatesManager <- R6::R6Class(
       self$namespace <- namespace_config$Namespace
     },
 
+    #' @description
+    #' return hidden /shown / disabled / enabled class for GSEA button based on 
+    #'  chosen comparison platform and whether or not Volcano Plot is rendered 
+    #'  
+    #' @return string
     addGSEAInputClass = function() {
       hide <- "hide"
       disabled <- "disabled"
@@ -83,6 +155,11 @@ CorrelatesManager <- R6::R6Class(
       )
     },
 
+    #' @description
+    #' show or hide GSEA button based on chosen comparison platform
+    #' @param button_name - name of target button to show/hide
+    #'  
+    #' @return none
     showGSEAButton = function(button_name) {
       if (grepl('SOMA',self$ComparisonPlatform) | grepl('RNA', self$ComparisonPlatform)) {
         return(
@@ -96,6 +173,10 @@ CorrelatesManager <- R6::R6Class(
       }
     },
 
+    #' @description
+    #' Enable / disable GSEA button based on whether or not Volcano Plot is shown
+    #' @param button_name - string - name of target button to enable/disable 
+    #' @return none
     enableGSEAButton = function(button_name) {
       if(!is.null(self$VolcanoSummaryData)) {
         do.call(shinyjs::enable, list(button_name))
@@ -105,6 +186,10 @@ CorrelatesManager <- R6::R6Class(
       }
     },
 
+    #' @description
+    #' Set Volcano Summary Data along with other volcano plot properties 
+    #'  
+    #' @return none
     getVolcanoSummaryData = function() {
 
       self$Adjusted <- self$AdjustmentMethod != "none"
@@ -112,7 +197,7 @@ CorrelatesManager <- R6::R6Class(
       correlationData <- self$remoteDB$getQuery(
         "[shiny].[GetCorrelationDataset] ?, ?, ?",
         tibble::tibble(
-          "QueryPlatform" =  self$QueryPlatform,
+          "QueryPlatform" = self$QueryPlatform,
           "QueryAnalyte" = self$QueryAnalyte,
           "ComparisonPlatform" = self$ComparisonPlatform
         )
@@ -153,6 +238,13 @@ CorrelatesManager <- R6::R6Class(
       self$VolcanoSummaryDataYAxisLabel <- glue::glue("-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})")
 
     },
+
+    #' @description
+    #' Get volcano plot
+    #' @param .data tibble - data for volcano plot
+    #' @param ns - namespace to apply to plot object
+    #'  
+    #' @return plotly object 
     getVolcanoPlot = function(.data, ns) {
 
       .data <- .data |>
@@ -302,6 +394,12 @@ CorrelatesManager <- R6::R6Class(
       p
 
     },
+
+    #' @description
+    #' Get formatted volcano plot data for data table 
+    #' @param .data tibble - data for volcano plot
+    #'  
+    #' @return tibble 
     getFormattedVolcanoSummaryData =  function(.data) {
 
       oldNames = c("QueryPlatform","QueryAnalyte","ComparisonPlatform","Analyte","p.value","-log10pvalue")
@@ -312,6 +410,11 @@ CorrelatesManager <- R6::R6Class(
         dplyr::rename(`:=`(!!rlang::quo_name(self$CorrelationMeasureName), CorrelationValue))
 
     },
+
+    #' @description
+    #' update analyte fields
+    #'  
+    #' @return none 
     updateAnalyteAttributes = function() {
 
       self$AnalyteSearchName <- CUSOMShinyHelpers::parseDelimitedString(self$Analyte,1)
@@ -326,6 +429,11 @@ CorrelatesManager <- R6::R6Class(
           dplyr::select(formatted.p.value)
       }
     },
+
+    #' @description
+    #' set analyte sample level data 
+    #'  
+    #' @return none 
     getAnalyteData = function() {
 
       self$AnalytePlotMethod <- getAnalytePlotMethod(self$analysisType, length(self$Analyte))
@@ -400,6 +508,12 @@ CorrelatesManager <- R6::R6Class(
       }
 
     },
+
+    #' @description
+    #' Get analyte plot
+    #' @param .data tibble - data for analyte plot
+    #' @param ns - namespace to apply to plot object 
+    #' @return plotly object 
     getAnalytePlot = function(.data, ns) {
 
       if(self$AnalytePlotMethod == "scatterplot") {
@@ -624,6 +738,11 @@ CorrelatesManager <- R6::R6Class(
       }
 
     },
+
+    #' @description
+    #' Get formatted analyte plot data for data table 
+    #'  
+    #' @return tibble 
     getFormattedAnalyteSummaryData =  function() {
 
       xlabel <- glue::glue("{self$QueryAnalyteLabel} log<sub>2</sub>({self$QueryMeasurement})")
@@ -648,6 +767,15 @@ CorrelatesManager <- R6::R6Class(
       }
 
     },
+
+    #' @description
+    #' Get GSEA data 
+    #' ** INCLUDES penalized calculation for ranks = `-log10pvalue` * CorrelationValue
+    #'  
+    #' @return list of 3 tibbles: 
+    #' * ranks - ranked analytes 
+    #' * GSEA_hallmarks - geneset used 
+    #' * gsea - gene set enrichment analysis  
     getGSEAData = function() {
 
       ranks <- self$VolcanoSummaryData |>
@@ -675,11 +803,16 @@ CorrelatesManager <- R6::R6Class(
 
       self$GSEAData <- list(
         "ranks" = ranks,
-        "hallmarks" = GSEA_hallmarks,
+        "hallmarks" = TrisomExploreR:::GSEA_hallmarks,
         "gsea" = gsea
       )
     },
 
+    #' @description
+    #' Get GSEA plot - top 25 
+    #' @param .data - data for plot
+    #' @param ns - namespace to apply to plot object
+    #' @return plotly object
     getGSEAPlot = function(.data, ns) {
 
       data <- .data$gsea |>
@@ -780,6 +913,10 @@ CorrelatesManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' Set selected GSEA pathway data
+    #' @param pathName - string - selected pathway name
+    #' @return none 
     getGSEAPathwayData = function(pathName) {
 
       gseaParam <- 0
@@ -858,6 +995,11 @@ CorrelatesManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' Get selected GSEA pathway enrichment plot
+    #' @param .data - data used for plot
+    #' @param ns - namespace to apply to plot object
+    #' @return plotly object
     getGSEAEnrichmentPlot = function(.data, ns) {
 
       p <- CUSOMShinyHelpers::plotGSEAEnrichment(
@@ -901,6 +1043,10 @@ CorrelatesManager <- R6::R6Class(
   )
 )
 
+#' small helper function to determin plot method for instance/namespace
+#' @param analysisType - string - analysis type for this instance/namespace
+#' @param analyteCount int - number of selected analytes
+#' @return string 
 getAnalytePlotMethod <- function(analysisType, analyteCount) {
   if(analyteCount > 1) {
     return("Heatmap")
@@ -915,6 +1061,3 @@ getAnalytePlotMethod <- function(analysisType, analyteCount) {
     return("Unknown")
   }
 }
-
-
-
