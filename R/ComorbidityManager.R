@@ -1,7 +1,7 @@
-#' R6 Class to manage Comorbidity Analysis 
-#' @description 
-#' Subclass of Feature Analysis Manager R6 Class to enable comorbidity-specific analysis. 
-#'  
+#' R6 Class to manage Comorbidity Analysis
+#' @description
+#' Subclass of Feature Analysis Manager R6 Class to enable comorbidity-specific analysis.
+#'
 #' @import dplyr
 #' @import tibble
 #' @importFrom stringr str_split
@@ -14,21 +14,21 @@ ComorbidityManager <- R6::R6Class(
   inherit = FeatureAnalysisManager,
   private = list(),
   public = list(
-    
+
     #' @description
     #' Create a new instance of ComorbidityManager object
     #' @param applicationName string - applicationName
-    #' @param id string - namespace for this class 
-    #' @param namespace_config tibble - configuration values for this namespace instance of the object  
-    #' @param remoteDB R6 class to manage remote database queries 
-    #' @param localDB R6 class to manange local database queries   
+    #' @param id string - namespace for this class
+    #' @param namespace_config tibble - configuration values for this namespace instance of the object
+    #' @param remoteDB R6 class to manage remote database queries
+    #' @param localDB R6 class to manange local database queries
     #' @return A new `ComorbidityManager` object.
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
       super$initialize(applicationName, id, namespace_config, remoteDB, localDB)
     },
 
     #' @description
-    #' set BaseData for comorbidity analysis - custom logic that overrides `getBaseData` method from 
+    #' set BaseData for comorbidity analysis - custom logic that overrides `getBaseData` method from
     #'  parent `FeatureAnalysisManager` class
     #' @return none
     getBaseData = function() {
