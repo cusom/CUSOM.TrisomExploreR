@@ -28,7 +28,6 @@ Imports:
     RColorBrewer,
     RSQLite,
     shiny,
-    shinyBS,
     shinycustomloader,
     shinydashboard,
     shinydashboardPlus,

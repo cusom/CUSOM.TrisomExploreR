@@ -4,7 +4,7 @@ condition_interactions_plot_ui <- function(id) {
   tagList(
     div(
       id = ns("UpsetPlotContent"),
-      box(
+      shinydashboardPlus::box(
         title = htmlOutput(
           ns("UpsetPlotTitle")
         ),

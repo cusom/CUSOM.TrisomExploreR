@@ -21,19 +21,17 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
       collapsible = FALSE,
       headerBorder = FALSE,
       shinyjs::disabled(
-        shiny::actionButton(
-          ns("PrimaryTutorial"),
-          label = "Take Tutorial",
-          class ="tutorial-btn",
-          icon = icon("question-circle")
+        bs4Dash::tooltip( 
+          shiny::actionButton(
+            ns("PrimaryTutorial"),
+            label = "Take Tutorial",
+            class ="tutorial-btn",
+            icon = icon("question-circle")
+          ),
+          title = "Click here to learn about setting dataset options to generate the volcano plot",
+          placement = "top"
         )
-      ),
-      shinyBS::bsTooltip(
-        id = ns("PrimaryTutorial"),
-        title = "Click here to learn about setting dataset options to generate the volcano plot",
-        placement = "top",
-        trigger = "hover"
-      ),
+      ),    
       shiny::tags$div(
         id = NS(id, "scrollableOptions"),
         style = "height:630px;padding-left:10px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
@@ -41,24 +39,16 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
         #shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shiny::tags$div(
           id = ns("Studies"),
-          CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
-            inputId = ns("Study"),
-            label = "",
-            fieldSetData = input_config$studiesTibble,
-            selected = input_config$studiesTibble[1,]
-          ),
-          shinyBS::bsTooltip(
-            id = ns("info_study"),
+          bs4Dash::tooltip(
+            CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
+              inputId = ns("Study"),
+              label = "",
+              fieldSetData = input_config$studiesTibble,
+              selected = input_config$studiesTibble[1,]
+            ),
             title = "Select a study below",
-            placement = "top",
-            trigger = "hover",
-            options = list(
-              delay = list(
-                show = 500,
-                hide = 100
-              )
-            )
-          )
+            placement = "top"
+          )         
         ),
         shiny::tags$br(),
         shinycustomloader::withLoader(

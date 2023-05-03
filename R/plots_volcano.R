@@ -9,36 +9,40 @@ volcano_plot_ui <- function(id) {
         class = "volcano-top-input-panel",
         shiny::tags$span(
           id = ns("AnalyteInput"),
-          shiny::selectizeInput(
-            inputId = ns("Analyte"),
-            label = "",
-            choices = NULL,
-            multiple = TRUE,
-            options = list(
-              labelField = "name",
-              searchField = "name",
-              valueField = "name",
-              placeholder = "Select analyte below",
-              onInitialize = I('function() { this.setValue(""); }'),
-              closeAfterSelect = TRUE,
-              selectOnTab = TRUE,
-              persist = FALSE,
-              `live-search` = TRUE,
-              dropupAuto = FALSE,
-              onType = I(paste0("
-                function (str) {
-                  if(this.currentResults.total == 0) {
-                    Shiny.setInputValue(
-                      '", ns("analyteSearchResults"), "',
-                      {
-                        query: this.currentResults.query,
-                        total: this.currentResults.total
-                      },
-                      { priority: 'event' }
-                    );
-                  };
-                }"))
-            )
+          bs4Dash::tooltip(
+            shiny::selectizeInput(
+              inputId = ns("Analyte"),
+              label = "",
+              choices = NULL,
+              multiple = TRUE,
+              options = list(
+                labelField = "name",
+                searchField = "name",
+                valueField = "name",
+                placeholder = "Select analyte below",
+                onInitialize = I('function() { this.setValue(""); }'),
+                closeAfterSelect = TRUE,
+                selectOnTab = TRUE,
+                persist = FALSE,
+                `live-search` = TRUE,
+                dropupAuto = FALSE,
+                onType = I(paste0("
+                  function (str) {
+                    if(this.currentResults.total == 0) {
+                      Shiny.setInputValue(
+                        '", ns("analyteSearchResults"), "',
+                        {
+                          query: this.currentResults.query,
+                          total: this.currentResults.total
+                        },
+                        { priority: 'event' }
+                      );
+                    };
+                  }"))
+              )
+            ),
+            title = "Select from this dropdown",
+            placement = "left"
           ),
           htmlOutput(ns("AnalyteSearchError"))
         ),
@@ -50,18 +54,6 @@ volcano_plot_ui <- function(id) {
       solidHeader = FALSE,
       collapsible = FALSE,
       headerBorder = FALSE,
-      shinyBS::bsTooltip(
-        id = ns("AnalyteInput"),
-        title = "Select from this dropdown",
-        placement = "left",
-        trigger = "hover",
-        options = list(
-          delay = list(
-            show = 500,
-            hide = 100
-          )
-        )
-      ),
       shinycustomloader::withLoader(
         plotly::plotlyOutput(
           ns("VolcanoPlot"),

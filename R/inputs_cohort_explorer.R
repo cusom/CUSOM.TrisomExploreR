@@ -1,10 +1,11 @@
+#' @export
 cohort_explorer_inputs_ui <- function(id, input_config) {
   ns <- NS(id)
   tagList(
     fluidRow(
       column(
         width = 12, class = "col-lg-12",
-        box(
+        shinydashboardPlus::box(
           id = ns("CohortFilters"),
           title = HTML(
             '<div class="dataset-options-title">Human Trisome Project Cohort Overview
@@ -78,6 +79,7 @@ cohort_explorer_inputs_ui <- function(id, input_config) {
   )
 }
 
+#' @export
 cohort_explorer_inputs_server <- function(id, r6, input_config) {
 
   moduleServer(id, function(input, output, session) {

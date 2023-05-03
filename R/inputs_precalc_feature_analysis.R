@@ -21,19 +21,17 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
       collapsible = FALSE,
       headerBorder = FALSE,
       shinyjs::disabled(
-        shiny::actionButton(
-          ns("PrimaryTutorial"),
-          label = "Take Tutorial",
-          class ="tutorial-btn",
-          icon = icon("question-circle")
+        bs4Dash::tooltip(
+          shiny::actionButton(
+            ns("PrimaryTutorial"),
+            label = "Take Tutorial",
+            class ="tutorial-btn",
+            icon = icon("question-circle")
+          ),
+          title = "Click here to learn about setting dataset options to generate the volcano plot",
+          placement = "top"
         )
-      ),
-      shinyBS::bsTooltip(
-        id = ns("PrimaryTutorial"),
-        title = "Click here to learn about setting dataset options to generate the volcano plot",
-        placement = "top",
-        trigger = "hover"
-      ),
+      ),     
       shiny::tags$div(
         id = NS(id, "scrollableOptions"),
         style = "height:570px;padding-left:10px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
@@ -107,22 +105,19 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
           tags$br(),
           tags$p(style="font-size:14px;font-weight: 700;font-style: italic;text-align: center", "Gene Set Enrichment Analysis"),
           shinyjs::disabled(
-            shiny::actionButton(
-              inputId = ns("RunGSEA"),
-              label = "Run GSEA",
-              width = "90%",
-              class = "refresh-ready-btn",
-              icon = icon("chart-bar")
+            bs4Dash::tooltip(
+              shiny::actionButton(
+                inputId = ns("RunGSEA"),
+                label = "Run GSEA",
+                width = "90%",
+                class = "refresh-ready-btn",
+                icon = icon("chart-bar")
+              ),
+              title = "Click here to see Gene Set Enrichment Analysis (GSEA)",
+              placement = "top"
             )
-          ),
-          shinyBS::bsTooltip(
-            id = ns("RunGSEA"),
-            title = "Click here to see Gene Set Enrichment Analysis (GSEA)",
-            placement = "top",
-            trigger = "hover"
           )
         )
-        #)
       )
     )
   )

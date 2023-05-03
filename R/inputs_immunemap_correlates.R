@@ -302,19 +302,17 @@ immunemap_correlates_inputs_ui <- function(id, input_config) {
             ,tags$hr(style = "margin-top:5px;margin-bottom:10px;")
             ,tags$br()
             ,tags$p(style="font-size:14px;font-weight: 700;font-style: italic;text-align: center", "Gene Set Enrichment Analysis")
-            ,actionButton(
-              ns("RunGSEA"),
-              label = "Run GSEA",
-              width = "90%",
-              class = "refresh-btn",
-              icon = icon("chart-bar")
-            )
-            ,shinyBS::bsTooltip(
-              id = ns("RunGSEA"),
+            ,bs4Dash::tooltip(
+              actionButton(
+                ns("RunGSEA"),
+                label = "Run GSEA",
+                width = "90%",
+                class = "refresh-btn",
+                icon = icon("chart-bar")
+              ),
               title = "Click here to see Gene Set Enrichment Analysis (GSEA)",
-              placement = "top",
-              trigger = "hover"
-            )
+              placement = "top"
+            )           
           )
         )
       )

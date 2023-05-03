@@ -21,19 +21,17 @@ correlates_inputs_ui <- function(id, input_config) {
       collapsible = FALSE,
       headerBorder = FALSE,
       shinyjs::disabled(
-        shiny::actionButton(
-          ns("PrimaryTutorial"),
-          label = "Take Tutorial",
-          class = "tutorial-btn",
-          icon = icon("question-circle")
+        bs4Dash::tooltip(
+          shiny::actionButton(
+            ns("PrimaryTutorial"),
+            label = "Take Tutorial",
+            class = "tutorial-btn",
+            icon = icon("question-circle")
+          ),
+          title = "Click here to learn about setting dataset options to generate the volcano plot",
+          placement = "top"
         )
-      ),
-      shinyBS::bsTooltip(
-        id = ns("PrimaryTutorial"),
-        title = "Click here to learn about setting dataset options to generate the volcano plot",
-        placement = "top",
-        trigger = "hover"
-      ),
+      ),  
       shiny::tags$div(
         id = NS(id, "scrollableOptions"),
         style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
@@ -286,29 +284,7 @@ correlates_inputs_ui <- function(id, input_config) {
           label = "Analyze & Plot",
           class = "refresh-btn",
           icon = icon("play")
-        )
-        # ,tags$br()
-        # ,shinyjs::hidden(
-        #   tags$div(
-        #     id = ns("GSEA")
-        #     ,tags$hr(style = "margin-top:5px;margin-bottom:10px;")
-        #     ,tags$br()
-        #     ,tags$p(style="font-size:14px;font-weight: 700;font-style: italic;text-align: center", "Gene Set Enrichment Analysis")
-        #     ,actionButton(
-        #       ns("RunGSEA"),
-        #       label = "Run GSEA",
-        #       width = "90%",
-        #       class = "refresh-btn",
-        #       icon = icon("chart-bar")
-        #     )
-        #     ,shinyBS::bsTooltip(
-        #       id = ns("RunGSEA"),
-        #       title = "Click here to see Gene Set Enrichment Analysis (GSEA)",
-        #       placement = "top",
-        #       trigger = "hover"
-        #     )
-        #   )
-        # )
+        )        
       )
     )
   )

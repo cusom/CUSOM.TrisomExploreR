@@ -9,18 +9,10 @@ feature_analysis_analyte_plot_ui <- function(id) {
         title = div(
           id = ns("AnalyteContentBoxTitle"),
           style = "font-size:12px;display:flex;align-items:center",
-          uiOutput(ns("toggleSidebarLinks")),
-          shinyBS::bsTooltip(
-            id = ns("toggleSidebarLinks"),
+          bs4Dash::tooltip(
+            uiOutput(ns("toggleSidebarLinks")),
             title = "Click here to learn more about the selected analyte",
-            placement = "right",
-            trigger = "hover",
-            options = list(
-              delay = list(
-                show = 500,
-                hide = 100
-              )
-            )
+            placement = "right"
           )
         ),
         height = "auto",

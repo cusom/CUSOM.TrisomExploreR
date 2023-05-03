@@ -13,7 +13,7 @@ condition_correlates_ui <- function(id, ...) {
         ),
         column(
           width = 12, class = "col-lg-5",
-          tabBox(
+          shinydashboard::tabBox(
             id = ns("VolcanoPlotBox"),
             title = "",
             height = "auto",
@@ -34,7 +34,7 @@ condition_correlates_ui <- function(id, ...) {
         ),
         column(
           width = 12, class = "col-lg-5",
-          tabBox(
+          shinydashboard::tabBox(
             id = ns("AnalytePlotBox"),
             title = "",
             height = "auto",
@@ -72,6 +72,7 @@ condition_correlates_server <- function(id, r6, ...) {
       #"show_correlates_boxplot",
       "show_analyte_plot",
       "show_download_modal",
+      "validate_GSEA",
       "run_GSEA",
       "get_GSEA_path_data",
       session = session

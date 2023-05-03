@@ -1,5 +1,5 @@
 #' @export
-cohort_explorer_ui <- function(id, ...) {
+cohort_explorer_ui <- function (id, ...) {
   ns <- NS(id)
   tagList(
     fluidPage(
@@ -8,116 +8,103 @@ cohort_explorer_ui <- function(id, ...) {
       fluidRow(
         column(
           width = 12, class = "col-lg-6",
-          tagList(
-            shinycssloaders::withSpinner(
-              plotly::plotlyOutput(
-                ns("SexesOverview"),
-                height = "400px"
+          bs4Dash::tooltip(
+            tags$div(
+              shinycssloaders::withSpinner(
+                plotly::plotlyOutput(
+                  ns("SexesOverview"),
+                  height = "400px"
+                )
               )
-            )
-            ,shinyBS::bsTooltip(
-              id = ns("SexesOverview"),
-              title = "Breakdown of controls and T21 by sex",
-              placement = "top",
-              trigger = "hover"
-            )
+            ),
+            title = "Breakdown of controls and T21 by sex",
+            placement = "top"
           )
         ),
-        column (
+        column(
           width = 12, class = "col-lg-6",
-          tagList(
-            shinycssloaders::withSpinner(
-              plotly::plotlyOutput(
-                ns("AgeDistributionOverview"),
-                height = "400px"
+          bs4Dash::tooltip(
+            tags$div(
+              shinycssloaders::withSpinner(
+                plotly::plotlyOutput(
+                  ns("AgeDistributionOverview"),
+                  height = "400px"
+                )
               )
-            )
-            ,shinyBS::bsTooltip(
-              id = ns("AgeDistributionOverview"),
-              title = "Participants ages are represented at the time of enrollment",
-              placement = "top",
-              trigger = "hover"
-            )
+            ),
+            title = "Participants ages are represented at the time of enrollment",
+            placement = "top"
           )
         )
       ),
-      tags$hr(style="margin-top:5px;margin-bottom:10px;"),
+      tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
       fluidRow(
         column(
           width = 12, class = "col-lg-3",
-          tagList(
-            shinycssloaders::withSpinner(
-              plotly::plotlyOutput(
-                ns("Probands"),
-                height="400px"
+          bs4Dash::tooltip(
+            tags$div(
+              shinycssloaders::withSpinner(
+                plotly::plotlyOutput(
+                  ns("Probands"),
+                  height = "400px"
+                )
               )
-            )
-            ,shinyBS::bsTooltip(
-              id = ns("Probands"),
-              title = "The family structure in relation to the participant with T21.<br />The participant may be shown in more than one category.<br />Only T21 are represented, and related controls are not shown.",
-              placement = "top",
-              trigger = "hover"
-            )
+            ),
+            title = "The family structure in relation to the participant with T21.<br />The participant may be shown in more than one category.<br />Only T21 are represented, and related controls are not shown.",
+            placement = "top"
           )
         ),
         column(
           width = 12, class = "col-lg-5",
-          tagList(
-            shinycssloaders::withSpinner(
-              plotly::plotlyOutput(
-                ns("SamplesAvailable"),
-                height="400px"
+          bs4Dash::tooltip(
+            tags$div(
+              shinycssloaders::withSpinner(
+                plotly::plotlyOutput(
+                  ns("SamplesAvailable"),
+                  height = "400px"
+                )
               )
-            )
-            ,shinyBS::bsTooltip(
-              id = ns("SamplesAvailable"),
-              title = "Total number of samples available by sample type",
-              placement = "top",
-              trigger = "hover"
-            )
+            ),
+            title = "Total number of samples available by sample type",
+            placement = "top"
           )
         ),
         column(
           width = 12, class = "col-lg-4",
-          tagList(
-            shinycssloaders::withSpinner(
-              plotly::plotlyOutput(
-                ns("OmicsSamplesAvailable"),
-                height = "400px"
+          bs4Dash::tooltip(
+            tags$div(
+              shinycssloaders::withSpinner(
+                plotly::plotlyOutput(
+                  ns("OmicsSamplesAvailable"),
+                  height = "400px"
+                )
               )
-            )
-            ,shinyBS::bsTooltip(
-              id = ns("OmicsSamplesAvailable"),
-              title = "Number of samples with -omics analyses from the Human Trisome Project",
-              placement = "top",
-              trigger = "hover"
-            )
+            ),
+            title = "Number of samples with -omics analyses from the Human Trisome Project",
+            placement = "top"
           )
         )
       ),
-      tags$hr(style="margin-top:5px;margin-bottom:10px;"),
+      tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
       fluidRow(
         column(
           width = 12, class = "col-lg-5",
-          tagList(
-            shinycssloaders::withSpinner(
-              plotly::plotlyOutput(
-                ns("RaceEthnicityChart"),
-                height = "480px"
+          bs4Dash::tooltip(
+            tags$div(
+              shinycssloaders::withSpinner( 
+                plotly::plotlyOutput(
+                  ns("RaceEthnicityChart"),
+                  height = "480px"
+                )
               )
-            )
-            ,shinyBS::bsTooltip(
-              id = ns("RaceEthnicityChart"),
-              title = "Current demographic information for participants in the database",
-              placement = "top",
-              trigger = "hover"
-            )
+            ),
+            title = "Current demographic information for participants in the database",
+            placement = "top"
           )
-
         ),
         column(
           width = 12, class = "col-lg-7",
-          box(
+          shinydashboardPlus::box(
             title = HTML(
               'State of Residence
               <span data-toggle="tooltip"
@@ -144,10 +131,9 @@ cohort_explorer_ui <- function(id, ...) {
               )
             )
           )
-
         )
       ),
-      tags$hr(style="margin-top:5px;margin-bottom:10px;")
+      tags$hr(style = "margin-top:5px;margin-bottom:10px;")
     )
   )
 
