@@ -6,7 +6,7 @@ clinical_overview_ui <- function(id, ...) {
       shiny::column(
         width = 12, class = "col-lg-12",
         shinydashboardPlus::box(
-          id = NS(id,"Overview"),
+          id = NS(id, "Overview"),
           title = "",
           height = "auto",
           width = 12,
@@ -23,87 +23,56 @@ clinical_overview_ui <- function(id, ...) {
           tags$br(),
           tags$div(
             class = "overviewHeader",
-            tags$h2("WHAT IS AN IMMUNE MAP?")
+            tags$h2("Overview")
           ),
           tags$div(
             class = "overviewBodyText",
-            tags$html("An immune map is a detailed characterization of the types and amounts of immune cells present in an organism.
-                  Altogether, these immune cells drive the immune response against infectious agents such as bacteria and viruses.
-                  Some immune cells also participate in the defense against tumors, and some can contribute to the appearance and severity
-                  of autoimmune disorders. Therefore, an immune map provides valuable information about how the immune system is functioning.
-                  By measuring a multitude of immune cell types in the blood, we can explore how the immune system is different in people
-                  with Down syndrome versus typical people, and also reveal differences among those with Down syndrome affected by
-                  different co-occurring health conditions or \'comorbidities\'."
+            tags$p("
+              Clinical data is presented in multiple formats for exploration. 
+              Sample numbers and additional data are available on hover. 
+              The data can be filtered by karyotype, sex, and age at enrollment. 
+              When data is filtered, all graphs are reactive.    
+            "
             ),
             tags$br(),
             tags$div(
-              class = "overviewHeader",
-              tags$h3("OVERVIEW")
-            ),
-            tags$div(
               class = "overviewBodyText",
-              tags$p("This dashboard contains data generated from circulating blood using two different platforms:
-                  mass-cytometry and flow-cytometry."
+              tags$b("Cohort Overview"),
+              tags$p(" tab presents 
+                    1) basic demographics of participants, 
+                    2) sample types available for participants currently in the database and 
+                    3) number of samples with -omics analyses available."
               ),
               tags$p(
-                tags$b("Effect of trisomy 21"),
-                tags$p("Explore the differences in immune cell types between
-                  samples with trisomy 21 (T21, Down syndrome) versus those from typical people (controls). The data are searchable
-                  by cell type and can be filtered by experimental platform, age at time of blood collection, and sex. Significant
-                  differences between trisomy 21 and controls (p<0.05) are indicated within the selected parameters."
+                tags$b("The Conditions Table"),
+                tags$p(" displays the most commonly reported co-occurring conditions, shown as a percentage of affected individuals 
+                    within typical people (controls) and people with trisomy 21. 
+                    In the left-hand column, a Condition Class can be selected and sex ratio of those diagnosed is reported below. 
+                    Once a Condition Class is selected, the Specific Conditions that comprise the Class are displayed in the right-hand column. "
                 )
               ),
               tags$p(
-                tags$b("Effect of Comorbidity"),
-                tags$html("Explore the differences in immune cell types between samples obtained from people with trisomy 21
-                  (T21, Down syndrome) <b><i>with</i></b> versus <b><i>without</i></b> selected comorbidities as defined
-                  by mass-cytometry. The data are searchable by cell type and can be filtered by age at time of blood collection,
-                  and sex. Significant differences between those <b><i>with</i></b> versus <b><i>without</i></b> selected
-                  comorbidities  (p<0.05) are indicated within the selected parameters."
-                )
-              ),
-              tags$p(
-                tags$b("METHODS"),
-                tags$p("Mass-cytometry and flow-cytometry were used to generate cell counts.
-                  All comparisons are reported using a Student\'s T-test and have not been corrected for multiple comparisons.
-                  For full methods and analysis, please see associated publications.
-                  Data are represented from two measurements: frequency of a given cell type among total non-granulocytes of
-                  hematopoietic origin (i.e. frequency among total CD45+CD66-) or frequency of a given cell type among its immune
-                  cell lineage (e.g. frequency among total T cells)"
+                tags$b("Conditions Interactions"),
+                tags$p(" dashboard displays the co-occurrence of selected conditions as an upset plot. 
+                    Users can select various classes of conditions, such as autoimmune conditions, or specific conditions, such as celiac disease or alopecia areata. 
+                    Note that a maximum of six co-occurring conditions can be selected at any time."
                 )
               )
             ),
             tags$br(),
             tags$div(
               class = "overviewHeader",
-              tags$h3("DATASETS AND PUBLICATIONS")
+              tags$h3("METHODS")
             ),
             tags$div(
               class = "overviewBodyText",
-              tags$p(
-                tags$a(
-                  href = "https://doi.org/10.1016/j.celrep.2019.10.038",
-                  target = "_blank",
-                  tags$b("Mass-cytometry reveals global immune remodeling with multi-lineage hypersensitivity to Type I Interferon in Down syndrome."),
-                  .noWS = c("outside")
-                ),
-                tags$html("Waugh, KA, Araya P, Pandey A, Jordan KR, Smith KP, Granrath RE, Khanal S, Butcher ET, Enriquez Estrada B,
-                  Rachubinski AL, McWilliams JA, Minter R, Dimasi T, Colvin KL,
-                  Baturin D, Pham AT, Galbraith MD, Bartsch KW, Yeager ME, Porter CC, Sullivan KD, Hsieh EW, Espinosa JM.
-                  Cell Reports. 2019 Nov 12; 29(7):1893-1908.")
+              tags$p("
+                Informed consent is first obtained from the participant, or their legal guardian. 
+                Clinical data is obtained from participant report and/or the medical record. 
+                For samples analyzed by the Human Trisome Project on a de-identified basis, the appropriate data sharing agreements are in place.  
+                Note that not all participants have clinical data available, or from both sources, as medical records are continually being abstracted and clinical data updated."
               ),
-              tags$br(),
-              tags$p(
-                tags$a(
-                  href = "https://www.pnas.org/content/early/2019/11/06/1908129116",
-                  target = "_blank",
-                  tags$b("Trisomy 21 dysregulates T cell lineages toward an autoimmunity-prone state associated with interferon hyperactivity."),
-                  .noWS = c("outside")
-                ),
-                tags$html("Araya P, Waugh KA, Sullivan KD, Nunez NG, Roselli E, Smith KP, Granrath RE, Rachubinski AL, Butcher ET,
-                  Minter R, Tuttle KD,
-                  Bruno TC, Maccioni M, and Espinosa JM. PNAS. 2019 Nov 7; PMID: 31699819.")
-              )
+              tags$br()
             )
           )
         )

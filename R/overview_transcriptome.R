@@ -6,7 +6,7 @@ transcriptome_overview_ui <- function(id, ...) {
       shiny::column(
         width = 12, class = "col-lg-12",
         shinydashboardPlus::box(
-          id = NS(id,"Overview"),
+          id = NS(id, "Overview"),
           title = "",
           height = "auto",
           width = 12,
@@ -23,22 +23,22 @@ transcriptome_overview_ui <- function(id, ...) {
           tags$br(),
           tags$div(
             class = "overviewHeader",
-            tags$h2("WHAT IS THE METABOLOME?")
+            tags$h2("WHAT IS THE TRANSCRIPTOME?")
           ),
           tags$div(
             class = "overviewBodyText",
             tags$p(
               tags$a(
-                href = "https://en.wikipedia.org/wiki/Metabolomics",
+                href = "https://www.genome.gov/about-genomics/fact-sheets/Transcriptome-Fact-Sheet",
                 target = "_blank",
-                tags$b("Metabolomics"),
+                tags$b("Transcriptomics"),
                 .noWS = c("outside")
               ),
-              tags$html(" is the study of all small molecules, or 'metabolites', produced by a cell, tissue, or organism while performing typical biological processes,
-                    such as converting food into energy, or getting rid of waste products from cells. Together, these metabolites create a chemical
-                    fingerprint (i.e. the 'metabolome') that provides valuable information about how that cell, tissue, or organism is functioning.
-                    Therefore, by measuring all metabolites, we can explore how cells are actively functioning in response to both internal gene expression changes
-                    and external environmental factors. We used metabolomics to compare metabolites between people with and without Down syndrome."
+              tags$html(" is the study of ribonucleic acid (RNA), a molecule that is produced in a cell when a gene is turned on. 
+                  While the DNA that encodes all genes is the same in every cell, different types of cells (e.g. a heart cell versus a liver cell) may turn certain genes 
+                  on and off at different times. Other factors may also affect what genes are turned on and off, such as age, gender, and diseases or other health conditions. 
+                  Therefore, by measuring the levels of all RNAs (i.e. the \"transcriptome\"), we can understand what genes are expressed in a variety of situations. 
+                  We used transcriptomics to compare gene expression between people with and without Down syndrome and in various types of cells."
               )
             ),
             tags$br(),
@@ -48,22 +48,14 @@ transcriptome_overview_ui <- function(id, ...) {
             ),
             tags$div(
               class = "overviewBodyText",
-              tags$p("This dashboard presents metabolomic data generated from plasma and can be displayed as either absolute or relative quantity.
-                          The data are searchable by metabolite and can be filtered by age at time of blood collection and sex.
-                          Significant differences between karyotypes (p<0.05) are indicated within the selected parameters."
-              ),
-              tags$p(
-                tags$b("Effect of trisomy 21"),
-                tags$p("Explore the differences in protein levels between samples with trisomy 21 and those without (controls).
-                            The data are searchable by protein name and can be filtered by platform, age at time of blood collection, and sex.
-                            Significant differences between karyotypes (p<0.05) are indicated within the selected parameters."
-                )
-              ),
+              tags$p("This dashboard presents transcriptome data generated from five sample types: fibroblasts, monocytes, T-cells, white blood cells, and whole blood. 
+                  The data are searchable by gene name and can be filtered by age at time of blood collection and sex. Significant differences between karyotypes (p<0.05) 
+                  are indicated within the selected parameters."
+              ),          
               tags$p(
                 tags$b("METHODS"),
-                tags$p("Metabolomics data were generated via ultra-high-pressure liquid chromatography coupled to high-resolution mass spectrometry (UHPLC-HRMS) technology.
-                          All comparisons are reported using a Student&rsquo;s T-test and have not been corrected for multiple comparisons.
-                          For full methods and analysis, please see associated publications."
+                tags$p("RNA-seq was used to identify the quantity of RNA in each of the five sample types. All comparisons are reported using a Student's T-test and have 
+                not been corrected for multiple comparisons. For full methods and analysis, please see associated publications."
                 )
               )
             ),
@@ -76,24 +68,14 @@ transcriptome_overview_ui <- function(id, ...) {
               class = "overviewBodyText",
               tags$p(
                 tags$a(
-                  href = "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5745140/",
+                  href = "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5012864/",
                   target = "_blank",
-                  tags$b("Red blood cell metabolism in Down syndrome: hints on metabolic derangements in aging."),
+                  tags$b("Trisomy 21 consistently activates the interferon response."),
                   .noWS = c("outside")
                 ),
-                tags$html("Culp-Hill R, Zheng C, Reisz JA, Smith K, Rachubinski A, Nemkov T, Butcher E, Granrath R, Hansen KC, Espinosa JM, D'Alessandro A. Blood Advances. 2017 Dec 21;1(27):2776-2780. PMID: 29296929.")
+                tags$html("Sullivan KD, Lewis HC, Hill AA, Pandey A, Jackson LP, Cabral JM, Smith KP, Liggett LA, Gomez EB, Galbraith MD, DeGregori J, Espinosa JM. Elife. 2016 Jul 29;5. PMID: 27472900.")
               ),
-              tags$br(),
-              tags$p(
-                tags$a(
-                  href = "https://www.nature.com/articles/s41467-019-12739-9",
-                  target = "_blank",
-                  tags$b("Trisomy 21 activates the kynurenine pathway via increased dosage of interferon receptors."),
-                  .noWS = c("outside")
-                ),
-                tags$html("Powers RK, Culp-Hill R, Ludwig MP, Smith KP, Waugh KA, Minter R, Tuttle KD, Lewis HC, Rachubinski AL, Granrath RE, Carmona-Iragui M, Wilkerson RB, Kahn DE, Joshi M, Lle&oacute; A, Blesa R,
-                              Fortea J, D'Alessandro A, Costello JC, Sullivan KD, Espinosa JM. Nature Communications. 2019 Oct 18;10(1):4766. PMID: 31628327.")
-              )
+              tags$br()
             )
           )
         )
