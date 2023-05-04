@@ -50,7 +50,7 @@ correlates_inputs_ui <- function(id, input_config) {
           label = "1) Select Query Platform",
           choiceNames = input_config$Queryplatforms,
           choiceValues = input_config$Queryplatforms,
-          selected = character(0)#input_config$Queryplatforms[1]
+          selected = character(0)
         ),
         tags$br(),
         shinyjs::hidden(
@@ -112,8 +112,8 @@ correlates_inputs_ui <- function(id, input_config) {
               maxoptions = 1
             )
           )
-        )
-        ,div(
+        ),
+        div(
           id = ns("ComparisonPlatformInput"),
           selectizeInput(
             inputId = ns("ComparisonPlatform"),
@@ -328,7 +328,7 @@ correlates_inputs_server <- function(id, r6, remoteDB, localDB) {
       analyteChoices <- remoteDB$getQuery(
         "[shiny].[GetQueryAnalytes] ?",
         tibble::tibble("QueryPlatform" = input$QueryPlatform)
-        )|>
+        ) |>
         dplyr::arrange(QueryAnalyte) |>
         dplyr::pull()
 
@@ -360,18 +360,6 @@ correlates_inputs_server <- function(id, r6, remoteDB, localDB) {
       gargoyle::trigger("validate_GSEA", session = session)
 
     }, ignoreInit = TRUE)
-
-
-
-
-
-
-
-
-
-
-
-
 
     observe({
       if(input$QueryAnalyte == "" & input$ComparisonPlatform == "") {

@@ -3,34 +3,54 @@ immunemap_correlates_inputs_ui <- function(id, input_config) {
   ns <- NS(id)
   tagList(
     shinydashboardPlus::box(
-      title = HTML(
+      title = shiny::HTML(
         '<div class="dataset-options-title">Dataset Options
           <span
             data-toggle="tooltip"
             data-placement="auto right"
-            title=""
-            class="fas fa-filter"
+            title = ""
+            class = "fas fa-filter"
             data-original-title="Set options below to generate volcano plot">
           </span>
         </div>'
       ),
       height = "auto",
-      width = 12,
+      width = NULL,
       closable = FALSE,
       solidHeader = FALSE,
       collapsible = FALSE,
       headerBorder = FALSE,
+      shinyjs::disabled(
+        bs4Dash::tooltip(
+          shiny::actionButton(
+            ns("PrimaryTutorial"),
+            label = "Take Tutorial",
+            class = "tutorial-btn",
+            icon = icon("question-circle")
+          ),
+          title = "Click here to learn about setting dataset options to generate the volcano plot",
+          placement = "top"
+        )
+      ),
       shiny::tags$div(
         id = NS(id, "scrollableOptions"),
-        style = "height:630px;padding-left:10px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
-        #style = "overflow-y:auto",
+        style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        shinyjs::hidden(
+          shinyWidgets::prettyRadioButtons(
+            inputId = ns("Study"),
+            label = "",
+            choiceNames = "NA",
+            choiceValues = "NA",
+            selected = "NA"
+          )
+        ),
         shinyWidgets::prettyRadioButtons(
           inputId = ns("QueryPlatform"),
           label = "1) Select Query Platform",
           choiceNames = input_config$Queryplatforms,
           choiceValues = input_config$Queryplatforms,
-          selected = input_config$Queryplatforms[1]
+          selected = character(0)
         ),
         tags$br(),
         shinyjs::hidden(
@@ -294,27 +314,7 @@ immunemap_correlates_inputs_ui <- function(id, input_config) {
           label = "Analyze & Plot",
           class = "refresh-btn",
           icon = icon("play")
-        )
-        ,tags$br()
-        ,shinyjs::hidden(
-          tags$div(
-            id = ns("GSEA")
-            ,tags$hr(style = "margin-top:5px;margin-bottom:10px;")
-            ,tags$br()
-            ,tags$p(style="font-size:14px;font-weight: 700;font-style: italic;text-align: center", "Gene Set Enrichment Analysis")
-            ,bs4Dash::tooltip(
-              actionButton(
-                ns("RunGSEA"),
-                label = "Run GSEA",
-                width = "90%",
-                class = "refresh-btn",
-                icon = icon("chart-bar")
-              ),
-              title = "Click here to see Gene Set Enrichment Analysis (GSEA)",
-              placement = "top"
-            )           
-          )
-        )
+        )       
       )
     )
   )
@@ -329,14 +329,31 @@ immunemap_correlates_inputs_server <- function(id, r6, input_config, remoteDB, l
 
     ns <- session$ns
 
-    bind_events(
-      ids = c("QueryPlatform","Experiment","QueryAnalyte","ComparisonPlatform","Sex","Age","StatTest","Covariates","AdjustmentMethod"),
+    TrisomExploreR::bind_events(
+      ids = c(
+        "Study",
+        "QueryPlatform",
+        "Experiment",
+        "QueryAnalyte",
+        "ComparisonPlatform",
+        "Sex",
+        "Age",
+        "StatTest",
+        "Covariates",
+        "AdjustmentMethod"
+      ),
       r6 = r6,
       session = session,
       parent_input = input
     )
 
-    observeEvent(c(input$QueryPlatform),{
+    observeEvent(c(input$QueryPlatform), {
+
+      shinybusy::show_modal_spinner(
+        spin = "atom",
+        color = "#3c8dbc",
+        text = glue::glue("Getting {input$QueryPlatform} Query Analytes...")
+      )
 
       analyteChoices <- remoteDB$getQuery(
         "[shiny].[GetQueryAnalytes] ?",
@@ -365,165 +382,18 @@ immunemap_correlates_inputs_server <- function(id, r6, input_config, remoteDB, l
         )
       )
 
-      # choices <- PlatformExperiments |>
-      #   filter(
-      #     PlatformDisplayName == input$QueryPlatform,
-      #     !is.na(ExperimentStudyName)
-      #   ) |>
-      #   dplyr::ExperimentStudyName,ExperimentID) |>
-      #   arrange(ExperimentStudyName) |>
-      #   tibble::deframe()
-      #
-      # updatePrettyRadioButtons(
-      #   session = session,
-      #   inputId = "Experiment",
-      #   choices = choices,
-      #   selected = character(0)
-      # )
-      #
-      # shinyjs::click(glue("AccordionInputs-1-heading"), asis = FALSE)
-
-    })
-
-
-
-    # observeEvent(c(input$Experiment), {
-    #
-    #   validate(
-    #     need(input$Experiment != "","")
-    #   )
-    #
-    #   show_modal_spinner(
-    #     spin = "half-circle",
-    #     color = "#3c8dbc",
-    #     text = glue("Getting Query Analytes for {input$Experiment}...")
-    #   )
-    #
-    #   queryAnalytes <- CUSOMShinyHelpers::getDataframeFromDatabase(
-    #     "EXEC [shiny].[GetAnalytesByPlatformExperiment] ?, ?"
-    #     ,tibble::tibble(
-    #       "Platform" = input$QueryPlatform,
-    #       "ExperimentID" = input$Experiment
-    #     )
-    #     ,conn_args = conn_args
-    #   ) |>
-    #     arrange(Analyte)
-    #
-    #   remove_modal_spinner()
-    #
-    #   updateSelectizeInput(
-    #     session = session,
-    #     inputId = "QueryAnalyte",
-    #     choices = queryAnalytes
-    #   )
-    #
-    #   shinyjs::click(glue("AccordionInputs-2-heading"), asis = FALSE)
-    #
-    # }, ignoreNULL = TRUE)
-
-
-    # observeEvent(c(input$QueryAnalyte),{
-    #   if(input$QueryAnalyte != "") {
-    #     #shinyjs::click(glue("AccordionInputs-3-heading"), asis = FALSE)
-    #   }
-    # }, ignoreInit = TRUE)
-
-    # observeEvent(c(input$ComparisonPlatform), {
-    #
-    #   if(grepl("SOMA",input$ComparisonPlatform) | grepl("Transcriptome",input$ComparisonPlatform)) {
-    #     shinyjs::show("GSEA")
-    #     if(!is.null(r6$VolcanoSummaryData)) {
-    #       gargoyle::trigger("enable_GSEA", session = session)
-    #     }
-    #   }
-    #   else {
-    #     gargoyle::trigger("disable_GSEA", session = session)
-    #     shinyjs::hide("GSEA")
-    #   }
-    # },ignoreInit = TRUE)
-
-    # observeEvent(c(gargoyle::watch("enable_GSEA"), session = session),{
-    #
-    #   shinyjs::enable("RunGSEA")
-    #   shinyjs::addClass(id = "RunGSEA", class = "refresh-ready-btn")
-    #
-    #
-    # }, ignoreInit = TRUE)
-    #
-    # observeEvent(c(gargoyle::watch("disable_GSEA"), session = session),{
-    #   shinyjs::disable("RunGSEA")
-    #   shinyjs::removeClass(id = "RunGSEA", class = "refresh-ready-btn")
-    #
-    # }, ignoreInit = TRUE)
-
-
-    # observeEvent(c(input$ComparisonPlatform), {
-    #
-    #   if(grepl("SOMA",input$ComparisonPlatform) | grepl("Transcriptome",input$ComparisonPlatform)) {
-    #     # shinyjs::enable("RunGSEA")
-    #     # shinyjs::addClass(id = "RunGSEA", class = "refresh-ready-btn")
-    #     shinyjs::show("GSEA")
-    #     #gargoyle::trigger("enable_GSEA")
-    #   }
-    #   else {
-    #     # shinyjs::disable("RunGSEA")
-    #     # shinyjs::removeClass(id = "RunGSEA", class = "refresh-ready-btn")
-    #     #shinyjs::hide("GSEA")
-    #     gargoyle::trigger("disable_GSEA")
-    #   }
-    #
-    #   #shinyjs::click(glue("AccordionInputs-4-heading"), asis = FALSE)
-    # }, ignoreInit = TRUE)
-
-    observeEvent(c(input$getData),{
-
-      gargoyle::trigger("get_volcano_data", session = session)
-
-      if(grepl("SOMA",input$ComparisonPlatform) | grepl("Transcriptome",input$ComparisonPlatform)) {
-        shinyjs::show("GSEA")
-        shinyjs::enable("RunGSEA")
-        shinyjs::addClass(id = "RunGSEA", class = "refresh-ready-btn")
-        gargoyle::trigger("enable_GSEA", session = session)
-      }
-      else {
-        shinyjs::disable("RunGSEA")
-        shinyjs::removeClass(id = "RunGSEA", class = "refresh-ready-btn")
-        gargoyle::trigger("disable_GSEA", session = session)
-      }
-      #gargoyle::trigger("get_correlates_data", session = session)
-    }, ignoreInit = TRUE)
-
-    observeEvent(c(input$RunGSEA),{
-
-      shinybusy::show_modal_spinner(
-        spin = "half-circle",
-        color = "#3c8dbc",
-        text = glue::glue("Calculating GSEA...")
-      )
-
-      r6$getGSEAData()
-
       shinybusy::remove_modal_spinner()
-
-      gargoyle::trigger("run_GSEA", session = session)
-
+   
     }, ignoreInit = TRUE)
 
-      #   plotName <- glue("{id}-VolcanoPlot")
-      #   keys <- ""
-      #   shinyjs::runjs(glue('removeExcessPlotTraces("{plotName}",3);'))
-      #   shinyjs::runjs(glue('removeExcessAnnotations("{plotName}",5);'))
-      #   shinyjs::runjs(glue('updateSelectedKeys("{plotName}","{keys}");') )
-      #
-      #
-      #
-      # }
-      #
-      # else {
-      #
-      # }
+    observeEvent(c(input$ComparisonPlatform),{
+      validate(
+        need(!is.null(input$ComparisonPlatform), ""),
+        need(input$ComparisonPlatform != "", "")
+      )
+      gargoyle::trigger("validate_GSEA", session = session)
 
-
+    }, ignoreInit = TRUE)
 
     observe({
       if(input$QueryAnalyte == "" & input$ComparisonPlatform == "") {
@@ -538,7 +408,15 @@ immunemap_correlates_inputs_server <- function(id, r6, input_config, remoteDB, l
       }
     })
 
+    observeEvent(c(input$getData),{
+
+      validate(
+        need(input$getData > 0, "")
+      )
+
+      gargoyle::trigger("get_volcano_data", session = session)
+
+    }, ignoreInit = TRUE)
 
   })
-
 }

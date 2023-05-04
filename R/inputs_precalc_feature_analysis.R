@@ -8,14 +8,14 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
           <span
             data-toggle="tooltip"
             data-placement="auto right"
-            title=""
-            class="fas fa-filter"
+            title = ""
+            class = "fas fa-filter"
             data-original-title="Set options below to generate volcano plot">
           </span>
         </div>'
       ),
       height = "auto",
-      width = 12,
+      width = NULL,
       closable = FALSE,
       solidHeader = FALSE,
       collapsible = FALSE,
@@ -25,16 +25,17 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
           shiny::actionButton(
             ns("PrimaryTutorial"),
             label = "Take Tutorial",
-            class ="tutorial-btn",
+            class = "tutorial-btn",
             icon = icon("question-circle")
           ),
           title = "Click here to learn about setting dataset options to generate the volcano plot",
           placement = "top"
         )
-      ),     
+      ),
       shiny::tags$div(
         id = NS(id, "scrollableOptions"),
-        style = "height:570px;padding-left:10px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
+        style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
+        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shinyjs::hidden(
           div(
             id = ns("Studies"),
@@ -96,27 +97,6 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
           label = "Analyze & Plot",
           class = "refresh-ready-btn",
           icon = icon("play")
-        ),
-        tags$br(),
-        #,shinyjs::hidden(
-        tags$div(
-          id = ns("GSEA"),
-          tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-          tags$br(),
-          tags$p(style="font-size:14px;font-weight: 700;font-style: italic;text-align: center", "Gene Set Enrichment Analysis"),
-          shinyjs::disabled(
-            bs4Dash::tooltip(
-              shiny::actionButton(
-                inputId = ns("RunGSEA"),
-                label = "Run GSEA",
-                width = "90%",
-                class = "refresh-ready-btn",
-                icon = icon("chart-bar")
-              ),
-              title = "Click here to see Gene Set Enrichment Analysis (GSEA)",
-              placement = "top"
-            )
-          )
         )
       )
     )
@@ -181,36 +161,14 @@ precalc_feature_analysis_inputs_server <- function(id, r6, input_config) {
         )
       }
       else {
-        shiny::tagList(
-
-        )
+        shiny::tagList()
       }
 
     })
 
     observeEvent(c(input$getData),{
 
-      shinyjs::enable("RunGSEA")
-
-      gargoyle::trigger("enable_GSEA", session = session)
-
       gargoyle::trigger("get_volcano_data", session = session)
-
-    }, ignoreInit = TRUE)
-
-    observeEvent(c(input$RunGSEA),{
-
-      shinybusy::show_modal_spinner(
-        spin = "half-circle",
-        color = "#3c8dbc",
-        text = glue::glue("Calculating GSEA...")
-      )
-
-      r6$getGSEAData()
-
-      shinybusy::remove_modal_spinner()
-
-      gargoyle::trigger("run_GSEA", session = session)
 
     }, ignoreInit = TRUE)
 

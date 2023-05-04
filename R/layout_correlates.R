@@ -52,7 +52,6 @@ correlates_ui <- function(id, ...) {
         tags$div(
           id = ns("GSEA-Placeholder")
         )
-
     )
   )
 }
