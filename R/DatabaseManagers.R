@@ -195,16 +195,42 @@ SQLiteQueryManager <- R6::R6Class(
 
     #' @description
     #' helper function to set/format parameters tibble
-    setParameters = function(parameters) {
+    #' @field parameters tibble - tibble of parameter values
+    #' @field e - environment - ephemeral environment to load parameter values
+    set_parameters = function(parameters, e) {
+
       if (!is.null(parameters)) {
-        params <- parameters |>
+
+        self$parameters <- parameters |>
           dplyr::mutate(dplyr::across(tidyselect::everything(), as.character)) |>
-          tidyr::pivot_longer(cols = tidyselect::everything()) |>
-          dplyr::select(value)
-        self$parameters <- lapply(seq_len(nrow(params)), function(i) unlist(params[i, 1], use.names=FALSE))
-      } else {
+          tidyr::pivot_longer(cols = tidyselect::everything())
+
+        # create / load env. object per parameter name / values
+        sapply(
+          unique(self$parameters$name),
+          function(param_name) {
+            param_vals <- self$parameters |>
+              dplyr::filter(name == param_name) |>
+              dplyr::distinct() |>
+              dplyr::pull()
+            assign(
+              param_name,
+              param_vals,
+              envir = e
+            )
+          }
+        )
+
+      }
+      else {
         self$parameters <- parameters
       }
+    },
+    clear_parameters = function(e) {
+
+      vals <- self$parameters$name
+      rm(vals, envir = e)
+
     }
   ),
   public = list(
@@ -236,30 +262,14 @@ SQLiteQueryManager <- R6::R6Class(
 
       else {
 
-        # convert params tibble into long-form key-value pairs
-        params <- parameters |>
-          dplyr::mutate(dplyr::across(tidyselect::everything(), as.character)) |>
-          tidyr::pivot_longer(cols = tidyselect::everything())
+        e <- new.env()
 
-        # create / load env. object per parameter name / values
-        sapply(
-          unique(params$name),
-          function(param_name) {
-            param_vals <- params |>
-              dplyr::filter(name == param_name) |>
-              dplyr::distinct() |>
-              dplyr::pull()
-            assign(
-              param_name,
-              param_vals,
-              inherits = TRUE
-            )
-          }
-        )
+        private$set_parameters(parameters, e)
 
         q <- glue::glue_sql(
           self$queryString,
-          .con = private$dbhandle
+          .con = private$dbhandle,
+          .envir = e
         )
 
         pq <- DBI::dbSendQuery(private$dbhandle, q)
