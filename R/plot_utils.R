@@ -20,6 +20,14 @@ toggle_GSEA_volcano_plot_trace <- function(session, ns, plot_name = "VolcanoPlot
 
 }
 
+purge_plot <- function(session, ns, plot_name, r6) {
+
+  plotName <- get_object_name_from_namespace_session(session = session, namespace = r6$namespace, object_name = plot_name)
+
+  shinyjs::runjs(glue::glue("PurgePlot('{plotName}');"))
+
+}
+
 get_object_name_from_namespace_session <- function(session, namespace, object_name) {
 
   matching_objects <- tibble::tibble(

@@ -31,7 +31,7 @@ correlates_inputs_ui <- function(id, input_config) {
           title = "Click here to learn about setting dataset options to generate the volcano plot",
           placement = "top"
         )
-      ),  
+      ),
       shiny::tags$div(
         id = NS(id, "scrollableOptions"),
         style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
@@ -284,7 +284,7 @@ correlates_inputs_ui <- function(id, input_config) {
           label = "Analyze & Plot",
           class = "refresh-btn",
           icon = icon("play")
-        )        
+        )
       )
     )
   )
@@ -298,6 +298,13 @@ correlates_inputs_server <- function(id, r6, remoteDB, localDB) {
   moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
+
+    rv <- list(
+      QueryPlatform = "",
+      Queryanalyte = "",
+      ComparisonPlatform = "",
+      ComparisonAnalyte = ""
+    )
 
     TrisomExploreR::bind_events(
       ids = c(
@@ -352,12 +359,50 @@ correlates_inputs_server <- function(id, r6, remoteDB, localDB) {
 
     }, ignoreInit = TRUE)
 
-    observeEvent(c(input$ComparisonPlatform),{
+    observeEvent(c(input$QueryAnalyte), {
+
+      if (input$QueryAnalyte == "") {
+
+        shinyjs::disable(id = "ComparisonPlatform")
+
+        purge_plot(session, ns, "VolcanoPlot", r6)
+        purge_plot(session, ns, "AnalytePlot", r6)
+
+        updateSelectizeInput(
+          session = session,
+          inputId = "ComparisonAnalyte",
+          selected = ""
+        )
+
+      }
+      else {
+        shinyjs::enable(id = "ComparisonPlatform")
+      }
+
+    }, ignoreInit = TRUE)
+
+    observeEvent(c(input$ComparisonPlatform), {
+
       validate(
         need(!is.null(input$ComparisonPlatform), ""),
         need(input$ComparisonPlatform != "", "")
       )
+      
+      if (input$ComparisonPlatform != rv$ComparisonPlatform && rv$ComparisonPlatform != "") {
+
+        # clear plots
+        purge_plot(session, ns, "VolcanoPlot", r6)
+        purge_plot(session, ns, "AnalytePlot", r6)
+
+        #Reset Analyte
+        r6$Analyte <- ""
+        gargoyle::trigger("sync_analyte_choice", session = session)
+
+      }
+
       gargoyle::trigger("validate_GSEA", session = session)
+
+      rv$ComparisonPlatform <<- input$ComparisonPlatform
 
     }, ignoreInit = TRUE)
 

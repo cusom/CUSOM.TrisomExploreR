@@ -65,7 +65,7 @@ immunemap_correlates_server <- function(id, r6, ...) {
 
     gargoyle::init(
       "get_correlates_data", 
-      "sync_correlates_analyte",
+      "sync_analyte_choice",
       "show_analyte_plot", 
       "show_download_modal", 
       "validate_GSEA",

@@ -176,7 +176,7 @@ volcano_plot_server <- function(id, r6, ...) {
       volcanoMultiSelectText()
     })
 
-    observeEvent(c(gargoyle::watch("sync_analyte_choice", session = session)),{
+    observeEvent(c(gargoyle::watch("sync_analyte_choice", session = session)), {
       updateSelectizeInput(
         session = session,
         inputId = "Analyte",
