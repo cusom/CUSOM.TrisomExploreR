@@ -12,7 +12,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
     },
     getAnalysisChoices = function(study) {
 
-      AnalysisCellTypes <- localDB$getQuery(
+      AnalysisCellTypes <- self$localDB$getQuery(
         "SELECT Analysis, CellType, count(1) [n]
         FROM sourceData
         WHERE ExperimentStudyName  = ({study})
@@ -20,7 +20,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
         tibble::tibble(study = study)
       )
 
-      StudyAnalyses <- localDB$getQuery(
+      StudyAnalyses <- self$localDB$getQuery(
         "SELECT distinct Analysis FROM sourceData"
         ) |>
         dplyr::pull()
@@ -144,7 +144,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
 
 
 
-        karyotypeInputCounts <- localDB$getQuery(
+        karyotypeInputCounts <- self$localDB$getQuery(
             "SELECT LabID, CellType, Analyte, Karyotype
             FROM sourceData
             WHERE ExperimentStudyName  = ({study})
@@ -209,7 +209,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
 
     getBaseData = function() {
 
-      self$BaseData <- localDB$getQuery(
+      self$BaseData <- self$localDB$getQuery(
           "SELECT ExperimentStudyName, LabID, Karyotype, Sex, Age, BMI, Analysis, CellType, Analyte, MeasuredValue, Measurement
             FROM sourceData
             WHERE ExperimentStudyName = ({study})
