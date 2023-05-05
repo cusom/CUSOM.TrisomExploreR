@@ -4,24 +4,24 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
   inherit = FeatureAnalysisManager,
   private = list(),
   public = list(
-    Age = c(0,99),
-    Sex = c("Male","Female"),
+    Age = c(0, 99),
+    Sex = c("Male", "Female"),
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
       super$initialize(applicationName, id, namespace_config, remoteDB, localDB)
     },
 
     getKaryotypeChoices = function(karyotypes, localDBLocation) {
 
-      if(self$analysisVariable == "Karyotype") {
+      if (self$analysisVariable == "Karyotype") {
         return(
           tibble::tibble(
-            choiceNames = 'Trisomy 21 vs. Control',
+            choiceNames = "Trisomy 21 vs. Control",
             choiceValues = glue::glue_collapse(karyotypes, sep = ";")
           )
         )
       }
 
-      if(self$analysisVariable == "Age") {
+      if (self$analysisVariable == "Age") {
 
         karyotypeInputs <- self$localDB$getQuery(
           "SELECT * FROM analyteKaryotypeCounts"
@@ -37,7 +37,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
           ) |>
           dplyr::bind_rows(
             tibble::tibble(
-              Karyotype = glue::glue_collapse(karyotypes, sep=","),
+              Karyotype = glue::glue_collapse(karyotypes, sep = ","),
               n = NA,
               sort = 999,
               choiceNames =
@@ -48,11 +48,11 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
                       data-placement="auto right"
                       title=""
                       class="fas fa-info-circle gtooltip info-tooltip"
-                      data-original-title="Test for differences in age trajectories between Trisomy 21 & Controls">
+                      data-original-title="Test for differences in trajectories between Trisomy 21 & Controls">
                     </span>
                   </div>'
                 ),
-              choiceValues = glue::glue_collapse(karyotypes,sep=";")
+              choiceValues = glue::glue_collapse(karyotypes, sep = ";")
             )
           ) |>
           dplyr::arrange(sort)
@@ -105,7 +105,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
       self$AnalytePlotTitle <- getAnalytePlotTitle(self$analysisVariable, self$AnalytePlotMethod, self$Analyte, self$Karyotype)
       self$groupBaselineLabel <- stringr::str_split(gsub("<.*?>", "", self$groupBaselineLabel),' ', simplify = TRUE)[1]
 
-      if(length(self$Analyte) == 1) {
+      if (length(self$Analyte) == 1) {
 
         self$AnalyteData <- self$remoteDB$getQuery(
           "[shiny].[GetDataByStudyAnalyteAgeSexKaryotype] ?,?,?,?,?,?",
@@ -114,8 +114,8 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
             "Analyte" = self$Analyte,
             "MinAge" = min(self$Age),
             "MaxAge" = max(self$Age),
-            "Sex" = glue::glue_collapse(self$Sex,";"),
-            "Karyotype" = unlist(stringr::str_split(self$Karyotype, pattern = ';'))
+            "Sex" = glue::glue_collapse(self$Sex, ";"),
+            "Karyotype" = unlist(stringr::str_split(self$Karyotype, pattern = ";"))
           )
         ) |>
         dplyr::mutate(
@@ -142,12 +142,12 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
             ) |>
             dplyr::select(-n) |>
             dplyr::ungroup() |>
-            dplyr::mutate( text = glue::glue("LabID: {LabID} <br />{log2Measurement}: {log2MeasuredValue}") )
+            dplyr::mutate(text = glue::glue("LabID: {LabID} <br />{log2Measurement}: {log2MeasuredValue}") )
 
           self$groupBaselineLabel <- self$AnalyteData |>
             dplyr::select(!!rlang::sym(self$analysisVariable)) |>
             dplyr::distinct() |>
-            dplyr::filter(grepl(self$groupBaselineLabel,!!rlang::sym(self$analysisVariable))) |>
+            dplyr::filter(grepl(self$groupBaselineLabel, !!rlang::sym(self$analysisVariable))) |>
             dplyr::pull()
 
         }
@@ -171,7 +171,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
 
       ranks <- self$VolcanoSummaryData |>
         dplyr::rowwise() |>
-        dplyr::mutate(ParsedComparisonAnalyte = CUSOMShinyHelpers::parseDelimitedString(Analyte,1)) |>
+        dplyr::mutate(ParsedComparisonAnalyte = CUSOMShinyHelpers::parseDelimitedString(Analyte, 1)) |>
         dplyr::ungroup() |>
         ### NO NEED TO PENALIZE SINCE THE MODEL IS DESEQ
         # dplyr::mutate(
@@ -185,10 +185,10 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
         dplyr::distinct(ID, .keep_all = TRUE) |>
         tibble::deframe()
 
-      gsea <- CUSOMShinyHelpers::runfGSEA(geneset = GSEA_hallmarks, ranks = ranks) |>
+      gsea <- CUSOMShinyHelpers::runfGSEA(geneset = TrisomExploreR:::GSEA_hallmarks, ranks = ranks) |>
         dplyr::mutate(
           Leading.edge.genes = purrr::map_chr(leadingEdge, toString),
-          Leading.edge.genes = gsub(' ','',Leading.edge.genes)
+          Leading.edge.genes = gsub(" ", "", Leading.edge.genes)
         ) |>
         dplyr::select("Gene.set" = pathway, "Size" = size, ES, NES, "p.value" = pval, "q.value" = padj, Leading.edge.genes) |>
         dplyr::mutate(Gene.set = stringr::str_to_title(trimws(gsub('_',' ',gsub('HALLMARK','',Gene.set)))))
@@ -233,7 +233,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
             cmid = 0,
             cmin = -limit,
             colorbar = list(
-              title = 'NES',
+              title = "NES",
               tickmode = "auto",
               len = 0.5,
               yanchor = "middle",
@@ -285,7 +285,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
           displaylogo = FALSE,
           toImageButtonOptions = list(
             format = "svg",
-            filename = glue::glue('{self$applicationName} - GSEA Plot {format(Sys.time(),"%Y%m%d_%H%M%S")}') ,
+            filename = glue::glue("{self$applicationName} - GSEA Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}") ,
             width = NULL,
             height = NULL
           ),
@@ -301,7 +301,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
     },
 
     getGSEAPathwayData = function(pathName) {
-      
+
       gseaParam <- 0
 
       stats <- self$GSEAData$ranks
@@ -318,7 +318,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
       ord <- order(rnk)
       statsAdj <- stats[ord]
       statsAdj <- sign(statsAdj) * (abs(statsAdj)^gseaParam)
-      statsAdj <- statsAdj/max(abs(statsAdj))
+      statsAdj <- statsAdj / max(abs(statsAdj))
 
       pathway <- unname(as.vector(na.omit(match(pathwayNammed, names(statsAdj)))))
       pathway <- sort(pathway)
@@ -335,7 +335,10 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
       xs <- as.vector(rbind(pathway - 1, pathway))
       ys <- as.vector(rbind(bottoms, tops))
 
-      GSEAScores <- tibble::tibble(x = c(0, xs, n + 1), y = c(0, ys, 0)) |>
+      GSEAScores <- tibble::tibble(
+        x = c(0, xs, n + 1),
+        y = c(0, ys, 0)
+      ) |>
         dplyr::inner_join(
           tibble::tibble(x = pathway, Gene = pathwayNammed),
           by = "x"
@@ -344,8 +347,8 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
         dplyr::relocate("Gene")
 
       self$GSEAPathwayData <- self$VolcanoSummaryData |>
-        dplyr::filter(AnalyteID %in% self$Analyte) |>
-        dplyr::select("Gene" = Analyte,log2FoldChange, `-log10pvalue`) |>
+        dplyr::filter(Analyte %in% self$Analyte) |>
+        dplyr::select("Gene" = Analyte, log2FoldChange, `-log10pvalue`) |>
         dplyr::left_join( GSEAScores, by = "Gene" ) |>
         dplyr::group_by(Gene) |>
         dplyr::arrange(-log2FoldChange) |>
@@ -366,12 +369,12 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
       self$GSEAAnalytes <- self$GSEAPathwayData |>
         dplyr::select(Analyte) |>
         dplyr::summarise(text = toString(Analyte)) |>
-        dplyr::mutate(text = gsub(', ','|',text)) |>
+        dplyr::mutate(text = gsub(", ", "|",text)) |>
         dplyr::pull()
 
       self$GSEAGenesetName <- glue::glue("HALLMARK_{gsub(' ','_',stringr::str_to_upper(self$GSEATraceName))}")
 
-    }, 
+    },
     getGSEAEnrichmentPlot = function(.data, ns) {
 
       p <- CUSOMShinyHelpers::plotGSEAEnrichment(

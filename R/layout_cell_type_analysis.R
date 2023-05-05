@@ -4,7 +4,7 @@ cell_type_analysis_ui <- function(id, ...) {
   shiny::tagList(
     fluidRow(
       column(
-        width = 12, class = "col-lg-2",
+        width = 12, class = "col-lg-2 col-slim",
         div(
           id = ns("Dataset-Options"),
           class = "sidebar-text",
@@ -12,7 +12,7 @@ cell_type_analysis_ui <- function(id, ...) {
         )
       ),
       column(
-        width = 12, class = "col-lg-10",
+        width = 12, class = "col-lg-10 col-slim",
         TrisomExploreR::cell_type_plot_ui(ns("plot"))
       )
     )
@@ -20,7 +20,7 @@ cell_type_analysis_ui <- function(id, ...) {
 }
 
 #' @export
-cell_type_analysis_server <- function(id,r6) {
+cell_type_analysis_server <- function(id, r6) {
 
   moduleServer(id, function(input, output, session) {
 
