@@ -48,7 +48,6 @@ Imports:
     tidyr,
     tigris,
     UpSetR,
-    UpsetR,
     waiter
 Remotes: 
     cusom/CUSOM.ShinyHelpers
