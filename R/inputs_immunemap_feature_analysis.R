@@ -21,7 +21,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
       collapsible = FALSE,
       headerBorder = FALSE,
       shinyjs::disabled(
-        bs4Dash::tooltip( 
+        bs4Dash::tooltip(
           shiny::actionButton(
             ns("PrimaryTutorial"),
             label = "Take Tutorial",
@@ -31,7 +31,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
           title = "Click here to learn about setting dataset options to generate the volcano plot",
           placement = "top"
         )
-      ),    
+      ),
       shiny::tags$div(
         id = NS(id, "scrollableOptions"),
         style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
@@ -47,7 +47,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
             ),
             title = "Select a study below",
             placement = "top"
-          )         
+          )
         ),
         shiny::tags$br(),
         shinycustomloader::withLoader(
@@ -141,16 +141,17 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
     ns <- session$ns
 
     TrisomExploreR::bind_events(
-      ids = c("Study",
-      "CellType",
-      "Analysis",
-      "Conditions",
-      "Karyotype",
-      "Sex",
-      "Age",
-      "StatTest",
-      "Covariates",
-      "AdjustmentMethod"
+      ids = c(
+        "Study",
+        "CellType",
+        "Analysis",
+        "Conditions",
+        "Karyotype",
+        "Sex",
+        "Age",
+        "StatTest",
+        "Covariates",
+        "AdjustmentMethod"
       ),
       r6 = r6,
       session = session,
@@ -158,6 +159,9 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
     )
 
     CellTypeArgs <- reactive({
+      validate(
+        need(input$Study != "", "")
+      )
       r6$getCellTypes(input$Study)
     })
 
@@ -191,6 +195,10 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
     })
 
     observeEvent(c(input$CellType),{
+
+      validate(
+        need(input$Study != "", "")
+      )
 
       Analysis <- r6$getAnalysisInputChoices()
 
@@ -324,7 +332,7 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
     output$Conditions <- shinyTree::renderTree({
        r6$getConditionTree(conditions())
-    })      
+    })
 
     output$Covariates <- renderUI({
 
