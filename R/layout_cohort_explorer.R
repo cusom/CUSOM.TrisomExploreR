@@ -8,30 +8,30 @@ cohort_explorer_ui <- function (id, ...) {
       fluidRow(
         column(
           width = 12, class = "col-lg-6",
-          bs4Dash::tooltip(
-            tags$div(
-              shinycssloaders::withSpinner(
-                plotly::plotlyOutput(
-                  ns("SexesOverview"),
-                  height = "400px"
-                )
+          tags$div(
+            shinycssloaders::withSpinner(
+              plotly::plotlyOutput(
+                ns("SexesOverview"),
+                height = "400px"
               )
-            ),
+            )
+          ) |>
+          bsplus::bs_embed_tooltip(
             title = "Breakdown of controls and T21 by sex",
             placement = "top"
           )
         ),
         column(
           width = 12, class = "col-lg-6",
-          bs4Dash::tooltip(
-            tags$div(
-              shinycssloaders::withSpinner(
-                plotly::plotlyOutput(
-                  ns("AgeDistributionOverview"),
-                  height = "400px"
-                )
+          tags$div(
+            shinycssloaders::withSpinner(
+              plotly::plotlyOutput(
+                ns("AgeDistributionOverview"),
+                height = "400px"
               )
-            ),
+            )
+          ) |>
+          bsplus::bs_embed_tooltip(
             title = "Participants ages are represented at the time of enrollment",
             placement = "top"
           )
@@ -41,45 +41,46 @@ cohort_explorer_ui <- function (id, ...) {
       fluidRow(
         column(
           width = 12, class = "col-lg-3",
-          bs4Dash::tooltip(
-            tags$div(
-              shinycssloaders::withSpinner(
-                plotly::plotlyOutput(
-                  ns("Probands"),
-                  height = "400px"
-                )
+          tags$div(
+            shinycssloaders::withSpinner(
+              plotly::plotlyOutput(
+                ns("Probands"),
+                height = "400px"
               )
-            ),
+            )
+          ) |>
+          bsplus::bs_embed_tooltip(
             title = "The family structure in relation to the participant with T21.<br />The participant may be shown in more than one category.<br />Only T21 are represented, and related controls are not shown.",
-            placement = "top"
+            placement = "top",
+            html = TRUE
           )
         ),
         column(
           width = 12, class = "col-lg-5",
-          bs4Dash::tooltip(
-            tags$div(
-              shinycssloaders::withSpinner(
-                plotly::plotlyOutput(
-                  ns("SamplesAvailable"),
-                  height = "400px"
-                )
+          tags$div(
+            shinycssloaders::withSpinner(
+              plotly::plotlyOutput(
+                ns("SamplesAvailable"),
+                height = "400px"
               )
-            ),
+            )
+          ) |>
+          bsplus::bs_embed_tooltip(
             title = "Total number of samples available by sample type",
             placement = "top"
           )
         ),
         column(
           width = 12, class = "col-lg-4",
-          bs4Dash::tooltip(
-            tags$div(
-              shinycssloaders::withSpinner(
-                plotly::plotlyOutput(
-                  ns("OmicsSamplesAvailable"),
-                  height = "400px"
-                )
+          tags$div(
+            shinycssloaders::withSpinner(
+              plotly::plotlyOutput(
+                ns("OmicsSamplesAvailable"),
+                height = "400px"
               )
-            ),
+            )
+          ) |>
+          bsplus::bs_embed_tooltip(
             title = "Number of samples with -omics analyses from the Human Trisome Project",
             placement = "top"
           )
@@ -89,15 +90,15 @@ cohort_explorer_ui <- function (id, ...) {
       fluidRow(
         column(
           width = 12, class = "col-lg-5",
-          bs4Dash::tooltip(
-            tags$div(
-              shinycssloaders::withSpinner( 
-                plotly::plotlyOutput(
-                  ns("RaceEthnicityChart"),
-                  height = "480px"
-                )
+          tags$div(
+            shinycssloaders::withSpinner( 
+              plotly::plotlyOutput(
+                ns("RaceEthnicityChart"),
+                height = "480px"
               )
-            ),
+            )
+          ) |>
+          bsplus::bs_embed_tooltip(
             title = "Current demographic information for participants in the database",
             placement = "top"
           )

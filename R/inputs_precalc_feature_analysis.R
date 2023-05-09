@@ -21,13 +21,13 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
       collapsible = FALSE,
       headerBorder = FALSE,
       shinyjs::disabled(
-        bs4Dash::tooltip(
-          shiny::actionButton(
-            ns("PrimaryTutorial"),
-            label = "Take Tutorial",
-            class = "tutorial-btn",
-            icon = icon("question-circle")
-          ),
+        shiny::actionButton(
+          ns("PrimaryTutorial"),
+          label = "Take Tutorial",
+          class = "tutorial-btn",
+          icon = icon("question-circle")
+        ) |>
+        bsplus::bs_embed_tooltip(
           title = "Click here to learn about setting dataset options to generate the volcano plot",
           placement = "top"
         )

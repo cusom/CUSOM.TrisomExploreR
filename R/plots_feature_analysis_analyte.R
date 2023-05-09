@@ -9,8 +9,8 @@ feature_analysis_analyte_plot_ui <- function(id) {
         title = div(
           id = ns("AnalyteContentBoxTitle"),
           style = "font-size:12px;display:flex;align-items:center",
-          bs4Dash::tooltip(
-            uiOutput(ns("toggleSidebarLinks")),
+          uiOutput(ns("toggleSidebarLinks")) |>
+          bsplus::bs_embed_tooltip(
             title = "Click here to learn more about the selected analyte",
             placement = "right"
           )

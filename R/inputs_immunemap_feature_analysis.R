@@ -21,16 +21,16 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
       collapsible = FALSE,
       headerBorder = FALSE,
       shinyjs::disabled(
-        bs4Dash::tooltip(
-          shiny::actionButton(
-            ns("PrimaryTutorial"),
-            label = "Take Tutorial",
-            class = "tutorial-btn",
-            icon = icon("question-circle")
-          ),
-          title = "Click here to learn about setting dataset options to generate the volcano plot",
-          placement = "top"
-        )
+        shiny::actionButton(
+          ns("PrimaryTutorial"),
+          label = "Take Tutorial",
+          class = "tutorial-btn",
+          icon = icon("question-circle")
+        ) |>
+          bsplus::bs_embed_tooltip(
+            title = "Click here to learn about setting dataset options to generate the volcano plot",
+            placement = "top"
+          )
       ),
       shiny::tags$div(
         id = NS(id, "scrollableOptions"),
@@ -38,13 +38,13 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shiny::tags$div(
           id = ns("Studies"),
-          bs4Dash::tooltip(
-            CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
-              inputId = ns("Study"),
-              label = "",
-              fieldSetData = input_config$studiesTibble,
-              selected = character(0)
-            ),
+          CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
+            inputId = ns("Study"),
+            label = "",
+            fieldSetData = input_config$studiesTibble,
+            selected = character(0)
+          ) |>
+          bsplus::bs_embed_tooltip(
             title = "Select a study below",
             placement = "top"
           )
@@ -73,7 +73,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
           proxy.height = "20px"
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        uiOutput(ns("ConditionsInputs")),
+        conditions_feature_analysis_inputs_ui(ns("conditions")),
         shinycustomloader::withLoader(
           uiOutput(ns("Sex")),
           type = "html",
@@ -145,7 +145,6 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
         "Study",
         "CellType",
         "Analysis",
-        "Conditions",
         "Karyotype",
         "Sex",
         "Age",
@@ -253,86 +252,11 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
     })
 
-    output$ConditionsInputs <- renderUI({
-
-      if (r6$namespace  == "Comorbidity") {
-        shiny::tagList(
-          actionButton(
-            inputId = ns("SetConditions"),
-            label = "Set Conditions",
-            icon = icon("file-medical"),
-            width = "99%"
-          )
-        )
-      }
-      else {
-        shiny::tagList(
-        )
-      }
-
-    })
-
-    observeEvent(c(input$SetConditions),{
-
-      validate(
-        need(input$SetConditions > 0, "")
-      )
-
-      shiny::showModal(
-        shiny::modalDialog(
-          title = htmltools::tags$h3(glue::glue("Set Co-Occuring Conditions:")),
-          size = "l",
-          easyClose = TRUE,
-          list(
-            shiny::tagList(
-              shiny::tags$b("Search for Co-Occuring Conditions")
-              ,shiny::tags$br()
-              ,shiny::tags$div(
-                id = ns("Conditions-Picker"),
-                  shinyTree::shinyTree(
-                    outputId = ns("Conditions"),
-                    search = TRUE,
-                    multiple = TRUE,
-                    theme = "proton",
-                    themeIcons = FALSE,
-                    themeDots = FALSE,
-                    checkbox = TRUE
-                  )
-              )
-              ,shiny::tags$br()
-              ,shinyWidgets::actionBttn(
-                inputId = ns("ConditionsReset"),
-                label = "Reset Selected Conditions",
-                icon = icon("undo"),
-                style = "minimal",
-                size = "xs",
-                color = "primary",
-                block = TRUE
-              )
-            )
-          ),
-          footer = shiny::tagList(
-            shiny::modalButton(label = "Close")
-          )
-        )
-      )
-    }, ignoreInit = TRUE)
-
-    observeEvent(c(input$ConditionsReset),{
-
-      shinyjs::reset("ConditionsInputs")
-      shinyjs::runjs(paste0("$('#",ns("Conditions"),"').jstree('deselect_all');"))
-
-    }, ignoreInit = TRUE)
-
-    conditions <- eventReactive(c(input$SetConditions),{
-      input_config$ConditionChoices |>
-        dplyr::select(ConditionClass, Condition)
-    })
-
-    output$Conditions <- shinyTree::renderTree({
-       r6$getConditionTree(conditions())
-    })
+    conditions_feature_analysis_inputs_server(
+      id = "conditions",
+      r6 = r6,
+      input_config = input_config
+    )
 
     output$Covariates <- renderUI({
 

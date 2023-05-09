@@ -5,37 +5,37 @@ cohort_explorer_kpi_ui <- function(id) {
     fluidRow(
       column(
         width = 12, class = "col-lg-12",
-        bs4Dash::tooltip(
-          shinydashboard::valueBoxOutput(ns("value1"), width = 3),
-          title = "Total number consented",
-          placement = "top"
-        )
-        , bs4Dash::tooltip(
-          shinydashboard::valueBoxOutput(ns("value2"), width = 3), 
-          title = "Individuals with Trisomy 21 (T21)",
-          placement = "top"
-        )
-        , bs4Dash::tooltip(
-          shinydashboard::valueBoxOutput(ns("value3"), width = 3),
-          title = "Individuals with other intellectual and/or developmental disability (IDD) and individuals with sex chromosome anomalies (SCA)",
-          placement = "top"
-        )      
-        , bs4Dash::tooltip(
-          shinydashboard::valueBoxOutput(ns("value4"), width = 3),
-          title = "Controls",
-          placement = "top" 
-        )
+        shinydashboard::valueBoxOutput(ns("value1"), width = 3) |>
+          bsplus::bs_embed_tooltip(
+            title = "Total number consented",
+            placement = "top"
+          ),
+        shinydashboard::valueBoxOutput(ns("value2"), width = 3) |>
+          bsplus::bs_embed_tooltip(
+            title = "Individuals with Trisomy 21 (T21)",
+            placement = "top"
+          ),
+        shinydashboard::valueBoxOutput(ns("value3"), width = 3) |>
+          bsplus::bs_embed_tooltip(
+            title = "Individuals with other intellectual and/or developmental disability (IDD) and individuals with sex chromosome anomalies (SCA)",
+            placement = "top"
+          ),     
+        shinydashboard::valueBoxOutput(ns("value4"), width = 3) |>
+          bsplus::bs_embed_tooltip(
+            title = "Controls",
+            placement = "top" 
+          )
       )
     ),
     fluidRow(
       column(
         width = 12, offset = 2, class = "col-lg-10",
-         shinydashboard::valueBoxOutput(ns("value5"), width = 4)
-        , bs4Dash::tooltip(
-          shinydashboard::valueBoxOutput(ns("value6"), width = 4),
-          title = "Total participants matching currently selected filters",
-          placement = "top" 
-        )
+        shinydashboard::valueBoxOutput(ns("value5"), width = 4),
+        shinydashboard::valueBoxOutput(ns("value6"), width = 4) |>
+          bsplus::bs_embed_tooltip(
+            title = "Total participants matching currently selected filters",
+            placement = "top" 
+          )
       )
     )
   )

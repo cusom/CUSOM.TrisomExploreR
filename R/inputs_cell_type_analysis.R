@@ -46,46 +46,46 @@ cell_type_inputs_ui <- function(id, input_config) {
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         div(
           id = "AnalyteInput",
-          bs4Dash::tooltip(
-            shiny::selectizeInput(
-              inputId = ns("Analyte"),
-              label = "Gene",
-              choices = input_config$Genes,
-              options = list(
-                labelField = 'name',
-                searchField = 'name',
-                valueField = 'name',
-                placeholder = 'Search for Gene',
-                onInitialize = I('function() { this.setValue(""); }'),
-                closeAfterSelect = TRUE,
-                selectOnTab = TRUE,
-                persist = FALSE,
-                `live-search` = TRUE,
-                #dropdownDirection = "down",
-                # onDropdownOpen = I("
-                #       function($dropdown){
-                #         $dropdown.css({
-                #           bottom: '100%',
-                #           top: ''
-                #         }).width(this.$control.outerWidth());
-                #       }
-                #     "
-                # ),
-                onType = I(paste0("
-                  function (str) {
-                    if(this.currentResults.total == 0) {
-                      Shiny.setInputValue(
-                        '", ns("analyteSearchResults"), "',
-                        {
-                          query: this.currentResults.query,
-                          total: this.currentResults.total
-                        },
-                        { priority: 'event' }
-                      );
-                    };
-                  }"))
-              )
-            ),
+          shiny::selectizeInput(
+            inputId = ns("Analyte"),
+            label = "Gene",
+            choices = input_config$Genes,
+            options = list(
+              labelField = 'name',
+              searchField = 'name',
+              valueField = 'name',
+              placeholder = 'Search for Gene',
+              onInitialize = I('function() { this.setValue(""); }'),
+              closeAfterSelect = TRUE,
+              selectOnTab = TRUE,
+              persist = FALSE,
+              `live-search` = TRUE,
+              #dropdownDirection = "down",
+              # onDropdownOpen = I("
+              #       function($dropdown){
+              #         $dropdown.css({
+              #           bottom: '100%',
+              #           top: ''
+              #         }).width(this.$control.outerWidth());
+              #       }
+              #     "
+              # ),
+              onType = I(paste0("
+                function (str) {
+                  if(this.currentResults.total == 0) {
+                    Shiny.setInputValue(
+                      '", ns("analyteSearchResults"), "',
+                      {
+                        query: this.currentResults.query,
+                        total: this.currentResults.total
+                      },
+                      { priority: 'event' }
+                    );
+                  };
+                }"))
+            )
+          ) |>
+          bsplus::bs_embed_tooltip(
             title = 'Genes are searchable by ENTREZ GeneID. <br /> Not all available genes are available in dataset.',
             placement = "right"
           )

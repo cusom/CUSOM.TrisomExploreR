@@ -9,7 +9,6 @@ License: file LICENSE
 Depends: 
     R (>= 2.10)
 Imports: 
-    bs4Dash,
     bsplus,
     circlize,
     CUSOMShinyHelpers,
