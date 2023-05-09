@@ -121,11 +121,13 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
         )
       ),
       footer = shiny::tagList(
-        shiny::actionButton(
-          ns("getData"),
-          label = "Analyze & Plot",
-          class = "refresh-ready-btn",
-          icon = icon("play")
+        shinyjs::disabled(
+          shiny::actionButton(
+            ns("getData"),
+            label = "Analyze & Plot",
+            class = "refresh-btn",
+            icon = icon("play")
+          )
         )
       )
     )
@@ -207,6 +209,28 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
         selected = Analysis
       )
 
+      shinyjs::removeClass(
+        class = "refresh-btn",
+        selector = paste0("#", ns("getData"))
+      )
+      shinyjs::addClass(
+        class = "refresh-ready-btn",
+        selector = paste0("#", ns("getData"))
+      )
+
+      if (r6$namespace == "Comorbidity" & is.null(r6$Conditions)) {
+        shinyjs::disable(
+          selector = paste0("#", ns("getData"))
+        )
+      }
+      else {
+        shinyjs::enable(
+          selector = paste0("#", ns("getData"))
+        )
+      }
+
+      gargoyle::trigger("validate_GSEA", session = session)
+
     }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
     output$Karyotype <- renderUI({
@@ -255,7 +279,8 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
     conditions_feature_analysis_inputs_server(
       id = "conditions",
       r6 = r6,
-      input_config = input_config
+      input_config = input_config,
+      parent = session
     )
 
     output$Covariates <- renderUI({
