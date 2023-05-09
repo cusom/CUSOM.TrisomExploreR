@@ -1,3 +1,10 @@
+#' R6 Class to manage Comorbidity Analysis for Immune Maps data
+#' @description
+#' Subclass of ImmuneMapFeatureAnalysisManager R6 Class to enable Immune Map specific analysis.
+#'
+#' @field analysisMetadata - 
+#' @field analysisChoices - 
+#' @field Analysis - 
 #' @export
 ImmuneMapComorbidityManager <- R6::R6Class(
   "ImmuneMapComorbidityManager",

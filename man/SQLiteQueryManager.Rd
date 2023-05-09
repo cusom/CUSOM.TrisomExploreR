@@ -17,6 +17,17 @@ Manage SQLite Database queries
 \item{\code{parameters}}{- tibble - tibble of parameter names and values}
 
 \item{\code{data}}{- tibble - query result formatted as tibble}
+
+\item{\code{parameters}}{tibble - tibble of parameter values}
+
+\item{\code{e}}{- environment - ephemeral environment to load parameter values}
+}
+\if{html}{\out{</div>}}
+}
+\section{Active bindings}{
+\if{html}{\out{<div class="r6-active-bindings">}}
+\describe{
+\item{\code{e}}{- environment - ephemeral environment to load parameter values}
 }
 \if{html}{\out{</div>}}
 }

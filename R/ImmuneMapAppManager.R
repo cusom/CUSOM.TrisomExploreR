@@ -1,3 +1,9 @@
+#' R6 Class to 
+#' @description 
+#' 
+#' @field analysis
+#' @field analysisMetadata
+#' @field CellType - 
 #' @export
 ImmuneMapAppManager <- R6::R6Class(
   "ImmuneMapAppManager",

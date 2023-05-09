@@ -1,3 +1,10 @@
+#' R6 Class to 
+#' @description 
+#' 
+#' @field app_config - list - 
+#' @field module_config - list - 
+#' @field analysis_config - list - 
+#' @field input_config - list - 
 #' @export
 TrisomExplorerAppManager <- R6::R6Class(
   "TrisomExplorerAppManager",
