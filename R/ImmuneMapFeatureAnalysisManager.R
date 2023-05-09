@@ -112,7 +112,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
     },
     getKaryotypeChoices = function(karyotypes) {
 
-      if(self$namespace == "Karyotype") {
+      if (self$namespace == "Karyotype") {
         return(
           tibble::tibble(
             choiceNames = glue::glue(
@@ -127,11 +127,12 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
                 </span>
               </div>'
             ),
-            choiceValues = glue::glue_collapse(karyotypes,sep=";")
+            choiceValues = glue::glue_collapse(karyotypes, sep = ";")
           )
         )
       }
-      else if(self$namespace == "Comorbidity") {
+
+      else if (self$namespace == "Comorbidity") {
         return(
           tibble::tibble(
             choiceNames =  karyotypes[1],
@@ -141,8 +142,6 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
       }
 
       else {
-
-
 
         karyotypeInputCounts <- self$localDB$getQuery(
             "SELECT LabID, CellType, Analyte, Karyotype
@@ -158,10 +157,10 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
             )
           ) |>
           dplyr::group_by(Analyte,Karyotype) |>
-          dplyr::summarise(n = dplyr::n_distinct(LabID), .groups = 'drop') |>
+          dplyr::summarise(n = dplyr::n_distinct(LabID), .groups = "drop") |>
           dplyr::ungroup() |>
           dplyr::group_by(Karyotype) |>
-          dplyr::summarise(n = round(median(n)), .groups = 'drop') |>
+          dplyr::summarise(n = round(median(n)), .groups = "drop") |>
           dplyr::ungroup() |>
           dplyr::mutate(
             sort = dplyr::case_when(
@@ -178,11 +177,11 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
             karyotypeInputCounts |>
               dplyr::bind_rows(
                 tibble::tibble(
-                  Karyotype = glue::glue_collapse(karyotypes,sep=";"),
+                  Karyotype = glue::glue_collapse(karyotypes, sep = ";"),
                   n = NA,
                   sort = 999,
                   choiceNames = glue::glue(
-                    '<div>{glue::glue_collapse(karyotypes,sep = " vs. ")}
+                    '<div>{glue::glue_collapse(karyotypes, sep = " vs. ")}
                       <span
                         data-toggle="tooltip"
                         data-placement="auto right"
@@ -192,7 +191,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
                       </span>
                     </div>'
                   ),
-                  choiceValues = glue::glue_collapse(karyotypes,sep=";")
+                  choiceValues = glue::glue_collapse(karyotypes, sep = ";")
                 )
               ) |>
               dplyr::arrange(sort)
@@ -204,8 +203,8 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
           )
         }
       }
-
     },
+    
 
     getBaseData = function() {
 
@@ -242,6 +241,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
         )
 
     },
+
     getVolcanoSummaryData = function() {
 
       self$getBaseData()
