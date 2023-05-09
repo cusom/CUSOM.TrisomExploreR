@@ -18,28 +18,12 @@ GSEA_analysis_inputs_server <-  function(id, r6, parent) {
     })
 
     output$ConfigureGSEA <- renderUI({
-
-      shiny::actionButton(
-        inputId = ns("ConfigureGSEA"),
-        label = "GSEA",
-        icon = icon("cogs")
-      ) |>
-        shiny::tagAppendAttributes(class = GSEAButtonClass())
-
-    })
-
-    observeEvent(c(input$ConfigureGSEA),{
-
-      validate(
-        need(input$ConfigureGSEA > 0, "")
-      )
-
-      shiny::showModal(
-        shiny::modalDialog(
-          title = htmltools::tags$h3(glue::glue("GSEA options:")),
-          size = "m",
-          easyClose = TRUE,
-          list(
+      shiny::tagList(
+        bsplus::bs_modal(
+          id = ns("configure-GSEA"),
+          title = htmltools::tags$h3(glue::glue("Pathway Analysis Options:")),
+          size = "medium",
+          body = list(
             htmltools::tags$div(
               shiny::actionButton(
                 inputId = ns("RunGSEA"),
@@ -57,13 +41,18 @@ GSEA_analysis_inputs_server <-  function(id, r6, parent) {
             tags$br(),
             tags$br()
           ),
-          footer = shiny::tagList(
-            shiny::modalButton(label = "Cancel")
-          )
-        )
+          footer = bsplus::bs_modal_closebutton(label = "Cancel")
+        ),
+        shiny::actionButton(
+          inputId = ns("ConfigureGSEA"),
+          label = "Pathways",
+          icon = icon("network-wired")
+        ) |>
+          shiny::tagAppendAttributes(class = GSEAButtonClass()) |>
+          bsplus::bs_attach_modal(id_modal = ns("configure-GSEA"))
       )
-
-    }, ignoreInit = TRUE)
+      
+    })
 
     observeEvent(c(input$RunGSEA), {
 
