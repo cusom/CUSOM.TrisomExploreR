@@ -72,6 +72,7 @@ feature_analysis_analyte_summary_data_server <- function(id, r6) {
             autowidth = FALSE,
             deferRender = TRUE,
             scrollY = 400,
+            scrollX = TRUE,
             scroller = TRUE,
             buttons = list(
               "colvis",

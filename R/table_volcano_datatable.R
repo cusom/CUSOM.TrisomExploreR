@@ -132,6 +132,7 @@ volcano_data_table_server <- function(id, r6) {
             autowidth = FALSE,
             deferRender = TRUE,
             scrollY = 400,
+            scrollX = TRUE,
             scroller = TRUE,
             buttons = list(
               "colvis",
