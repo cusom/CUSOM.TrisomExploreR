@@ -76,10 +76,10 @@ volcano_data_table_server <- function(id, r6) {
     })
 
     FoldChangeDataTableData <- shiny::eventReactive(
-      c(gargoyle::watch("get_volcano_data", session = session), 
+      c(gargoyle::watch("get_volcano_data", session = session),
         input$SignificanceLevelTableFilter, input$FoldChangeTableFilter
       ), {
-        
+
       validate(
         need(!is.null(r6$VolcanoSummaryData), ""),
         need(!is.null(input$SignificanceLevelTableFilter), ""),
@@ -119,7 +119,7 @@ volcano_data_table_server <- function(id, r6) {
           extensions = list(
             "Buttons" = NULL,
             "ColReorder" = NULL,
-            "Responsive" = NULL,
+            #"Responsive" = NULL,
             "Scroller" = NULL
           ),
           selection = "none",
@@ -141,8 +141,8 @@ volcano_data_table_server <- function(id, r6) {
                 action = DT::JS(
                   paste0(
                     "function ( e, dt, node, config ) {
-                   Shiny.setInputValue('", ns("DataDownload"), "', true, {priority: 'event'});
-                  }"
+                     Shiny.setInputValue('", ns("DataDownload"), "', true, {priority: 'event'});
+                    }"
                   )
                 )
               )

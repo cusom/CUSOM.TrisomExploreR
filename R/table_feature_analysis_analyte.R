@@ -56,7 +56,12 @@ feature_analysis_analyte_summary_data_server <- function(id, r6) {
             ifelse(length(r6$Analyte) > 1, "Selected Analytes Data", glue::glue("{r6$Analyte} Data"))
           ),
           filter = "top",
-          extensions = c("Buttons", "ColReorder", "Responsive", "Scroller"),
+          extensions = list(
+            "Buttons" = NULL,
+            "ColReorder" = NULL,
+            #"Responsive" = NULL,
+            "Scroller" = NULL
+          ),
           selection = "none",
           rownames = FALSE,
           style = "bootstrap",
