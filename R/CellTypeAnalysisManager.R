@@ -104,9 +104,9 @@ CellTypeAnalysisManager <- R6::R6Class(
         dplyr::rename( "CellType" = Specimen ) |>
         dplyr::filter(
           CellType %in% self$CellType,
-          Sex %in% self$Sex | is.na(self$Sex),
-          Age >= min(self$Age) | is.na(self$Age),
-          Age <= max(self$Age) | is.na(self$Age),
+          (Sex %in% self$Sex || is.na(self$Sex)),
+          (Age >= min(self$Age) || is.na(self$Age)),
+          (Age <= max(self$Age) || is.na(self$Age)),
           outlier == FALSE
         ) |>
         dplyr::mutate(
