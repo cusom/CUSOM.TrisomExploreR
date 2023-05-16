@@ -29,7 +29,8 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
         ) |>
           bsplus::bs_embed_tooltip(
             title = "Click here to learn about setting dataset options to generate the volcano plot",
-            placement = "top"
+            placement = "top",
+            html = TRUE
           )
       ),
       shiny::tags$div(
@@ -46,7 +47,8 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
           ) |>
           bsplus::bs_embed_tooltip(
             title = "Select a study below",
-            placement = "top"
+            placement = "top",
+            html = TRUE
           )
         ),
         shiny::tags$br(),

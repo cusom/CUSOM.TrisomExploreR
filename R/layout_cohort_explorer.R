@@ -18,7 +18,8 @@ cohort_explorer_ui <- function (id, ...) {
           ) |>
           bsplus::bs_embed_tooltip(
             title = "Breakdown of controls and T21 by sex",
-            placement = "top"
+            placement = "top",
+            html = TRUE
           )
         ),
         column(
@@ -33,7 +34,8 @@ cohort_explorer_ui <- function (id, ...) {
           ) |>
           bsplus::bs_embed_tooltip(
             title = "Participants ages are represented at the time of enrollment",
-            placement = "top"
+            placement = "top",
+            html = TRUE
           )
         )
       ),
@@ -67,7 +69,8 @@ cohort_explorer_ui <- function (id, ...) {
           ) |>
           bsplus::bs_embed_tooltip(
             title = "Total number of samples available by sample type",
-            placement = "top"
+            placement = "top",
+            html = TRUE
           )
         ),
         column(
@@ -82,7 +85,8 @@ cohort_explorer_ui <- function (id, ...) {
           ) |>
           bsplus::bs_embed_tooltip(
             title = "Number of samples with -omics analyses from the Human Trisome Project",
-            placement = "top"
+            placement = "top",
+            html = TRUE
           )
         )
       ),
@@ -100,7 +104,8 @@ cohort_explorer_ui <- function (id, ...) {
           ) |>
           bsplus::bs_embed_tooltip(
             title = "Current demographic information for participants in the database",
-            placement = "top"
+            placement = "top",
+            html = TRUE
           )
         ),
         column(

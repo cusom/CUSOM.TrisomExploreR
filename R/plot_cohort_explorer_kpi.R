@@ -13,17 +13,20 @@ cohort_explorer_kpi_ui <- function(id) {
         shinydashboard::valueBoxOutput(ns("value2"), width = 3) |>
           bsplus::bs_embed_tooltip(
             title = "Individuals with Trisomy 21 (T21)",
-            placement = "top"
+            placement = "top",
+            html = TRUE
           ),
         shinydashboard::valueBoxOutput(ns("value3"), width = 3) |>
           bsplus::bs_embed_tooltip(
             title = "Individuals with other intellectual and/or developmental disability (IDD) and individuals with sex chromosome anomalies (SCA)",
-            placement = "top"
+            placement = "top",
+            html = TRUE
           ),     
         shinydashboard::valueBoxOutput(ns("value4"), width = 3) |>
           bsplus::bs_embed_tooltip(
             title = "Controls",
-            placement = "top" 
+            placement = "top",
+            html = TRUE
           )
       )
     ),
@@ -34,7 +37,8 @@ cohort_explorer_kpi_ui <- function(id) {
         shinydashboard::valueBoxOutput(ns("value6"), width = 4) |>
           bsplus::bs_embed_tooltip(
             title = "Total participants matching currently selected filters",
-            placement = "top" 
+            placement = "top",
+            html = TRUE
           )
       )
     )

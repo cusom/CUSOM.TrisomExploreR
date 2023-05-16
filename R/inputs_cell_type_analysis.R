@@ -87,7 +87,8 @@ cell_type_inputs_ui <- function(id, input_config) {
           ) |>
           bsplus::bs_embed_tooltip(
             title = 'Genes are searchable by ENTREZ GeneID. <br /> Not all available genes are available in dataset.',
-            placement = "right"
+            placement = "right",
+            html = TRUE
           )
         ),
         htmlOutput(ns("AnalyteSearchError")),                

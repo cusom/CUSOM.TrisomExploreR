@@ -42,7 +42,8 @@ volcano_plot_ui <- function(id) {
           ) |>
           bsplus::bs_embed_tooltip(
             title = "Select from this dropdown",
-            placement = "left"
+            placement = "left",
+            html = TRUE
           ),
           htmlOutput(ns("AnalyteSearchError"))
         ),
