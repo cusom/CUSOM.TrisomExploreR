@@ -1,5 +1,14 @@
+#' Create layout / skeleton / objects for TrisomExploreR cohort explorer
+#' @param id - string - id for this module namespace
+#' @param ... dots - additional arguments (if any) to be passed to sub-modules
+#' @importFrom shinycssloaders withSpinner
+#' @importFrom plotly plotlyOutput
+#' @importFrom bsplus bs_embed_tooltip
+#' @importFrom shinydashboardPlus box
+#' @importFrom leaflet leafletOutput
+#' @return ui module
 #' @export
-cohort_explorer_ui <- function (id, ...) {
+cohort_explorer_ui <- function(id, ...) {
   ns <- NS(id)
   tagList(
     fluidPage(
@@ -145,6 +154,14 @@ cohort_explorer_ui <- function (id, ...) {
 
 }
 
+#' Server-side logic / processing for TrisomExploreR cohort explorer
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic to be utilized by all sub-modules
+#' @param ... dots - additional arguments (if any) to be passed to sub-modules
+#' @importFrom gargoyle init
+#' @importFrom gargoyle watch
+#' @importFrom plotly renderPlotly
+#' @importFrom leaflet renderLeaflet
 #' @export
 cohort_explorer_server <- function(id, r6, ...) {
 
@@ -189,13 +206,6 @@ cohort_explorer_server <- function(id, r6, ...) {
     output$ParticipantStates <- leaflet::renderLeaflet({
       dataWithFilters() |> r6$getParticipantStatesPlot()
     })
-
-    #submodules <- list("inputs","kpi","sex_plot","age_plot","probands_plot","samples_plot","omics_plot","race_ethnicity_plot","state_plot")
-
-    # sapply(submodules, function(submodule) {
-    #   module_name <- glue("cohort_explorer_{submodule}_server")
-    #   do.call(module_name,list(submodule, r6))
-    # })
 
   })
 

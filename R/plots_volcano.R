@@ -1,5 +1,9 @@
 #' Volcano Plot Module
-#'
+#' @param id namespace for this module instance
+#' @importFrom shinydashboardPlus box
+#' @importFrom bsplus bs_embed_tooltip
+#' @importFrom shinycustomloader withLoader
+#' @importFrom plotly renderPlotly
 #' @export
 volcano_plot_ui <- function(id) {
   ns <- shiny::NS(id)
@@ -69,6 +73,17 @@ volcano_plot_ui <- function(id) {
   )
 }
 
+#' server side logic / processing for volcano plot ui module
+#' @param id namespace for this module instance
+#' @param r6 r6 class for data management
+#' @param ... dots - additional arguments passed to other submodules
+#' @import plotly
+#' @import glue
+#' @import shinyjs
+#' @importFrom gargoyle watch
+#' @importFrom gargoyle trigger
+#' @importFrom shinybusy show_modal_spinner
+#' @importFrom shinybusy remove_modal_spinner
 #' @export
 volcano_plot_server <- function(id, r6, ...) {
 

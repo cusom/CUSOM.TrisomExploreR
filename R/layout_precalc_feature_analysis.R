@@ -1,3 +1,8 @@
+#' Create standard layout / skeleton / sub-modules for TrisomExploreR precalculated feature analysis - DESeq2 
+#' Follows same skeleton as standard feature analysis but with precalc specific input module
+#' @param id - string - id for this module namespace
+#' @param ... dots - additional arguments (if any) to be passed to sub-modules
+#' @importFrom shinydashboard tabBox
 #' @export
 precalc_feature_analysis_ui <- function(id, ...) {
   ns <- NS(id)
@@ -54,12 +59,16 @@ precalc_feature_analysis_ui <- function(id, ...) {
   )
 }
 
+#' Server-side logic / processing for TrisomExploreR precalculated feature analysis - DESeq2 
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic to be utilized by all sub-modules
+#' @param ... dots - additional arguments (if any) to be passed to sub-modules
 #' @export
 precalc_feature_analysis_server <- function(id, r6, ...) {
 
   moduleServer(id, function(input, output, session) {
 
-     ns <- session$ns
+    ns <- session$ns
 
     gargoyle::init(
       "get_volcano_data",

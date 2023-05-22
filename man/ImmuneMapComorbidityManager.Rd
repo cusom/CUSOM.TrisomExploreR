@@ -33,7 +33,6 @@ Subclass of ImmuneMapFeatureAnalysisManager R6 Class to enable Immune Map specif
 <ul>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="addGSEAInputClass"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-addGSEAInputClass'><code>TrisomExploreR::FeatureAnalysisManager$addGSEAInputClass()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="addInputSpecialClass"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-addInputSpecialClass'><code>TrisomExploreR::FeatureAnalysisManager$addInputSpecialClass()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="enableGSEAButton"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-enableGSEAButton'><code>TrisomExploreR::FeatureAnalysisManager$enableGSEAButton()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="getAnalyteData"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-getAnalyteData'><code>TrisomExploreR::FeatureAnalysisManager$getAnalyteData()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="getAnalytePlot"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-getAnalytePlot'><code>TrisomExploreR::FeatureAnalysisManager$getAnalytePlot()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="getConditionTree"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-getConditionTree'><code>TrisomExploreR::FeatureAnalysisManager$getConditionTree()</code></a></span></li>
@@ -49,7 +48,6 @@ Subclass of ImmuneMapFeatureAnalysisManager R6 Class to enable Immune Map specif
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="getHiddenInputClass"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-getHiddenInputClass'><code>TrisomExploreR::FeatureAnalysisManager$getHiddenInputClass()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="getSelectedConditionList"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-getSelectedConditionList'><code>TrisomExploreR::FeatureAnalysisManager$getSelectedConditionList()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="getVolcanoPlot"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-getVolcanoPlot'><code>TrisomExploreR::FeatureAnalysisManager$getVolcanoPlot()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="showGSEAButton"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-showGSEAButton'><code>TrisomExploreR::FeatureAnalysisManager$showGSEAButton()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="updateAnalyteAttributes"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-updateAnalyteAttributes'><code>TrisomExploreR::FeatureAnalysisManager$updateAnalyteAttributes()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="ImmuneMapFeatureAnalysisManager" data-id="getAnalysisChoices"><a href='../../TrisomExploreR/html/ImmuneMapFeatureAnalysisManager.html#method-ImmuneMapFeatureAnalysisManager-getAnalysisChoices'><code>TrisomExploreR::ImmuneMapFeatureAnalysisManager$getAnalysisChoices()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="ImmuneMapFeatureAnalysisManager" data-id="getAnalysisInputChoices"><a href='../../TrisomExploreR/html/ImmuneMapFeatureAnalysisManager.html#method-ImmuneMapFeatureAnalysisManager-getAnalysisInputChoices'><code>TrisomExploreR::ImmuneMapFeatureAnalysisManager$getAnalysisInputChoices()</code></a></span></li>
@@ -63,6 +61,7 @@ Subclass of ImmuneMapFeatureAnalysisManager R6 Class to enable Immune Map specif
 \if{html}{\out{<a id="method-ImmuneMapComorbidityManager-new"></a>}}
 \if{latex}{\out{\hypertarget{method-ImmuneMapComorbidityManager-new}{}}}
 \subsection{Method \code{new()}}{
+Create a new instance of a FeatureAnalysisManager
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ImmuneMapComorbidityManager$new(
   applicationName,
@@ -73,11 +72,28 @@ Subclass of ImmuneMapFeatureAnalysisManager R6 Class to enable Immune Map specif
 )}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{applicationName}}{string - name of application}
+
+\item{\code{id}}{string - namespace for this instance}
+
+\item{\code{namespace_config}}{list - configurations for this namespace}
+
+\item{\code{remoteDB}}{R6 class - query manager for remote database queries}
+
+\item{\code{localDB}}{R6 class - query manager for local database queries}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ImmuneMapComorbidityManager-getBaseData"></a>}}
 \if{latex}{\out{\hypertarget{method-ImmuneMapComorbidityManager-getBaseData}{}}}
 \subsection{Method \code{getBaseData()}}{
+Get / set sample level data with filers applied
+Overrides super method with data model specific to Immune Maps data
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ImmuneMapComorbidityManager$getBaseData()}\if{html}{\out{</div>}}
 }

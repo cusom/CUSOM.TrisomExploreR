@@ -3,6 +3,9 @@
 #' Manage ODBC Database connections
 #'
 #' @field connection_open - logical - whether the connection is currently is open or not
+#' @importFrom DBI dbConnect
+#' @importFrom DBI dbDisconnect
+#' @importFrom odbc odbc
 #' @export
 ODBCConnectionManager <- R6::R6Class(
   "ODBCConnectionManager",
@@ -59,6 +62,12 @@ ODBCConnectionManager <- R6::R6Class(
 #' @field parameters - tibble - tibble of parameter names and values
 #' @field convertFactorsToStrings - logical - whether to convert all factors to strings
 #' @field data - tibble - query result formatted as tibble
+#' @import dplyr
+#' @importFrom DBI dbSendQuery
+#' @importFrom DBI dbBind
+#' @importFrom DBI dbFetch
+#' @importFrom DBI dbClearResult
+#'
 #' @export
 ODBCQueryManager <- R6::R6Class(
   "ODBCQueryManager",
@@ -140,6 +149,9 @@ ODBCQueryManager <- R6::R6Class(
 #' Manage SQLite Database connections
 #'
 #' @field connection_open - logical - whether the connection is currently is open or not
+#' @importFrom DBI dbConnect
+#' @importFrom DBI dbDisconnect
+#' @importFrom RSQLite SQLite
 #' @export
 SQLiteConnectionManager <- R6::R6Class(
   "SQLiteConnectionManager",
@@ -187,6 +199,9 @@ SQLiteConnectionManager <- R6::R6Class(
 #' @field queryString - string - Parameterized SQL Query to execute against target database
 #' @field parameters - tibble - tibble of parameter names and values
 #' @field data - tibble - query result formatted as tibble
+#' @import dplyr
+#' @import tidyr
+#' @importFrom glue glue_sql
 #' @export
 SQLiteQueryManager <- R6::R6Class(
   "SQLiteQueryManager",
@@ -195,8 +210,8 @@ SQLiteQueryManager <- R6::R6Class(
 
     #' @description
     #' helper function to set/format parameters tibble
-    #' @field parameters tibble - tibble of parameter values
-    #' @field e - environment - ephemeral environment to load parameter values
+    #' @param parameters tibble - tibble of parameter values
+    #' @param e - environment - ephemeral environment to load parameter values
     set_parameters = function(parameters, e) {
 
       if (!is.null(parameters)) {

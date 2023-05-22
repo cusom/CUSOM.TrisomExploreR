@@ -6,6 +6,9 @@
 \usage{
 volcano_plot_ui(id)
 }
+\arguments{
+\item{id}{namespace for this module instance}
+}
 \description{
 Volcano Plot Module
 }

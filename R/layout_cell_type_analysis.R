@@ -1,3 +1,7 @@
+#' Create standard layout / skeleton / sub-modules for TrisomExploreR cell type analysis 
+#' @param id - string - id for this module namespace
+#' @param ... dots - additional arguments (if any) to be passed to sub-modules
+#' @return ui module
 #' @export
 cell_type_analysis_ui <- function(id, ...) {
   ns <- NS(id)
@@ -19,6 +23,10 @@ cell_type_analysis_ui <- function(id, ...) {
   )
 }
 
+#' Server-side logic / processing for TrisomExploreR cell type analysis 
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic to be utilized by all sub-modules
+#' @importFrom gargoyle init
 #' @export
 cell_type_analysis_server <- function(id, r6) {
 

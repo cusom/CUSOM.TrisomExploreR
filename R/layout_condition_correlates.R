@@ -1,3 +1,7 @@
+#' Create layout / skeleton / objects / submodules for TrisomExploreR condition correlates explorer
+#' @param id - string - id for this module namespace
+#' @param ... dots - additional arguments (if any) to be passed to sub-modules
+#' @importFrom shinydashboard tabBox
 #' @export
 condition_correlates_ui <- function(id, ...) {
   ns <- NS(id)
@@ -55,6 +59,11 @@ condition_correlates_ui <- function(id, ...) {
   )
 }
 
+#' Server-side logic / processing for TrisomExploreR condition correlates explorer
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic to be utilized by all sub-modules
+#' @param ... dots - additional arguments (if any) to be passed to sub-modules
+#' @importFrom gargoyle init
 #' @export
 condition_correlates_server <- function(id, r6, ...) {
 

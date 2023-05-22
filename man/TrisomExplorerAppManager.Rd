@@ -2,11 +2,9 @@
 % Please edit documentation in R/TrisomExplorerAppManager.R
 \name{TrisomExplorerAppManager}
 \alias{TrisomExplorerAppManager}
-\title{R6 Class to}
+\title{R6 Class to manage core TrisomExploreR applications}
 \description{
-R6 Class to
-
-R6 Class to
+R6 Class to manage core TrisomExploreR applications
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -32,10 +30,22 @@ R6 Class to
 \if{html}{\out{<a id="method-TrisomExplorerAppManager-new"></a>}}
 \if{latex}{\out{\hypertarget{method-TrisomExplorerAppManager-new}{}}}
 \subsection{Method \code{new()}}{
+Create a new instance of a TrisomExplorerAppManager
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{TrisomExplorerAppManager$new(ApplicationId, remoteDB, localDB)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{ApplicationId}}{- string - application id}
+
+\item{\code{remoteDB}}{R6 class - query manager for remote database queries}
+
+\item{\code{localDB}}{R6 class - query manager for local database queries}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-TrisomExplorerAppManager-clone"></a>}}

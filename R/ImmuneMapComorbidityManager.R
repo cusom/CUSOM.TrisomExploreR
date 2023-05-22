@@ -2,9 +2,9 @@
 #' @description
 #' Subclass of ImmuneMapFeatureAnalysisManager R6 Class to enable Immune Map specific analysis.
 #'
-#' @field analysisMetadata - 
-#' @field analysisChoices - 
-#' @field Analysis - 
+#' @field analysisMetadata -
+#' @field analysisChoices -
+#' @field Analysis -
 #' @export
 ImmuneMapComorbidityManager <- R6::R6Class(
   "ImmuneMapComorbidityManager",
@@ -14,9 +14,20 @@ ImmuneMapComorbidityManager <- R6::R6Class(
     analysisMetadata = NULL,
     analysisChoices = NULL,
     Analysis = NULL,
+
+    #' @description
+    #' Create a new instance of a FeatureAnalysisManager
+    #' @param applicationName string - name of application
+    #' @param id string - namespace for this instance
+    #' @param namespace_config list - configurations for this namespace
+    #' @param remoteDB R6 class - query manager for remote database queries
+    #' @param localDB R6 class - query manager for local database queries
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
       super$initialize(applicationName, id, namespace_config, remoteDB, localDB)
     },
+    #' @description
+    #' Get / set sample level data with filers applied
+    #' Overrides super method with data model specific to Immune Maps data
     getBaseData = function() {
 
       baseData <- localDB$getQuery(

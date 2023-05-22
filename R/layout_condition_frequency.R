@@ -1,3 +1,5 @@
+#' Create layout / skeleton / objects for TrisomExploreR condition frequency analysis
+#' @param id - string - id for this module namespace
 #' @export
 condition_frequency_ui <- function(id) {
   ns <- NS(id)
@@ -29,6 +31,11 @@ condition_frequency_ui <- function(id) {
 
 }
 
+#' Server-side logic / processing for TrisomExploreR condition frequency analysis
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic to be utilized by all sub-modules
+#' @importFrom gargoyle init
+#' @importFrom glue glue
 #' @export
 condition_frequency_server <- function(id, r6) {
 
@@ -42,7 +49,7 @@ condition_frequency_server <- function(id, r6) {
 
     sapply(submodules, function(submodule) {
       module_name <- glue::glue("condition_frequency_{submodule}_server")
-      do.call(module_name,list(submodule, r6))
+      do.call(module_name, list(submodule, r6))
     })
 
 

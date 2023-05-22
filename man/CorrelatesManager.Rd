@@ -106,8 +106,6 @@ Enables analysis of cross-omics correlations
 \itemize{
 \item \href{#method-CorrelatesManager-new}{\code{CorrelatesManager$new()}}
 \item \href{#method-CorrelatesManager-addGSEAInputClass}{\code{CorrelatesManager$addGSEAInputClass()}}
-\item \href{#method-CorrelatesManager-showGSEAButton}{\code{CorrelatesManager$showGSEAButton()}}
-\item \href{#method-CorrelatesManager-enableGSEAButton}{\code{CorrelatesManager$enableGSEAButton()}}
 \item \href{#method-CorrelatesManager-getVolcanoSummaryData}{\code{CorrelatesManager$getVolcanoSummaryData()}}
 \item \href{#method-CorrelatesManager-getVolcanoPlot}{\code{CorrelatesManager$getVolcanoPlot()}}
 \item \href{#method-CorrelatesManager-getFormattedVolcanoSummaryData}{\code{CorrelatesManager$getFormattedVolcanoSummaryData()}}
@@ -162,46 +160,6 @@ return hidden /shown / disabled / enabled class for GSEA button based on
 
 \subsection{Returns}{
 string
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-CorrelatesManager-showGSEAButton"></a>}}
-\if{latex}{\out{\hypertarget{method-CorrelatesManager-showGSEAButton}{}}}
-\subsection{Method \code{showGSEAButton()}}{
-show or hide GSEA button based on chosen comparison platform
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$showGSEAButton(button_name)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{button_name}}{- name of target button to show/hide}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-none
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-CorrelatesManager-enableGSEAButton"></a>}}
-\if{latex}{\out{\hypertarget{method-CorrelatesManager-enableGSEAButton}{}}}
-\subsection{Method \code{enableGSEAButton()}}{
-Enable / disable GSEA button based on whether or not Volcano Plot is shown
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$enableGSEAButton(button_name)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{button_name}}{- string - name of target button to enable/disable}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-none
 }
 }
 \if{html}{\out{<hr>}}

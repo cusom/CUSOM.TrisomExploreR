@@ -86,8 +86,6 @@ Enables analysis of co-occuring conditions by chosen feature
 \itemize{
 \item \href{#method-ConditionCorrelatesManager-new}{\code{ConditionCorrelatesManager$new()}}
 \item \href{#method-ConditionCorrelatesManager-addGSEAInputClass}{\code{ConditionCorrelatesManager$addGSEAInputClass()}}
-\item \href{#method-ConditionCorrelatesManager-showGSEAButton}{\code{ConditionCorrelatesManager$showGSEAButton()}}
-\item \href{#method-ConditionCorrelatesManager-enableGSEAButton}{\code{ConditionCorrelatesManager$enableGSEAButton()}}
 \item \href{#method-ConditionCorrelatesManager-getQueryAnalytes}{\code{ConditionCorrelatesManager$getQueryAnalytes()}}
 \item \href{#method-ConditionCorrelatesManager-getVolcanoSummaryData}{\code{ConditionCorrelatesManager$getVolcanoSummaryData()}}
 \item \href{#method-ConditionCorrelatesManager-getFormattedVolcanoSummaryData}{\code{ConditionCorrelatesManager$getFormattedVolcanoSummaryData()}}
@@ -146,40 +144,6 @@ return hidden /shown / disabled / enabled class for GSEA button based on
 \if{html}{\out{<div class="r">}}\preformatted{ConditionCorrelatesManager$addGSEAInputClass()}\if{html}{\out{</div>}}
 }
 
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-ConditionCorrelatesManager-showGSEAButton"></a>}}
-\if{latex}{\out{\hypertarget{method-ConditionCorrelatesManager-showGSEAButton}{}}}
-\subsection{Method \code{showGSEAButton()}}{
-show or hide GSEA button based on chosen comparison platform
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ConditionCorrelatesManager$showGSEAButton(button_name)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{button_name}}{- name of target button to show/hide}
-}
-\if{html}{\out{</div>}}
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-ConditionCorrelatesManager-enableGSEAButton"></a>}}
-\if{latex}{\out{\hypertarget{method-ConditionCorrelatesManager-enableGSEAButton}{}}}
-\subsection{Method \code{enableGSEAButton()}}{
-Enable / disable GSEA button based on whether or not Volcano Plot is shown
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ConditionCorrelatesManager$enableGSEAButton(button_name)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{button_name}}{- string - name of target button to enable/disable}
-}
-\if{html}{\out{</div>}}
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ConditionCorrelatesManager-getQueryAnalytes"></a>}}

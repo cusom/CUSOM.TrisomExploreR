@@ -2,11 +2,9 @@
 % Please edit documentation in R/ImmuneMapAppManager.R
 \name{ImmuneMapAppManager}
 \alias{ImmuneMapAppManager}
-\title{R6 Class to}
+\title{R6 Class to manage the Immune Map application - subclass of the core TrisomExplorerAppManager}
 \description{
-R6 Class to
-
-R6 Class to
+subclass of the core TrisomExplorerAppManager - inherits core attributes and methods
 }
 \section{Super class}{
 \code{\link[TrisomExploreR:TrisomExplorerAppManager]{TrisomExploreR::TrisomExplorerAppManager}} -> \code{ImmuneMapAppManager}
@@ -14,7 +12,11 @@ R6 Class to
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{CellType}}{-}
+\item{\code{analysis}}{- string -}
+
+\item{\code{analysisMetadata}}{- tibble -}
+
+\item{\code{CellType}}{- tibble - analysis choices for UI input}
 }
 \if{html}{\out{</div>}}
 }
@@ -29,10 +31,22 @@ R6 Class to
 \if{html}{\out{<a id="method-ImmuneMapAppManager-new"></a>}}
 \if{latex}{\out{\hypertarget{method-ImmuneMapAppManager-new}{}}}
 \subsection{Method \code{new()}}{
+Create a new instance of a ImmuneMapAppManager
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ImmuneMapAppManager$new(ApplicationId, remoteDB, localDB)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{ApplicationId}}{- string - application id}
+
+\item{\code{remoteDB}}{R6 class - query manager for remote database queries}
+
+\item{\code{localDB}}{R6 class - query manager for local database queries}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ImmuneMapAppManager-clone"></a>}}

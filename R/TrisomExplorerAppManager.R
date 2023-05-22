@@ -1,10 +1,10 @@
-#' R6 Class to 
-#' @description 
-#' 
-#' @field app_config - list - 
-#' @field module_config - list - 
-#' @field analysis_config - list - 
-#' @field input_config - list - 
+#' R6 Class to manage core TrisomExploreR applications
+#' @description
+#'  R6 Class to manage core TrisomExploreR applications
+#' @field app_config - list -
+#' @field module_config - list -
+#' @field analysis_config - list -
+#' @field input_config - list -
 #' @export
 TrisomExplorerAppManager <- R6::R6Class(
   "TrisomExplorerAppManager",
@@ -54,6 +54,11 @@ TrisomExplorerAppManager <- R6::R6Class(
       Analytes = NULL
     ),
 
+    #' @description
+    #' Create a new instance of a TrisomExplorerAppManager
+    #' @param ApplicationId - string - application id
+    #' @param remoteDB R6 class - query manager for remote database queries
+    #' @param localDB R6 class - query manager for local database queries
     initialize = function(ApplicationId, remoteDB, localDB){
 
       self$app_config$ApplicationId <- ApplicationId

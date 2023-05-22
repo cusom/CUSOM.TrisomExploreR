@@ -2,16 +2,106 @@
 % Please edit documentation in R/FeatureAnalysisManager.R
 \name{FeatureAnalysisManager}
 \alias{FeatureAnalysisManager}
-\title{R6 Class to}
+\title{R6 Class to  manage Feature Analysis}
 \description{
-R6 Class to
-
-R6 Class to
+R6 Class to  manage Feature Analysis - Karyotype, Sex, Age, BMI, etc.
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
 \item{\code{applicationName}}{- string - application name}
+
+\item{\code{namespace}}{- string - namespace for this class instance}
+
+\item{\code{remoteDB}}{- R6 Class - class to manage remote database queries}
+
+\item{\code{localDB}}{- R6 Class - class to manage local database queries}
+
+\item{\code{analysisVariable}}{- string - feature to be analyzed}
+
+\item{\code{analysisVariableLabel}}{- string - friendly label for analysis variable}
+
+\item{\code{analysisType}}{- string - type of analysis - continuous or categorical}
+
+\item{\code{analytesLabel}}{- string - label to be used for all analytes (Metabolites, Proteins, etc. )}
+
+\item{\code{groupBaselineLabel}}{- string}
+
+\item{\code{FoldChangeVar}}{- string - name of variable indicating fold change or difference (log2FoldChange)}
+
+\item{\code{SignificanceVariable}}{- string - name of variable indiciating significance value (p-value)}
+
+\item{\code{Study}}{- string - selected study}
+
+\item{\code{Platform}}{- string vector - Platform values chosen for analysis}
+
+\item{\code{CellType}}{- string vector - Cell Type values chosen for analysis}
+
+\item{\code{Karyotype}}{- string vector - Karyotype(s) chosen for analysis}
+
+\item{\code{Conditions}}{- string vector - Conditions chosen for analysis}
+
+\item{\code{Sex}}{- string vector - Sex values chosen for analysis}
+
+\item{\code{Age}}{- numeric vector - Age values chosen fo analysis}
+
+\item{\code{FilterLowCount}}{- deprecated?}
+
+\item{\code{StatTest}}{- string - name of statistical test to apply for analysis (Linear Model, etc.)}
+
+\item{\code{Covariates}}{- string vector - names of features to include as covariates in Linear Model analysis}
+
+\item{\code{AdjustmentMethod}}{- string - name of multiple hypothesis correction method to apply to statistical output}
+
+\item{\code{Adjusted}}{- logical - whether the statistical test includes multiple hypothesis correction or not}
+
+\item{\code{SignificanceLabel}}{- string - if adjusted, `q-value`, otherwise `p-value`}
+
+\item{\code{BaseData}}{- sample level data with filters applied}
+
+\item{\code{VolcanoSummaryData}}{- tibble - Fold Change summary data used for volcano plot}
+
+\item{\code{VolcanoSummaryDataXAxisLabel}}{- string - volcano plot x-axis}
+
+\item{\code{VolcanoSummaryDataYAxisLabel}}{- string - volcano plot y-axis}
+
+\item{\code{VolcanoSummaryMaxFoldChange}}{- numeric - maxiumum abs. value of fold change}
+
+\item{\code{VolcanoPlotTitle}}{- string - title to show above volcano plot}
+
+\item{\code{volcanoTopAnnotationLabel}}{- string - label to be shown above top-level volcano plot (Up in X, Increasing with X, etc. )}
+
+\item{\code{volcanoPlotExpectedTraceCount}}{- numeric - number of base traces present in the active volcano plot (usually between 1 - 3)}
+
+\item{\code{VolcanoSummaryDataFoldChangeFilter}}{- deprecated?}
+
+\item{\code{volcanoMultiSelectText}}{- string - text shown below volcano plot when multiple analytes are chosen}
+
+\item{\code{Analyte}}{- string vector - analyte(s) chosen for analysis}
+
+\item{\code{AnalyteSearchName}}{- string - cleaned analyte name for external links}
+
+\item{\code{AnalyteData}}{- tibble - sample level data for chosen analyte(s)}
+
+\item{\code{AnalytePlotMethod}}{- string - one of boxplot, scatterplot, heatmap}
+
+\item{\code{AnalytePlotTitle}}{- string - title for analyte plot}
+
+\item{\code{AnalytePlotStatAnnotation}}{- string - formatted stat annotation to be shown above analyte plot}
+
+\item{\code{AnalytePlotXAxisLabel}}{- string - x-axis label for analyte plot}
+
+\item{\code{HeatmapData}}{- tibble - data to use for heatmap plot when multiple analytes are chosen}
+
+\item{\code{GSEAData}}{- list of ranks, hallmarks, and gsea results}
+
+\item{\code{GSEAAnalytes}}{- character vector - matching analytes for for chosen GSEA pathway}
+
+\item{\code{GSEATraceName}}{- string - name of chosen GSEA pathway}
+
+\item{\code{GSEAGenesetName}}{- string - formatted version of GSEA Trace Name}
+
+\item{\code{GSEAPathwayData}}{- pathway specific data for chosen GSEA pathway}
 }
 \if{html}{\out{</div>}}
 }
@@ -28,8 +118,6 @@ R6 Class to
 \item \href{#method-FeatureAnalysisManager-getHiddenInputClass}{\code{FeatureAnalysisManager$getHiddenInputClass()}}
 \item \href{#method-FeatureAnalysisManager-addInputSpecialClass}{\code{FeatureAnalysisManager$addInputSpecialClass()}}
 \item \href{#method-FeatureAnalysisManager-addGSEAInputClass}{\code{FeatureAnalysisManager$addGSEAInputClass()}}
-\item \href{#method-FeatureAnalysisManager-showGSEAButton}{\code{FeatureAnalysisManager$showGSEAButton()}}
-\item \href{#method-FeatureAnalysisManager-enableGSEAButton}{\code{FeatureAnalysisManager$enableGSEAButton()}}
 \item \href{#method-FeatureAnalysisManager-getBaseData}{\code{FeatureAnalysisManager$getBaseData()}}
 \item \href{#method-FeatureAnalysisManager-getVolcanoSummaryData}{\code{FeatureAnalysisManager$getVolcanoSummaryData()}}
 \item \href{#method-FeatureAnalysisManager-getFormattedVolcanoSummaryData}{\code{FeatureAnalysisManager$getFormattedVolcanoSummaryData()}}
@@ -49,6 +137,7 @@ R6 Class to
 \if{html}{\out{<a id="method-FeatureAnalysisManager-new"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-new}{}}}
 \subsection{Method \code{new()}}{
+Create a new instance of a FeatureAnalysisManager
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$new(
   applicationName,
@@ -59,11 +148,29 @@ R6 Class to
 )}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{applicationName}}{string - name of application}
+
+\item{\code{id}}{string - namespace for this instance}
+
+\item{\code{namespace_config}}{list - configurations for this namespace}
+
+\item{\code{remoteDB}}{R6 class - query manager for remote database queries}
+
+\item{\code{localDB}}{R6 class - query manager for local database queries}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getGetDataButtonClass"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getGetDataButtonClass}{}}}
 \subsection{Method \code{getGetDataButtonClass()}}{
+helper function to toggle "Get Data" button class based on conditions
+enabled / green if study is chosen, organge / disabled otherwise
+enabled / green if namespace is comorb / conditions are chosen, diabled otherwise
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getGetDataButtonClass()}\if{html}{\out{</div>}}
 }
@@ -73,24 +180,41 @@ R6 Class to
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getKaryotypeChoices"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getKaryotypeChoices}{}}}
 \subsection{Method \code{getKaryotypeChoices()}}{
+helper function to get Karyotype input options based on namespace
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getKaryotypeChoices(karyotypes)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{karyotypes}}{string vector of karyotypes for input widget}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getConditionTree"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getConditionTree}{}}}
 \subsection{Method \code{getConditionTree()}}{
+helper function to get hierarchical condition input values
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getConditionTree(conditions)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{conditions}}{- tibble of condition hierarchy choices}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getSelectedConditionList"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getSelectedConditionList}{}}}
 \subsection{Method \code{getSelectedConditionList()}}{
+get aggregated HTML string of chosen conditions with line breaks per condition
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getSelectedConditionList()}\if{html}{\out{</div>}}
 }
@@ -100,6 +224,8 @@ R6 Class to
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getCovariateChoices"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getCovariateChoices}{}}}
 \subsection{Method \code{getCovariateChoices()}}{
+helper function to get covariate choices based on namespace
+if namespace is Age, remove age, if Sex, remove sex
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getCovariateChoices()}\if{html}{\out{</div>}}
 }
@@ -109,24 +235,41 @@ R6 Class to
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getDisabledInputClass"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getDisabledInputClass}{}}}
 \subsection{Method \code{getDisabledInputClass()}}{
+helper function to disable an input if it matches the name of the namespace
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getDisabledInputClass(inputName)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{inputName}}{name of input widget}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getHiddenInputClass"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getHiddenInputClass}{}}}
 \subsection{Method \code{getHiddenInputClass()}}{
+helper function to hide an input if it matches the name of the namespace
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getHiddenInputClass(inputName)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{inputName}}{name of input widget}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-addInputSpecialClass"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-addInputSpecialClass}{}}}
 \subsection{Method \code{addInputSpecialClass()}}{
+helper function to add a diabled or hidden class to an input if it matches the name of the namespace
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$addInputSpecialClass(
   inputName,
@@ -134,31 +277,25 @@ R6 Class to
 )}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{inputName}}{name of input widget}
+
+\item{\code{class}}{string - one of `disabled` or `hide`}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-addGSEAInputClass"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-addGSEAInputClass}{}}}
 \subsection{Method \code{addGSEAInputClass()}}{
+helper function to hide / show, disable / enable GSEA Pathway analysis based on conditions
+If study is one of SOMA / RNASeq, show
+If volcano summary plot has been rendered, enable button
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$addGSEAInputClass()}\if{html}{\out{</div>}}
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-FeatureAnalysisManager-showGSEAButton"></a>}}
-\if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-showGSEAButton}{}}}
-\subsection{Method \code{showGSEAButton()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$showGSEAButton(button_name)}\if{html}{\out{</div>}}
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-FeatureAnalysisManager-enableGSEAButton"></a>}}
-\if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-enableGSEAButton}{}}}
-\subsection{Method \code{enableGSEAButton()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$enableGSEAButton(button_name)}\if{html}{\out{</div>}}
 }
 
 }
@@ -166,6 +303,7 @@ R6 Class to
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getBaseData"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getBaseData}{}}}
 \subsection{Method \code{getBaseData()}}{
+Get / set sample level data with filers applied
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getBaseData()}\if{html}{\out{</div>}}
 }
@@ -175,6 +313,7 @@ R6 Class to
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getVolcanoSummaryData"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getVolcanoSummaryData}{}}}
 \subsection{Method \code{getVolcanoSummaryData()}}{
+Set Volcano Summary Data along with other volcano plot properties
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getVolcanoSummaryData()}\if{html}{\out{</div>}}
 }
@@ -184,24 +323,43 @@ R6 Class to
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getFormattedVolcanoSummaryData"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getFormattedVolcanoSummaryData}{}}}
 \subsection{Method \code{getFormattedVolcanoSummaryData()}}{
+get user-friendly formatted VolcanoSummaryData
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getFormattedVolcanoSummaryData(.data)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{.data}}{tibble of volcano summary data to format}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getVolcanoPlot"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getVolcanoPlot}{}}}
 \subsection{Method \code{getVolcanoPlot()}}{
+Get volcano plot
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getVolcanoPlot(.data, ns)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{.data}}{tibble - data for volcano plot}
+
+\item{\code{ns}}{- namespace to apply to plot object}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-updateAnalyteAttributes"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-updateAnalyteAttributes}{}}}
 \subsection{Method \code{updateAnalyteAttributes()}}{
+helper function to update various attributes for the chosen analyte
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$updateAnalyteAttributes()}\if{html}{\out{</div>}}
 }
@@ -211,6 +369,7 @@ R6 Class to
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getAnalyteData"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getAnalyteData}{}}}
 \subsection{Method \code{getAnalyteData()}}{
+get sample level data for selected analyte(s)
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getAnalyteData()}\if{html}{\out{</div>}}
 }
@@ -220,24 +379,44 @@ R6 Class to
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getAnalytePlot"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getAnalytePlot}{}}}
 \subsection{Method \code{getAnalytePlot()}}{
+Get analyte plot
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getAnalytePlot(.data, ns)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{.data}}{tibble - data for analyte plot}
+
+\item{\code{ns}}{- namespace to apply to plot object}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getFormattedAnalyteSummaryData"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getFormattedAnalyteSummaryData}{}}}
 \subsection{Method \code{getFormattedAnalyteSummaryData()}}{
+Get formatted analyte plot data for data table
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getFormattedAnalyteSummaryData(.data)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{.data}}{- analyte sample level data}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getGSEAData"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getGSEAData}{}}}
 \subsection{Method \code{getGSEAData()}}{
+Get GSEA data
+** INCLUDES penalized calculation for ranks = `-log10pvalue` * CorrelationValue
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getGSEAData()}\if{html}{\out{</div>}}
 }
@@ -247,28 +426,56 @@ R6 Class to
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getGSEAPlot"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getGSEAPlot}{}}}
 \subsection{Method \code{getGSEAPlot()}}{
+Get GSEA plot - top 25
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getGSEAPlot(.data, ns)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{.data}}{- data for plot}
+
+\item{\code{ns}}{- namespace to apply to plot object}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getGSEAPathwayData"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getGSEAPathwayData}{}}}
 \subsection{Method \code{getGSEAPathwayData()}}{
+Set selected GSEA pathway data
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getGSEAPathwayData(pathName)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{pathName}}{- string - selected pathway name}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getGSEAEnrichmentPlot"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getGSEAEnrichmentPlot}{}}}
 \subsection{Method \code{getGSEAEnrichmentPlot()}}{
+Get selected GSEA pathway enrichment plot
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getGSEAEnrichmentPlot(.data, ns)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{.data}}{- data used for plot}
+
+\item{\code{ns}}{- namespace to apply to plot object}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-clone"></a>}}

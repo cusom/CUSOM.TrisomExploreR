@@ -1,3 +1,8 @@
+#' Create layout / skeleton / sub-modules for TrisomExploreR Immune Maps specific cross-omics correlates analysis
+#' Follows standard layout for correlates analysis, except Immune Map inputs are different
+#' @param id - string - id for this module namespace
+#' @param ... dots - additional arguments (if any) to be passed to sub-modules
+#' @importFrom shinydashboard tabBox
 #' @export
 immunemap_correlates_ui <- function(id, ...) {
   ns <- NS(id)
@@ -56,6 +61,11 @@ immunemap_correlates_ui <- function(id, ...) {
   )
 }
 
+#' Server-side logic / processing for TrisomExploreR Immune Maps specific cross-omics correlates analysis
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic to be utilized by all sub-modules
+#' @param ... dots - additional arguments (if any) to be passed to sub-modules
+#' @importFrom gargoyle init
 #' @export
 immunemap_correlates_server <- function(id, r6, ...) {
 
@@ -64,13 +74,13 @@ immunemap_correlates_server <- function(id, r6, ...) {
     ns <- session$ns
 
     gargoyle::init(
-      "get_correlates_data", 
+      "get_correlates_data",
       "sync_analyte_choice",
-      "show_analyte_plot", 
-      "show_download_modal", 
+      "show_analyte_plot",
+      "show_download_modal",
       "validate_GSEA",
-      "run_GSEA", 
-      "get_GSEA_path_data", 
+      "run_GSEA",
+      "get_GSEA_path_data",
       session = session
     )
 

@@ -1,11 +1,11 @@
-#' R6 Class to manage Clincal Data Application  
-#' @description 
+#' R6 Class to manage Clincal Data Application
+#' @description
 #' Sets application-wide configurations, module configurations,
 #' analysis configurations and default input values
 #' @field app_config - list - application-wide configrations (applicationid, title, label, etc.)
-#' @field module_config - list - module-namespace configurations 
+#' @field module_config - list - module-namespace configurations
 #' @field analysis_config - list - namespace-specific analysis options / configurations
-#' @field input_config - list - application-wide default input values 
+#' @field input_config - list - application-wide default input values
 #' @import dplyr
 #' @import tibble
 #' @import tidyr
@@ -53,12 +53,12 @@ ClinicalDataAppManager <- R6::R6Class(
       ConditionClassData = NULL,
       PlatformExperiments = NULL
     ),
-    
+
     #' @description
     #' Create a new instance of a ClinicalDataAppManager object
-    #' @param ApplicationId string - ApplicationId 
-    #' @param remoteDB R6 class to manage remote database queries 
-    #' @param localDB R6 class to manange local database queries 
+    #' @param ApplicationId string - ApplicationId
+    #' @param remoteDB R6 class to manage remote database queries
+    #' @param localDB R6 class to manange local database queries
     #' @return A new `ClinicalDataAppManager` object.
     initialize = function(ApplicationId, remoteDB, localDB){
 
@@ -157,7 +157,6 @@ ClinicalDataAppManager <- R6::R6Class(
           SortOrder = dplyr::case_when(
             OMICSSampleAvailable == "Transcriptome" ~ 1,
             OMICSSampleAvailable == "Proteome" ~ 2,
-            OMICSSampleAvailable == "Proteome-SomaScan®" ~ 3,
             OMICSSampleAvailable == "Metabolome" ~ 4,
             OMICSSampleAvailable == "Immune Map" ~ 5,
             TRUE ~ 6

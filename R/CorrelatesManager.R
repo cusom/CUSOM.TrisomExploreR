@@ -156,37 +156,6 @@ CorrelatesManager <- R6::R6Class(
     },
 
     #' @description
-    #' show or hide GSEA button based on chosen comparison platform
-    #' @param button_name - name of target button to show/hide
-    #'  
-    #' @return none
-    showGSEAButton = function(button_name) {
-      if (grepl('SOMA',self$ComparisonPlatform) | grepl('RNA', self$ComparisonPlatform)) {
-        return(
-          do.call(shinyjs::show, list(button_name))
-        )
-      }
-      else {
-        return(
-          do.call(shinyjs::hide, list(button_name))
-        )
-      }
-    },
-
-    #' @description
-    #' Enable / disable GSEA button based on whether or not Volcano Plot is shown
-    #' @param button_name - string - name of target button to enable/disable 
-    #' @return none
-    enableGSEAButton = function(button_name) {
-      if(!is.null(self$VolcanoSummaryData)) {
-        do.call(shinyjs::enable, list(button_name))
-      }
-      else {
-        do.call(shinyjs::disable, list(button_name))
-      }
-    },
-
-    #' @description
     #' Set Volcano Summary Data along with other volcano plot properties 
     #'  
     #' @return none

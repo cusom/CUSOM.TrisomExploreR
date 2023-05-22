@@ -1,53 +1,65 @@
-#' R6 Class to
+#' R6 Class to  manage Feature Analysis
 #' @description
-#'
+#' R6 Class to  manage Feature Analysis - Karyotype, Sex, Age, BMI, etc.
 #' @field applicationName - string - application name
-#' @field namespace
-#' @field remoteDB
-#' @field localDB
-#' @field analysisVariable
-#' @field analysisVariableLabel
-#' @field analysisType
-#' @field analytesLabel
-#' @field groupBaselineLabel
-#' @field FoldChangeVar
-#' @field SignificanceVariable
-#' @field Study
-#' @field Platform
-#' @field CellType
-#' @field Karyotype
-#' @field Conditions
-#' @field Sex
-#' @field Age
-#' @field FilterLowCount
-#' @field StatTest
-#' @field Covariates
-#' @field AdjustmentMethod
-#' @field Adjusted
-#' @field SignificanceLabel
-#' @field BaseData
-#' @field VolcanoSummaryData
-#' @field VolcanoSummaryDataXAxisLabel
-#' @field VolcanoSummaryDataYAxisLabel
-#' @field VolcanoSummaryMaxFoldChange
-#' @field VolcanoPlotTitle
-#' @field volcanoTopAnnotationLabel
-#' @field volcanoPlotExpectedTraceCount
-#' @field VolcanoSummaryDataFoldChangeFilter
-#' @field volcanoMultiSelectText
-#' @field Analyte
-#' @field AnalyteSearchName
-#' @field AnalyteData
-#' @field AnalytePlotMethod
-#' @field AnalytePlotTitle
-#' @field AnalytePlotStatAnnotation
-#' @field AnalytePlotXAxisLabel
-#' @field HeatmapData
-#' @field GSEAData
-#' @field GSEAAnalytes
-#' @field GSEATraceName
-#' @field GSEAGenesetName
-#' @field GSEAPathwayData
+#' @field namespace - string - namespace for this class instance
+#' @field remoteDB - R6 Class - class to manage remote database queries
+#' @field localDB - R6 Class - class to manage local database queries
+#' @field analysisVariable - string - feature to be analyzed
+#' @field analysisVariableLabel - string - friendly label for analysis variable
+#' @field analysisType - string - type of analysis - continuous or categorical
+#' @field analytesLabel - string - label to be used for all analytes (Metabolites, Proteins, etc. )
+#' @field groupBaselineLabel - string
+#' @field FoldChangeVar - string - name of variable indicating fold change or difference (log2FoldChange)
+#' @field SignificanceVariable - string - name of variable indiciating significance value (p-value)
+#' @field Study - string - selected study
+#' @field Platform - string vector - Platform values chosen for analysis
+#' @field CellType - string vector - Cell Type values chosen for analysis
+#' @field Karyotype - string vector - Karyotype(s) chosen for analysis
+#' @field Conditions - string vector - Conditions chosen for analysis
+#' @field Sex - string vector - Sex values chosen for analysis
+#' @field Age - numeric vector - Age values chosen fo analysis
+#' @field FilterLowCount - deprecated?
+#' @field StatTest - string - name of statistical test to apply for analysis (Linear Model, etc.)
+#' @field Covariates - string vector - names of features to include as covariates in Linear Model analysis
+#' @field AdjustmentMethod - string - name of multiple hypothesis correction method to apply to statistical output
+#' @field Adjusted - logical - whether the statistical test includes multiple hypothesis correction or not
+#' @field SignificanceLabel - string - if adjusted, `q-value`, otherwise `p-value`
+#' @field BaseData - sample level data with filters applied
+#' @field VolcanoSummaryData - tibble - Fold Change summary data used for volcano plot
+#' @field VolcanoSummaryDataXAxisLabel - string - volcano plot x-axis
+#' @field VolcanoSummaryDataYAxisLabel - string - volcano plot y-axis
+#' @field VolcanoSummaryMaxFoldChange - numeric - maxiumum abs. value of fold change
+#' @field VolcanoPlotTitle - string - title to show above volcano plot
+#' @field volcanoTopAnnotationLabel - string - label to be shown above top-level volcano plot (Up in X, Increasing with X, etc. )
+#' @field volcanoPlotExpectedTraceCount - numeric - number of base traces present in the active volcano plot (usually between 1 - 3)
+#' @field VolcanoSummaryDataFoldChangeFilter - deprecated?
+#' @field volcanoMultiSelectText - string - text shown below volcano plot when multiple analytes are chosen
+#' @field Analyte - string vector - analyte(s) chosen for analysis
+#' @field AnalyteSearchName - string - cleaned analyte name for external links
+#' @field AnalyteData - tibble - sample level data for chosen analyte(s)
+#' @field AnalytePlotMethod - string - one of boxplot, scatterplot, heatmap
+#' @field AnalytePlotTitle - string - title for analyte plot
+#' @field AnalytePlotStatAnnotation - string - formatted stat annotation to be shown above analyte plot
+#' @field AnalytePlotXAxisLabel - string - x-axis label for analyte plot
+#' @field HeatmapData - tibble - data to use for heatmap plot when multiple analytes are chosen
+#' @field GSEAData - list of ranks, hallmarks, and gsea results
+#' @field GSEAAnalytes - character vector - matching analytes for for chosen GSEA pathway
+#' @field GSEATraceName - string - name of chosen GSEA pathway
+#' @field GSEAGenesetName - string - formatted version of GSEA Trace Name
+#' @field GSEAPathwayData - pathway specific data for chosen GSEA pathway
+#' @import dplyr
+#' @import tidyr
+#' @import tibble
+#' @import purrr
+#' @import glue
+#' @import plotly
+#' @importFrom htmlwidgets onRender
+#' @importFrom shinyTree get_selected
+#' @importFrom stringr str_c
+#' @importFrom stringr str_split
+#' @importFrom heatmaply heatmaply
+#' @importFrom fgsea calcGseaStat
 #' @export
 FeatureAnalysisManager <- R6::R6Class(
   "FeatureAnalysisManager",
@@ -108,6 +120,13 @@ FeatureAnalysisManager <- R6::R6Class(
     GSEAGenesetName = "",
     GSEAPathwayData = NULL,
 
+    #' @description
+    #' Create a new instance of a FeatureAnalysisManager
+    #' @param applicationName string - name of application
+    #' @param id string - namespace for this instance
+    #' @param namespace_config list - configurations for this namespace
+    #' @param remoteDB R6 class - query manager for remote database queries
+    #' @param localDB R6 class - query manager for local database queries
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
 
       self$applicationName <- applicationName
@@ -125,6 +144,10 @@ FeatureAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' helper function to toggle "Get Data" button class based on conditions
+    #' enabled / green if study is chosen, organge / disabled otherwise
+    #' enabled / green if namespace is comorb / conditions are chosen, diabled otherwise
     getGetDataButtonClass = function() {
       if (is.null(self$Study)) {
         return("refresh-btn shinyjs-disabled")
@@ -139,6 +162,9 @@ FeatureAnalysisManager <- R6::R6Class(
       }
     },
 
+    #' @description
+    #' helper function to get Karyotype input options based on namespace
+    #' @param karyotypes string vector of karyotypes for input widget
     getKaryotypeChoices = function(karyotypes) {
 
       if (self$namespace == "Karyotype") {
@@ -198,7 +224,7 @@ FeatureAnalysisManager <- R6::R6Class(
           ) |>
           dplyr::arrange(sort)
 
-        if(self$analysisType == "Continuous") {
+        if (self$analysisType == "Continuous") {
           return(
             karyotypeInputCounts |>
               dplyr::bind_rows(
@@ -231,13 +257,16 @@ FeatureAnalysisManager <- R6::R6Class(
       }
     },
 
+    #' @description
+    #' helper function to get hierarchical condition input values
+    #' @param conditions - tibble of condition hierarchy choices
     getConditionTree = function(conditions) {
 
       tree <- conditions |>
         CUSOMShinyHelpers::dfToTree()
 
       if (!is.null(self$Conditions)) {
-        selected_nodes <- get_selected(self$Conditions, format = "classid") |>
+        selected_nodes <- shinyTree::get_selected(self$Conditions, format = "classid") |>
           unlist() |>
           tibble::as_tibble() |>
           dplyr::pull()
@@ -260,6 +289,8 @@ FeatureAnalysisManager <- R6::R6Class(
       )
     },
 
+    #' @description
+    #' get aggregated HTML string of chosen conditions with line breaks per condition
     getSelectedConditionList = function() {
       return(
         shinyTree::get_selected(self$Conditions, "classid") |>
@@ -273,12 +304,18 @@ FeatureAnalysisManager <- R6::R6Class(
       )
     },
 
+    #' @description
+    #' helper function to get covariate choices based on namespace
+    #' if namespace is Age, remove age, if Sex, remove sex
     getCovariateChoices = function() {
       return(
         setdiff(c("Age", "Sex"), self$analysisVariable)
       )
     },
 
+    #' @description
+    #' helper function to disable an input if it matches the name of the namespace
+    #' @param inputName name of input widget
     getDisabledInputClass = function(inputName) {
       if (self$analysisVariable == inputName) {
         return(
@@ -287,6 +324,9 @@ FeatureAnalysisManager <- R6::R6Class(
       }
     },
 
+    #' @description
+    #' helper function to hide an input if it matches the name of the namespace
+    #' @param inputName name of input widget
     getHiddenInputClass = function(inputName) {
       if (self$analysisVariable == inputName) {
         return(
@@ -295,7 +335,11 @@ FeatureAnalysisManager <- R6::R6Class(
       }
     },
 
-    addInputSpecialClass = function(inputName, class = c("disabled", "hide")){
+    #' @description
+    #' helper function to add a diabled or hidden class to an input if it matches the name of the namespace
+    #' @param inputName name of input widget
+    #' @param class string - one of `disabled` or `hide`
+    addInputSpecialClass = function(inputName, class = c("disabled", "hide")) {
       class <- match.arg(class)
       if (self$analysisVariable == inputName) {
         return(
@@ -304,6 +348,10 @@ FeatureAnalysisManager <- R6::R6Class(
       }
     },
 
+    #' @description
+    #' helper function to hide / show, disable / enable GSEA Pathway analysis based on conditions
+    #' If study is one of SOMA / RNASeq, show
+    #' If volcano summary plot has been rendered, enable button
     addGSEAInputClass = function() {
       hide <- "hide"
       disabled <- "disabled"
@@ -320,28 +368,8 @@ FeatureAnalysisManager <- R6::R6Class(
       )
     },
 
-    showGSEAButton = function(button_name) {
-      if (grepl("SOMA", self$Study) | grepl("RNA", self$Study)) {
-        return(
-          do.call(shinyjs::show, list(button_name))
-        )
-      }
-      else {
-        return(
-          do.call(shinyjs::hide, list(button_name))
-        )
-      }
-    },
-
-    enableGSEAButton = function(button_name) {
-      if (!is.null(self$VolcanoSummaryData)) {
-        do.call(shinyjs::enable, list(button_name))
-      }
-      else {
-        do.call(shinyjs::disable, list(button_name))
-      }
-    },
-
+    #' @description
+    #' Get / set sample level data with filers applied
     getBaseData = function() {
 
       self$BaseData <- self$localDB$getQuery(
@@ -368,13 +396,16 @@ FeatureAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' Set Volcano Summary Data along with other volcano plot properties
+    #'
     getVolcanoSummaryData = function() {
 
       self$getBaseData()
 
       self$Adjusted <- self$AdjustmentMethod != "none"
 
-      if(self$analysisType == "Categorical") {
+      if (self$analysisType == "Categorical") {
 
         dataframe <- self$BaseData |>
           dplyr::select(LabID, Analyte, log2MeasuredValue, self$analysisVariable, self$Covariates) |>
@@ -437,6 +468,9 @@ FeatureAnalysisManager <- R6::R6Class(
       }
     },
 
+    #' @description
+    #' get user-friendly formatted VolcanoSummaryData
+    #' @param .data tibble of volcano summary data to format
     getFormattedVolcanoSummaryData =  function(.data) {
 
       adjustedInd <- self$AdjustmentMethod != "none"
@@ -452,6 +486,11 @@ FeatureAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' Get volcano plot
+    #' @param .data tibble - data for volcano plot
+    #' @param ns - namespace to apply to plot object
+    #'
     getVolcanoPlot = function(.data, ns) {
 
       .data <- .data |>
@@ -552,6 +591,8 @@ FeatureAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' helper function to update various attributes for the chosen analyte
     updateAnalyteAttributes = function() {
 
       self$AnalyteSearchName <- CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)
@@ -587,6 +628,8 @@ FeatureAnalysisManager <- R6::R6Class(
       }
     },
 
+    #' @description
+    #' get sample level data for selected analyte(s)
     getAnalyteData = function() {
 
       self$AnalytePlotMethod <- getAnalytePlotMethod(self$analysisType, length(self$Analyte))
@@ -646,6 +689,10 @@ FeatureAnalysisManager <- R6::R6Class(
       }
     },
 
+    #' @description
+    #' Get analyte plot
+    #' @param .data tibble - data for analyte plot
+    #' @param ns - namespace to apply to plot object
     getAnalytePlot = function(.data, ns) {
 
       if (self$AnalytePlotMethod == "boxplot") {
@@ -949,6 +996,9 @@ FeatureAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' Get formatted analyte plot data for data table
+    #' @param .data - analyte sample level data
     getFormattedAnalyteSummaryData =  function(.data) {
 
       if (self$AnalytePlotMethod == "boxplot") {
@@ -986,6 +1036,11 @@ FeatureAnalysisManager <- R6::R6Class(
       }
 
     },
+
+    #' @description
+    #' Get GSEA data
+    #' ** INCLUDES penalized calculation for ranks = `-log10pvalue` * CorrelationValue
+    #'
     getGSEAData = function() {
 
       ranks <- self$VolcanoSummaryData |>
@@ -1017,6 +1072,10 @@ FeatureAnalysisManager <- R6::R6Class(
       )
     },
 
+    #' @description
+    #' Get GSEA plot - top 25
+    #' @param .data - data for plot
+    #' @param ns - namespace to apply to plot object
     getGSEAPlot = function(.data, ns) {
 
       data <- .data$gsea |>
@@ -1117,6 +1176,9 @@ FeatureAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' Set selected GSEA pathway data
+    #' @param pathName - string - selected pathway name
     getGSEAPathwayData = function(pathName) {
 
       gseaParam <- 0
@@ -1193,6 +1255,10 @@ FeatureAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' Get selected GSEA pathway enrichment plot
+    #' @param .data - data used for plot
+    #' @param ns - namespace to apply to plot object
     getGSEAEnrichmentPlot = function(.data, ns) {
 
       p <- CUSOMShinyHelpers::plotGSEAEnrichment(
@@ -1236,6 +1302,10 @@ FeatureAnalysisManager <- R6::R6Class(
   )
 )
 
+#' small helper function to determine plot method for instance/namespace
+#' @param analysisType - string - analysis type for this instance/namespace
+#' @param analyteCount int - number of selected analytes
+#' @return string
 getAnalytePlotMethod <- function(analysisType, analyteCount) {
   if(analyteCount > 1) {
     return("heatmap")
@@ -1251,6 +1321,12 @@ getAnalytePlotMethod <- function(analysisType, analyteCount) {
   }
 }
 
+#' small helper function to generate plot title based on criteria
+#' @param analysisVariable - string - name of analysis variable
+#' @param plotMethod - string - one of boxplot, scatterplot, or heatmap
+#' @param analyte - string vector - vector of chosen analytes
+#' @param groupVariable - string - grouping variable used in analysis (Karyotype)
+#' @return string
 getAnalytePlotTitle <- function(analysisVariable, plotMethod, analyte, groupVariable) {
 
   groupVarCount <- length(stringr::str_split(groupVariable, pattern = ";", simplify = TRUE))
@@ -1266,6 +1342,9 @@ getAnalytePlotTitle <- function(analysisVariable, plotMethod, analyte, groupVari
   }
 }
 
+#' small helper function to generate x-axis label for analyte plot
+#' @param namespace - string - namespace
+#' @param analysisVariable - string - name of analysis variable
 getAnalytePlotXAxisLabel <- function(namespace, analysisVariable) {
   if (namespace == "Comorbidity") {
     return(
