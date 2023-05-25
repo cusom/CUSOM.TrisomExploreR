@@ -3,18 +3,18 @@
 #' @param ... dots - additional arguments (if any) to be passed to sub-modules
 #' @export
 condition_interactions_ui <- function(id, ...) {
-  ns <- NS(id)
-  tagList(
-    fluidRow(
-      column(
+  ns <- shiny::NS(id)
+  shiny::tagList(
+    shiny::fluidRow(
+      shiny::column(
         width = 12, class = "col-lg-2",
-        div(
+        shiny::div(
           id = ns("Dataset-Options"),
           class = "sidebar-text",
           TrisomExploreR::condition_interactions_inputs_ui(ns("inputs"), ...)
         )
       ),
-      column(
+      shiny::column(
         width = 12, class = "col-lg-10",
         TrisomExploreR::condition_interactions_plot_ui(ns("plot"))
       )
@@ -31,7 +31,7 @@ condition_interactions_ui <- function(id, ...) {
 #' @export
 condition_interactions_server <- function(id, r6, ...) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 

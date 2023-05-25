@@ -1,18 +1,30 @@
+#' Create input widgets for TrisomExploreR feature analysis
+#' @param id - string - id for this module namespace
+#' @param input_config - list - list of default values for various input widgets
+#' @importFrom shinydashboardPlus box
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom shinyWidgets awesomeCheckboxGroup
+#' @importFrom shinyWidgets numericRangeInput
+#' @import shinyjs
+#' @importFrom bsplus bs_embed_tooltip
+#' @importFrom CUSOMShinyHelpers prettyRadioButtonsFieldSet
+#' @importFrom shinycustomloader withLoader
 #' @export
 feature_analysis_inputs_ui <- function(id, input_config) {
   ns <- shiny::NS(id)
   shiny::tagList(
     shinydashboardPlus::box(
       title = shiny::HTML(
-        '<div class="dataset-options-title">Dataset Options
+        "<div class=\"dataset-options-title\">Dataset Options
           <span
-            data-toggle="tooltip"
-            data-placement="auto right"
-            title = ""
-            class = "fas fa-filter"
-            data-original-title="Set options below to generate volcano plot">
+            data-toggle=\"tooltip\"
+            data-placement=\"auto right\"
+            title = \"\"
+            class = \"fas fa-filter\"
+            data-original-title=\"Set options below to generate volcano plot\">
           </span>
-        </div>'
+        </div>"
       ),
       height = "auto",
       width = NULL,
@@ -59,7 +71,7 @@ feature_analysis_inputs_ui <- function(id, input_config) {
           proxy.height = "20px"
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        conditions_feature_analysis_inputs_ui(ns("conditions")),
+        TrisomExploreR::conditions_feature_analysis_inputs_ui(ns("conditions")),
         shinycustomloader::withLoader(
           uiOutput(ns("Sex")),
           type = "html",
@@ -121,10 +133,20 @@ feature_analysis_inputs_ui <- function(id, input_config) {
 
 }
 
+#' Server-side logic / processing for TrisomExploreR feature analysis inputs
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic for inputs
+#' @param input_config - list - list of default values for various input widgets to be used server-side
+#' @import shinyjs
+#' @importFrom gargoyle trigger
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom shinyWidgets awesomeCheckboxGroup
+#' @importFrom shinyWidgets numericRangeInput
 #' @export
 feature_analysis_inputs_server <- function(id, r6, input_config) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
@@ -142,10 +164,10 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
       parent_input = input
     )
 
-    observeEvent(c(input$Study), {
-      validate(
-        need(!is.null(input$Study), ""),
-        need(input$Study != "", "")
+    shiny::observeEvent(c(input$Study), {
+      shiny::validate(
+        shiny::need(!is.null(input$Study), ""),
+        shiny::need(input$Study != "", "")
       )
 
       shinyjs::removeClass(
@@ -172,11 +194,11 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
 
     }, ignoreInit = TRUE)
 
-    output$Karyotype <- renderUI({
+    output$Karyotype <- shiny::renderUI({
 
-      validate(
-        need(!is.null(input$Study), ""),
-        need(input$Study != "", "")
+      shiny::validate(
+        shiny::need(!is.null(input$Study), ""),
+        shiny::need(input$Study != "", "")
       )
 
       karyotypeChoices <- r6$getKaryotypeChoices(input_config$karyotypes)
@@ -190,18 +212,20 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
         width = "90%"
       )
 
-      if(nrow(karyotypeChoices) == 1) {
+      if (nrow(karyotypeChoices) == 1) {
         shinyjs::disabled(
           input
         )
       } else {
         input |>
-          shiny::tagAppendAttributes(class = r6$addInputSpecialClass("Karyotype","disabled"))
+          shiny::tagAppendAttributes(
+            class = r6$addInputSpecialClass("Karyotype", "disabled")
+          )
       }
 
     })
 
-    output$Sex <- renderUI({
+    output$Sex <- shiny::renderUI({
 
       shinyWidgets::awesomeCheckboxGroup(
         inputId = ns("Sex"),
@@ -211,20 +235,22 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
         inline = TRUE,
         width = "90%"
       ) |>
-      shiny::tagAppendAttributes(class = r6$addInputSpecialClass("Sex","disabled"))
+      shiny::tagAppendAttributes(
+        class = r6$addInputSpecialClass("Sex", "disabled")
+        )
 
     })
 
-    conditions_feature_analysis_inputs_server(
+    TrisomExploreR::conditions_feature_analysis_inputs_server(
       id = "conditions",
       r6 = r6,
       input_config = input_config,
       parent = session
     )
 
-    output$Covariates <- renderUI({
+    output$Covariates <- shiny::renderUI({
 
-      if(input$StatTest == "Linear Model") {
+      if (input$StatTest == "Linear Model") {
 
         choices <- r6$getCovariateChoices()
 
@@ -246,10 +272,10 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
       }
     })
 
-    observeEvent(c(input$getData),{
+    shiny::observeEvent(c(input$getData), {
 
-      validate(
-        need(input$getData > 0, "")
+      shiny::validate(
+        shiny::need(input$getData > 0, "")
       )
 
       gargoyle::trigger("get_volcano_data", session = session)

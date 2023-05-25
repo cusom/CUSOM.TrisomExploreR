@@ -5,15 +5,15 @@
 #' @importFrom shinydashboard tabBox
 #' @export
 precalc_feature_analysis_ui <- function(id, ...) {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
   shiny::tagList(
-    fluidRow(
-      column(
+    shiny::fluidRow(
+      shiny::column(
         width = 12,
         class = "col-lg-2 col-slim",
         TrisomExploreR::precalc_feature_analysis_inputs_ui(ns("inputs"), ...)
       ),
-      column(
+      shiny::column(
         width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
         shinydashboard::tabBox(
           id = ns("VolcanoPlotBox"),
@@ -22,7 +22,7 @@ precalc_feature_analysis_ui <- function(id, ...) {
           width = NULL,
           shiny::tabPanel(
             title = "Volcano Plot",
-            div(
+            shiny::tags$div(
               id = ns("VolcanoContent"),
               TrisomExploreR::volcano_plot_ui(ns("volcano-plot"))
             )
@@ -33,7 +33,7 @@ precalc_feature_analysis_ui <- function(id, ...) {
           )
         )
       ),
-      column(
+      shiny::column(
         width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
         shinydashboard::tabBox(
           id = ns("AnalytePlotBox"),
@@ -53,7 +53,7 @@ precalc_feature_analysis_ui <- function(id, ...) {
         )
       )
     ),
-    tags$div(
+    shiny::tags$div(
       id = ns("GSEA-Placeholder")
     )
   )
@@ -66,7 +66,7 @@ precalc_feature_analysis_ui <- function(id, ...) {
 #' @export
 precalc_feature_analysis_server <- function(id, r6, ...) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 

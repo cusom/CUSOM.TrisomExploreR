@@ -4,15 +4,15 @@
 #' @importFrom shinydashboard tabBox
 #' @export
 immunemap_feature_analysis_ui <- function(id, ...) {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
   shiny::tagList(
-    fluidRow(
-      column(
+    shiny::fluidRow(
+      shiny::column(
         width = 12,
         class = "col-lg-2 col-slim",
-        TrisomExploreR::immunemap_feature_analysis_inputs_ui(ns("inputs"), ...) 
+        TrisomExploreR::immunemap_feature_analysis_inputs_ui(ns("inputs"), ...)
       ),
-      column(
+      shiny::column(
         width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
         shinydashboard::tabBox(
           id = ns("VolcanoPlotBox"),
@@ -21,7 +21,7 @@ immunemap_feature_analysis_ui <- function(id, ...) {
           width = NULL,
           shiny::tabPanel(
             title = "Volcano Plot",
-            div(
+            shiny::tags$div(
               id = ns("VolcanoContent"),
               TrisomExploreR::volcano_plot_ui(ns("volcano-plot"))
             )
@@ -32,7 +32,7 @@ immunemap_feature_analysis_ui <- function(id, ...) {
           )
         )
       ),
-      column(
+      shiny::column(
         width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
         shinydashboard::tabBox(
           id = ns("AnalytePlotBox"),
@@ -49,10 +49,10 @@ immunemap_feature_analysis_ui <- function(id, ...) {
             value = "AnalyteTable",
             TrisomExploreR::feature_analysis_analyte_summary_data_ui(ns("analyte-summary-data"))
           )
-          )
         )
-      ),
-    tags$div(
+      )
+    ),
+    shiny::tags$div(
       id = ns("GSEA-Placeholder")
     )
   )
@@ -67,16 +67,16 @@ immunemap_feature_analysis_ui <- function(id, ...) {
 #' @export
 immunemap_feature_analysis_server <- function(id, r6, ...) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
     gargoyle::init(
-      "get_volcano_data", 
-      "show_analyte_plot", 
-      "sync_analyte_choice", 
+      "get_volcano_data",
+      "show_analyte_plot",
+      "sync_analyte_choice",
       "validate_GSEA",
-      "run_GSEA", 
+      "run_GSEA",
       "get_GSEA_path_data",
       session = session
     )

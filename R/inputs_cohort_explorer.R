@@ -1,22 +1,30 @@
+#' Create input wigets for TrisomExploreR cohort explorer
+#' @param id - string - id for this module namespace
+#' @param input_config - list - list of default values for various input widgets
+#' @importFrom shinydashboardPlus box
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom shinyWidgets awesomeCheckboxGroup
+#' @importFrom shinyWidgets numericRangeInput
 #' @export
 cohort_explorer_inputs_ui <- function(id, input_config) {
-  ns <- NS(id)
-  tagList(
-    fluidRow(
-      column(
+  ns <- shiny::NS(id)
+  shiny::tagList(
+    shiny::fluidRow(
+      shiny::column(
         width = 12, class = "col-lg-12",
         shinydashboardPlus::box(
           id = ns("CohortFilters"),
-          title = HTML(
-            '<div class="dataset-options-title">Human Trisome Project Cohort Overview
+          title = shiny::HTML(
+            "<div class=\"dataset-options-title\">Human Trisome Project Cohort Overview
               <span
-                data-toggle="tooltip"
-                data-placement="auto right"
-                title=""
-                class="fas fa-filter"
-                data-original-title="Set options below">
+                data-toggle=\"tooltip\"
+                data-placement=\"auto right\"
+                title=\"\"
+                class=\"fas fa-filter\"
+                data-original-title=\"Set options below\">
               </span>
-            </div>'
+            </div>"
           ),
           height = "auto",
           width = NULL,
@@ -24,7 +32,7 @@ cohort_explorer_inputs_ui <- function(id, input_config) {
           solidHeader = FALSE,
           collapsible = FALSE,
           headerBorder = FALSE,
-          column(
+          shiny::column(
             width = 12, class = "col-lg-2",
             shinyWidgets::awesomeCheckboxGroup(
               inputId = ns("Karyotypes"),
@@ -34,7 +42,7 @@ cohort_explorer_inputs_ui <- function(id, input_config) {
               inline = TRUE
             )
           ),
-          column(
+          shiny::column(
             width = 12, class = "col-lg-2",
             shinyWidgets::awesomeCheckboxGroup(
               inputId = ns("Sex"),
@@ -44,7 +52,7 @@ cohort_explorer_inputs_ui <- function(id, input_config) {
               inline = TRUE
             )
           ),
-          column(
+          shiny::column(
             width = 12, class = "col-lg-2",
             shinyWidgets::numericRangeInput(
               inputId =  ns("Age"),
@@ -53,7 +61,7 @@ cohort_explorer_inputs_ui <- function(id, input_config) {
               width = "90%"
             )
           ),
-          column(
+          shiny::column(
             width = 12, class = "col-lg-2",
             shinyWidgets::pickerInput(
               inputId = ns("Samples"),
@@ -63,7 +71,7 @@ cohort_explorer_inputs_ui <- function(id, input_config) {
               multiple = TRUE
             )
           ),
-          column(
+          shiny::column(
             width = 12, class = "col-lg-2",
             shinyWidgets::pickerInput(
               inputId = ns("OmicsSamples"),
@@ -79,10 +87,15 @@ cohort_explorer_inputs_ui <- function(id, input_config) {
   )
 }
 
+#' Server-side logic / processing for TrisomExploreR cohort explorer inpuots
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic to be utilized by all sub-modules
+#' @param input_config - list - list of default values for various input widgets to be used server-side
+#' @importFrom gargoyle trigger
 #' @export
 cohort_explorer_inputs_server <- function(id, r6, input_config) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
      ns <- session
 
@@ -93,7 +106,8 @@ cohort_explorer_inputs_server <- function(id, r6, input_config) {
        parent_input = input
      )
 
-     observeEvent(c(input$Karyotypes,input$Sex,input$Age,input$Samples,input$OmicsSamples),{
+     shiny::observeEvent(
+      c(input$Karyotypes, input$Sex, input$Age, input$Samples, input$OmicsSamples), {
        r6$getParticipantData()
        gargoyle::trigger("get_cohort_data")
      })

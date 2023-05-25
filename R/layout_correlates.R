@@ -4,16 +4,16 @@
 #' @importFrom shinydashboard tabBox
 #' @export
 correlates_ui <- function(id, ...) {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
   shiny::tagList(
-    fluidRow(
-      column(
+    shiny::fluidRow(
+      shiny::column(
         width = 12,
         class = "col-lg-2 col-slim",
           TrisomExploreR::correlates_inputs_ui(ns("inputs"), ...)
       ),
-      fluidRow(
-        column(
+      shiny::fluidRow(
+        shiny::column(
           width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
           shinydashboard::tabBox(
             id = ns("VolcanoPlotBox"),
@@ -22,7 +22,7 @@ correlates_ui <- function(id, ...) {
             width = NULL,
             shiny::tabPanel(
               title = "Volcano Plot",
-              div(
+              shiny::tags$div(
                 id = ns("VolcanoContent"),
                 TrisomExploreR::volcano_plot_ui(ns("volcano-plot"))
               )
@@ -33,7 +33,7 @@ correlates_ui <- function(id, ...) {
             )
           )
         ),
-        column(
+        shiny::column(
           width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
             shinydashboard::tabBox(
               id = ns("AnalytePlotBox"),
@@ -49,11 +49,11 @@ correlates_ui <- function(id, ...) {
                 title = "Correlation Sample Level Data",
                 value = "Correlation Sample Level Data",
                 TrisomExploreR::feature_analysis_analyte_summary_data_ui(ns("analyte-summary-data"))
-              )            
+              )
             )
           )
         ),
-        tags$div(
+        shiny::tags$div(
           id = ns("GSEA-Placeholder")
         )
     )
@@ -68,7 +68,7 @@ correlates_ui <- function(id, ...) {
 #' @export
 correlates_server <- function(id, r6, ...) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
@@ -83,7 +83,7 @@ correlates_server <- function(id, r6, ...) {
       session = session
     )
 
-    TrisomExploreR::correlates_inputs_server(id = "inputs", r6 = r6, ...)
+    TrisomExploreR::correlates_inputs_server(id = "inputs", r6 = r6)
 
     TrisomExploreR::volcano_plot_server(id = "volcano-plot", r6 = r6, parent = session)
 

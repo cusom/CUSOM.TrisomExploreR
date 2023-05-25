@@ -1,9 +1,19 @@
+#' Create standard inputs widgets for TrisomExploreR cell type analysis
+#' @param id - string - id for this module namespace
+#' @param input_config list - list of default values for various input widgets
+#' @importFrom shinydashboardPlus box
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom shinyWidgets awesomeCheckboxGroup
+#' @importFrom shinyWidgets numericRangeInput
+#' @importFrom bsplus bs_embed_tooltip
+#' @return ui module
 #' @export
 cell_type_inputs_ui <- function(id, input_config) {
-  ns <- NS(id)
-  tagList(
+  ns <- shiny::NS(id)
+  shiny::tagList(
     shinydashboardPlus::box(
-      title = HTML(
+      title = shiny::HTML(
         '<div class="dataset-options-title">Dataset Options
           <span
             data-toggle="tooltip"
@@ -21,7 +31,7 @@ cell_type_inputs_ui <- function(id, input_config) {
       collapsible = FALSE,
       headerBorder = FALSE,
       shiny::tags$div(
-        id = NS(id, "scrollableOptions"),
+        id = ns("scrollableOptions"),
         style = "height:630px;padding-left:10px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
         shinyjs::hidden(
           shinyWidgets::prettyRadioButtons(
@@ -44,17 +54,17 @@ cell_type_inputs_ui <- function(id, input_config) {
           multiple = TRUE
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        div(
+        shiny::tags$div(
           id = "AnalyteInput",
           shiny::selectizeInput(
             inputId = ns("Analyte"),
             label = "Gene",
             choices = input_config$Genes,
             options = list(
-              labelField = 'name',
-              searchField = 'name',
-              valueField = 'name',
-              placeholder = 'Search for Gene',
+              labelField = "name",
+              searchField = "name",
+              valueField = "name",
+              placeholder = "Search for Gene",
               onInitialize = I('function() { this.setValue(""); }'),
               closeAfterSelect = TRUE,
               selectOnTab = TRUE,
@@ -86,13 +96,13 @@ cell_type_inputs_ui <- function(id, input_config) {
             )
           ) |>
           bsplus::bs_embed_tooltip(
-            title = 'Genes are searchable by ENTREZ GeneID. <br /> Not all available genes are available in dataset.',
+            title = "Genes are searchable by ENTREZ GeneID. <br /> Not all available genes are available in dataset.",
             placement = "right",
             html = TRUE
           )
         ),
-        htmlOutput(ns("AnalyteSearchError")),                
-        shiny::tags$hr(style="margin-top:5px;margin-bottom:10px;"),
+        shiny::htmlOutput(ns("AnalyteSearchError")),
+        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shinyWidgets::awesomeCheckboxGroup(
           inputId = ns("Sex"),
           label = "Sex",
@@ -108,7 +118,7 @@ cell_type_inputs_ui <- function(id, input_config) {
           value = c(min(input_config$ages), max(input_config$ages)),
           width = "90%"
         ),
-        tags$hr(style="margin-top:5px;margin-bottom:10px;"),
+        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shinyWidgets::prettyRadioButtons(
           inputId = ns("StatTest"),
           label = "Statistical test",
@@ -121,14 +131,13 @@ cell_type_inputs_ui <- function(id, input_config) {
           choiceNames = input_config$statTestschoiceNames,
           choiceValues = input_config$statTests
         ),
-        div(
+        shiny::tags$div(
           id = ns("CovariateInput"),
-          CUSOMShinyHelpers::createInputControl(
-            controlType = "checkboxGroupInput",
+          shinyWidgets::awesomeCheckboxGroup(
             inputId = ns("Covariates"),
             label = "Adjust for covariates",
-            choices = c("Sex","Age") ,
-            selected = c("Sex","Age"),
+            choices = c("Sex", "Age"),
+            selected = c("Sex", "Age"),
             inline = TRUE
           )
         ),
@@ -144,35 +153,49 @@ cell_type_inputs_ui <- function(id, input_config) {
           choiceNames = input_config$adjustmentMethodsNames,
           choiceValues = input_config$adjustmentMethods
         ),
-        tags$hr(style="margin-top:5px;margin-bottom:10px;")
+        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;")
       ),
       footer = shiny::tagList(
         shiny::actionButton(
           ns("Refresh"),
           label = "Analyze & Plot",
           class = "refresh-btn",
-          icon = icon("play")
+          icon = shiny::icon("play")
         )
       )
     )
   )
 }
 
+#' Server-side logic / processing for TrisomExploreR cell type analysis inputs
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic for inputs
+#' @import shinyjs
+#' @importFrom gargoyle trigger
 #' @export
-cell_type_inputs_server <- function(id,r6) {
+cell_type_inputs_server <- function(id, r6) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
     TrisomExploreR::bind_events(
-      ids = c("Platform","CellType","Sex","Age","StatTest","Covariates","AdjustmentMethod","Analyte"),
+      ids = c(
+        "Platform",
+        "CellType",
+        "Sex",
+        "Age",
+        "StatTest",
+        "Covariates",
+        "AdjustmentMethod",
+        "Analyte"
+      ),
       r6 = r6,
       session = session,
       parent_input = input
     )
 
-    observeEvent(c(input$Analyte),{
+    shiny::observeEvent(c(input$Analyte), {
 
       if (input$Analyte == "") {
         shinyjs::removeClass(id = "Refresh", class = "refresh-ready-btn")
@@ -200,46 +223,35 @@ cell_type_inputs_server <- function(id,r6) {
     },  domain = session)
 
     ## when a gene is chosen -- trigger the plot
-    observeEvent(c(input$Refresh),{
-      if(input$Analyte != "") {
+    shiny::observeEvent(c(input$Refresh), {
+      if (input$Analyte != "") {
         gargoyle::trigger("render_analyte_plot", session = session)
       }
     }, ignoreInit = TRUE)
 
-    AnalyteSearchErrorText <- eventReactive(c(input$analyteSearchResults, input$Analyte), {
+    AnalyteSearchErrorText <- shiny::eventReactive(
+      c(input$analyteSearchResults, input$Analyte), {
 
       searchResultData <- input$analyteSearchResults
-      req(searchResultData)
+      shiny::req(searchResultData)
 
       if (length(input$Analyte) > 0 & input$Analyte != "") {
-        HTML("")
+        shiny::HTML("")
       }
-      else if(searchResultData$total == 0) {
-        HTML(paste0('<span style="color:black;font-size:smaller;padding-left:10px;"><b>"', searchResultData$query, '"</b> not found. Please try another value</span>'))
+      else if (searchResultData$total == 0) {
+        shiny::HTML(paste0('<span style="color:black;font-size:smaller;padding-left:10px;"><b>"',
+        searchResultData$query,
+        '"</b> not found. Please try another value</span>')
+        )
       }
       else {
-        HTML("")
+        shiny::HTML("")
       }
     }, domain = session)
 
-    output$AnalyteSearchError <- renderUI({
+    output$AnalyteSearchError <- shiny::renderUI({
       AnalyteSearchErrorText()
     })
-
-    # output$AnalyteSearchError <- renderUI({
-
-    #   searchResultData <- input$analyteSearchResults
-    #   req(searchResultData)
-
-    #   if(searchResultData$total == 0) {
-
-    #     HTML(paste0('<span style="color:black;"><b>"',searchResultData$query,'"</b> not found. <br /> Please try searching for another gene</span>'))
-    #   }
-    #   else {
-
-    #     HTML("")
-    #   }
-    # })
 
   })
 

@@ -2,26 +2,26 @@
 #' @param id - string - id for this module namespace
 #' @export
 condition_frequency_ui <- function(id) {
-  ns <- NS(id)
-  tagList(
-    fluidPage(
-      fluidRow(
-        column(
+  ns <- shiny::NS(id)
+  shiny::tagList(
+    shiny::fluidPage(
+      shiny::fluidRow(
+        shiny::column(
           width = 12, class = "col-lg-6",
           condition_frequency_class_table_ui(ns("class_table"))
         ),
-        column(
+        shiny::column(
           width = 12, class = "col-lg-6",
           condition_frequency_condition_table_ui(ns("condition_table"))
         )
       ),
-      tags$hr(style="margin-top:5px;margin-bottom:10px;"),
-      fluidRow(
+      shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+      shiny::fluidRow(
         column(
           width = 12, class = "col-lg-6",
           condition_frequency_class_sex_plot_ui(ns("class_sex_plot"))
         ),
-        column(
+        shiny::column(
           width = 12, class = "col-lg-6",
           condition_frequency_condition_sex_plot_ui(ns("condition_sex_plot"))
         )
@@ -39,7 +39,7 @@ condition_frequency_ui <- function(id) {
 #' @export
 condition_frequency_server <- function(id, r6) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session
 
@@ -51,7 +51,6 @@ condition_frequency_server <- function(id, r6) {
       module_name <- glue::glue("condition_frequency_{submodule}_server")
       do.call(module_name, list(submodule, r6))
     })
-
 
   })
 

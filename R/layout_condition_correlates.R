@@ -4,15 +4,15 @@
 #' @importFrom shinydashboard tabBox
 #' @export
 condition_correlates_ui <- function(id, ...) {
-  ns <- NS(id)
-  tagList(
-    fluidRow(
-      column(
+  ns <- shiny::NS(id)
+  shiny::tagList(
+    shiny::fluidRow(
+      shiny::column(
         width = 12,
         class = "col-lg-2 col-slim",
         condition_correlates_inputs_ui(ns("correlates-inputs"), ...)
       ),
-      column(
+      shiny::column(
         width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
         shinydashboard::tabBox(
           id = ns("VolcanoPlotBox"),
@@ -21,7 +21,7 @@ condition_correlates_ui <- function(id, ...) {
           width = NULL,
           shiny::tabPanel(
             title = "Volcano Plot",
-            div(
+            shiny::tags$div(
               id = ns("VolcanoContent"),
               volcano_plot_ui(ns("volcano-plot"))
             )
@@ -32,7 +32,7 @@ condition_correlates_ui <- function(id, ...) {
           )
         )
       ),
-      column(
+      shiny::column(
         width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
         shinydashboard::tabBox(
           id = ns("AnalytePlotBox"),
@@ -41,19 +41,19 @@ condition_correlates_ui <- function(id, ...) {
           width = NULL,
           shiny::tabPanel(
             title = "Heatmap",
-            div(
+            shiny::tags$div(
               id = ns("AnalyteContent"),
               condition_correlates_heatmap_plot_ui(ns("heatmap-plot"))
             )
           ),
-          tabPanel(
+          shiny::tabPanel(
             title = "Heatmap Summary Data",
             feature_analysis_analyte_summary_data_ui(ns("heatmap-summary"))
           )
         )
       )
     ),
-    tags$div(
+    shiny::tags$div(
       id = ns("GSEA-Placeholder")
     )
   )
@@ -67,7 +67,7 @@ condition_correlates_ui <- function(id, ...) {
 #' @export
 condition_correlates_server <- function(id, r6, ...) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 

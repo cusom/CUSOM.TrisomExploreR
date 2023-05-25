@@ -1,16 +1,30 @@
+#' Create input widgets for TrisomExploreR conditions feature analysis / additional inputs for co-occuring condition analysis
+#' @param id - string - id for this module namespace
+#' @param input_config - list - list of default values for various input widgets
 #' @export
 conditions_feature_analysis_inputs_ui <- function(id, input_config) {
   ns <- shiny::NS(id)
   shiny::tagList(
-    uiOutput(ns("ConditionsInputs")),
-    tags$br()
+    shiny::uiOutput(ns("ConditionsInputs")),
+    shiny::tags$br()
   )
 }
 
+#' Server-side logic / processing for TrisomExploreR conditions feature analysis inputs
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic for inputs
+#' @param input_config - list - list of default values for various input widgets to be used server-side
+#' @param parent - session object - parent session
+#' @import dplyr 
+#' @importFrom bsplus bs_modal
+#' @importFrom bsplus bs_attach_modal
+#' @import glue
+#' @import shinyTree
+#' @import shinyjs
 #' @export
 conditions_feature_analysis_inputs_server <- function(id, r6, input_config, parent) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
@@ -29,12 +43,12 @@ conditions_feature_analysis_inputs_server <- function(id, r6, input_config, pare
         shiny::tagList(
           bsplus::bs_modal(
             id = ns("Conditions-Picker"),
-            title = htmltools::tags$h3(glue::glue("Set Co-Occuring Conditions:")),
+            title = shiny::tags$h3(glue::glue("Set Co-Occuring Conditions:")),
             size = "large",
             body = list(
               shiny::tagList(
-                fluidRow(
-                  column(
+                shiny::fluidRow(
+                  shiny::column(
                     width = 12,
                     class = "col-lg-6",
                     shiny::tags$b("Search for Co-Occuring Conditions"),
@@ -51,11 +65,11 @@ conditions_feature_analysis_inputs_server <- function(id, r6, input_config, pare
                       )
                     )
                   ),
-                  column(
+                  shiny::column(
                     width = 12,
                     class = "col-lg-6",
                     tags$b("Selected Co-Occuring Conditions"),
-                    htmlOutput(ns("selectedConditions"), placeholder = TRUE)
+                    shiny::htmlOutput(ns("selectedConditions"), placeholder = TRUE)
                   )
                 ),
                 shiny::tags$hr(),
@@ -71,7 +85,7 @@ conditions_feature_analysis_inputs_server <- function(id, r6, input_config, pare
               )
             )
           ),
-          actionButton(
+          shiny::actionButton(
             inputId = ns("SetConditions"),
             label = "Choose Co-Occuring Conditions",
             icon = icon("file-medical"),
@@ -87,14 +101,14 @@ conditions_feature_analysis_inputs_server <- function(id, r6, input_config, pare
 
     })
 
-    observeEvent(c(input$ConditionsReset),{
+    shiny::observeEvent(c(input$ConditionsReset), {
 
       shinyjs::reset("ConditionsInputs")
       shinyjs::runjs(paste0("$('#",ns("Conditions"),"').jstree('deselect_all');"))
 
     }, ignoreInit = TRUE)
 
-    conditions <- eventReactive(c(input$SetConditions), {
+    conditions <- shiny::eventReactive(c(input$SetConditions), {
       input_config$ConditionChoices |>
         dplyr::select(ConditionClass, Condition)
     })
@@ -103,18 +117,18 @@ conditions_feature_analysis_inputs_server <- function(id, r6, input_config, pare
       r6$getConditionTree(conditions())
     })
 
-    selectedConditionList <- eventReactive(c(input$Conditions),{
-      validate(
-        need(length(shinyTree::get_selected(input$Conditions)) > 0, "")
+    selectedConditionList <- shiny::eventReactive(c(input$Conditions), {
+      shiny::validate(
+        shiny::need(length(shinyTree::get_selected(input$Conditions)) > 0, "")
       )
       r6$getSelectedConditionList()
     })
 
-    output$selectedConditions <- renderText({
+    output$selectedConditions <- shiny::renderText({
       selectedConditionList()
     })
 
-    observe({
+    shiny::observe({
       if (length(shinyTree::get_selected(input$Conditions)) > 0) {
         shinyjs::enable(
           selector = paste0("#", parent$ns("getData"))

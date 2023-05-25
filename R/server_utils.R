@@ -1,5 +1,5 @@
 #' @export
-load_modules <- function (id, module_config){
+load_modules <- function(id, module_config) {
 
   namespace_config <- dplyr::filter(module_config, Namespace == id)
 
@@ -34,6 +34,3 @@ bind_events <- function(ids, r6, session, parent_input) {
     }
   )
 }
-
-
-

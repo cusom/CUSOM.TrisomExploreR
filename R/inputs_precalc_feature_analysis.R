@@ -1,18 +1,26 @@
+#' Create input widgets for TrisomExploreR precalculated feature analysis - DESeq2 
+#' @param id - string - id for this module namespace
+#' @param input_config - list - list of default values for various input widgets
+#' @importFrom shinydashboard tabBox
+#' @import shinyjs
+#' @importFrom bsplus bs_embed_tooltip
+#' @importFrom CUSOMShinyHelpers prettyRadioButtonsFieldSet
+#' @importFrom shinycustomloader withLoader
 #' @export
 precalc_feature_analysis_inputs_ui <- function(id, input_config) {
   ns <- shiny::NS(id)
   shiny::tagList(
     shinydashboardPlus::box(
       title = shiny::HTML(
-        '<div class="dataset-options-title">Dataset Options
+        "<div class=\"dataset-options-title\">Dataset Options
           <span
-            data-toggle="tooltip"
-            data-placement="auto right"
-            title = ""
-            class = "fas fa-filter"
-            data-original-title="Set options below to generate volcano plot">
+            data-toggle=\"tooltip\"
+            data-placement=\"auto right\"
+            title = \"\"
+            class = \"fas fa-filter\"
+            data-original-title=\"Set options below to generate volcano plot\">
           </span>
-        </div>'
+        </div>"
       ),
       height = "auto",
       width = NULL,
@@ -38,7 +46,7 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
         style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shinyjs::hidden(
-          div(
+          shiny::tags$div(
             id = ns("Studies"),
             CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
               inputId = ns("Study"),
@@ -105,21 +113,39 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
 
 }
 
+#' Server-side logic / processing for TrisomExploreR precalculated feature analysis inputs
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic to be utilized by all sub-modules
+#' @param input_config - list - list of default values for various input widgets to be used server-side
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom shinyWidgets awesomeCheckboxGroup
+#' @importFrom shinyWidgets numericRangeInput
+#' @importFrom gargoyle trigger
 #' @export
 precalc_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
     TrisomExploreR::bind_events(
-      ids = c("Study","Conditions","Karyotype","Sex","Age","StatTest","Covariates","AdjustmentMethod"),
+      ids = c(
+        "Study",
+        "Conditions",
+        "Karyotype",
+        "Sex",
+        "Age",
+        "StatTest",
+        "Covariates",
+        "AdjustmentMethod"
+      ),
       r6 = r6,
       session = session,
       parent_input = input
     )
 
-    output$Karyotype <- renderUI({
+    output$Karyotype <- shiny::renderUI({
 
       karyotypeChoices <- r6$getKaryotypeChoices(input_config$karyotypes)
 
@@ -132,30 +158,31 @@ precalc_feature_analysis_inputs_server <- function(id, r6, input_config) {
         width = "90%"
       )
 
-      if(nrow(karyotypeChoices) == 1) {
+      if (nrow(karyotypeChoices) == 1) {
         shinyjs::disabled(
           input
         )
       } else {
         input |>
-          shiny::tagAppendAttributes(class = r6$addInputSpecialClass("Karyotype","disabled"))
+          shiny::tagAppendAttributes(
+            class = r6$addInputSpecialClass("Karyotype", "disabled")
+          )
       }
 
     })
 
-    output$Covariates <- renderUI({
+    output$Covariates <- shiny::renderUI({
 
-      if(input$StatTest == "Linear Model") {
+      if (input$StatTest == "Linear Model") {
 
         choices <- r6$getCovariateChoices()
 
         shiny::tagList(
           shiny::tags$br(),
-          CUSOMShinyHelpers::createInputControl(
-            controlType = "checkboxGroupInput",
+          shinyWidgets::awesomeCheckboxGroup(
             inputId = ns("Covariates"),
             label = "Adjust for covariates",
-            choices = choices ,
+            choices = choices,
             selected = choices,
             inline = TRUE
           )
@@ -167,7 +194,7 @@ precalc_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
     })
 
-    observeEvent(c(input$getData),{
+    shiny::observeEvent(c(input$getData), {
 
       gargoyle::trigger("get_volcano_data", session = session)
 

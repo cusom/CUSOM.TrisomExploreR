@@ -1,9 +1,17 @@
+#' Create input widgets for TrisomExploreR condition interactions
+#' @param id - string - id for this module namespace
+#' @param input_config - list - list of default values for various input widgets
+#' @importFrom shinydashboardPlus box
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom shinyWidgets awesomeCheckboxGroup
+#' @importFrom shinyWidgets numericRangeInput
 #' @export
 condition_interactions_inputs_ui <- function(id, input_config) {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
   shiny::tagList(
     shinydashboardPlus::box(
-      title = HTML(
+      title = shiny::HTML(
         '<div class="dataset-options-title">Set Dataset Options
           <span
             data-toggle="tooltip"
@@ -26,10 +34,10 @@ condition_interactions_inputs_ui <- function(id, input_config) {
         shinyWidgets::prettyRadioButtons(
           inputId = ns("selectedAnnotationLevel"),
           label = "Annotation level",
-          choices = c('Classes of Conditions','Specific Conditions') ,
+          choices = c("Classes of Conditions", "Specific Conditions"),
           selected = "Classes of Conditions"
         ),
-        tags$br(),
+        shiny::tags$br(),
         shinyWidgets::pickerInput(
           inputId = ns("SelectedConditions"),
           label = "",
@@ -48,8 +56,8 @@ condition_interactions_inputs_ui <- function(id, input_config) {
             maxOptionsText = "Maximum number selected"
           )
         ),
-        tags$br(),
-        tags$hr(style="margin-top:5px;margin-bottom:10px;"),
+        shiny::tags$br(),
+        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shinyWidgets::awesomeCheckboxGroup(
           inputId = ns("Karyotypes"),
           label = "Karyotype",
@@ -57,7 +65,7 @@ condition_interactions_inputs_ui <- function(id, input_config) {
           selected = input_config$karyotypes,
           inline = TRUE
         ),
-        tags$br(),
+        shiny::tags$br(),
         shinyWidgets::awesomeCheckboxGroup(
           inputId = ns("Sex"),
           label = "Sex",
@@ -65,7 +73,7 @@ condition_interactions_inputs_ui <- function(id, input_config) {
           selected = input_config$sexes,
           inline = TRUE
         ),
-        tags$br(),
+        shiny::tags$br(),
         shinyWidgets::numericRangeInput(
           inputId =  ns("Age"),
           label = "Age range",
@@ -74,14 +82,14 @@ condition_interactions_inputs_ui <- function(id, input_config) {
         )
       ),
       footer = shiny::tagList(
-        actionButton(
+        shiny::actionButton(
           ns("getData"),
           label = "Analyze & Plot",
           class = "refresh-ready-btn",
           icon = icon("play")
         ),
-        tags$hr(style="margin-top:5px;margin-bottom:10px;"),
-        actionButton(
+        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        shiny::actionButton(
           ns("Reset"),
           label = "Reset Inputs",
           class = "refresh-btn",
@@ -92,27 +100,43 @@ condition_interactions_inputs_ui <- function(id, input_config) {
   )
 }
 
+#' Server-side logic / processing for TrisomExploreR condition interactions inputs
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic to be utilized by all sub-modules
+#' @param input_config - list - list of default values for various input widgets to be used server-side
+#' @import shinyjs
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom shinyWidgets awesomeCheckboxGroup
+#' @importFrom shinyWidgets numericRangeInput
+#' @importFrom gargoyle trigger
 #' @export
 condition_interactions_inputs_server <- function(id, r6, input_config) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
     TrisomExploreR::bind_events(
-      ids = c("selectedAnnotationLevel","SelectedConditions","Karyotypes","Sex","Age"),
+      ids = c(
+        "selectedAnnotationLevel",
+        "SelectedConditions",
+        "Karyotypes",
+        "Sex",
+        "Age"
+      ),
       r6 = r6,
       session = session,
       parent_input = input
     )
 
-    observeEvent(c(input$selectedAnnotationLevel),{
+    shiny::observeEvent(c(input$selectedAnnotationLevel), {
 
-      if(input$selectedAnnotationLevel == "Classes of Conditions") {
+      if (input$selectedAnnotationLevel == "Classes of Conditions") {
 
         shinyWidgets::updatePickerInput(
-          session,
-          'SelectedConditions',
+          session = session,
+          inputId = "SelectedConditions",
           label = "Class (select up to 6)",
           choices = sort(input_config$ConditionClasses),
           selected = ""
@@ -121,8 +145,8 @@ condition_interactions_inputs_server <- function(id, r6, input_config) {
       } else {
 
         shinyWidgets::updatePickerInput(
-          session,
-          'SelectedConditions',
+          session = session,
+          inputId = "SelectedConditions",
           label = "Condition (select up to 6)",
           choices = input_config$ConditionsChoices,
           selected = ""
@@ -130,29 +154,11 @@ condition_interactions_inputs_server <- function(id, r6, input_config) {
 
       }
 
-      # if(input$selectedAnnotationLevel != rv$selectedAnnotationLevel & rv$selectedAnnotationLevel != "" ) {
-      #
-      #   rv$clearPlot <- TRUE
-      #
-      #   updatePickerInput(
-      #     session,
-      #     'SelectedConditions',
-      #     selected = NULL
-      #   )
-      #
-      # }
-      #
-      # else {
-      #   rv$clearPlot <- FALSE
-      # }
-      #
-      # rv$selectedAnnotationLevel <<- input$selectedAnnotationLevel
-
     })
 
-    observe({
+    shiny::observe({
 
-      if(length(input$SelectedConditions) < 2 ) {
+      if (length(input$SelectedConditions) < 2) {
 
         shinyjs::disable("getData")
         shinyjs::removeClass(id = "getData", class = "refresh-ready-btn")
@@ -165,26 +171,24 @@ condition_interactions_inputs_server <- function(id, r6, input_config) {
         shinyjs::enable("getData")
         shinyjs::removeClass(id = "getData", class = "refresh-btn")
         shinyjs::addClass(id = "getData", class = "refresh-ready-btn")
-        #rv$clearPlot <- FALSE
 
       }
 
     })
 
-    observeEvent(c(input$getData),{
+    shiny::observeEvent(c(input$getData),{
       r6$update_upset_plot_data()
       gargoyle::trigger("get_interactions_plot")
     }, ignoreInit = TRUE)
 
 
-    observeEvent(c(input$Reset),{
+    shiny::observeEvent(c(input$Reset), {
 
       shinyjs::reset("selectedAnnotationLevel")
       shinyjs::reset("SelectedConditions")
       shinyjs::reset("Karyotypes")
       shinyjs::reset("Sex")
       shinyjs::reset("Age")
-      #rv$clearPlot <- TRUE
       r6$clear_upset_plot_data()
       gargoyle::trigger("get_interactions_plot")
 

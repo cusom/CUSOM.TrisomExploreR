@@ -1,18 +1,28 @@
+#' Create input widgets for TrisomExploreR Immune Maps specific cross-omics correlates analysis
+#' @param id - string - id for this module namespace
+#' @param input_config - list - list of default values for various input widgets
+#' @importFrom shinydashboardPlus box
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom shinyWidgets awesomeCheckboxGroup
+#' @importFrom shinyWidgets numericRangeInput
+#' @import shinyjs
+#' @importFrom bsplus bs_embed_tooltip
 #' @export
 immunemap_correlates_inputs_ui <- function(id, input_config) {
-  ns <- NS(id)
-  tagList(
+  ns <- shiny::NS(id)
+  shiny::tagList(
     shinydashboardPlus::box(
       title = shiny::HTML(
-        '<div class="dataset-options-title">Dataset Options
+        "<div class=\"dataset-options-title\">Dataset Options
           <span
-            data-toggle="tooltip"
-            data-placement="auto right"
-            title = ""
-            class = "fas fa-filter"
-            data-original-title="Set options below to generate volcano plot">
+            data-toggle=\"tooltip\"
+            data-placement=\"auto right\"
+            title = \"\"
+            class = \"fas fa-filter\"
+            data-original-title=\"Set options below to generate volcano plot\">
           </span>
-        </div>'
+        </div>"
       ),
       height = "auto",
       width = NULL,
@@ -53,7 +63,7 @@ immunemap_correlates_inputs_ui <- function(id, input_config) {
           choiceValues = input_config$Queryplatforms,
           selected = character(0)
         ),
-        tags$br(),
+        shiny::tags$br(),
         shinyjs::hidden(
           shinyWidgets::prettyRadioButtons(
             inputId = ns("AdjustmentMethod"),
@@ -82,15 +92,15 @@ immunemap_correlates_inputs_ui <- function(id, input_config) {
             label = "Age range",
             value = c(min(input_config$ages), max(input_config$ages))
           )
-        )
-        ,div(
+        ),
+        shiny::tags$div(
           id = ns("QueryAnalyteInput"),
-          selectizeInput(
+          shiny::selectizeInput(
             inputId = ns("QueryAnalyte"),
-            label="2) Select Query Analyte",
-            choices= NULL,
+            label = "2) Select Query Analyte",
+            choices = NULL,
             options = list(
-              placeholder = 'Please select below',
+              placeholder = "Please select below",
               onInitialize = I('function() { this.setValue(""); }'),
               closeAfterSelect = TRUE,
               selectOnTab = TRUE,
@@ -100,14 +110,14 @@ immunemap_correlates_inputs_ui <- function(id, input_config) {
             )
           )
         ),
-        div(
+        shiny::tags$div(
           id = ns("ComparisonPlatformInput"),
-          selectizeInput(
+          shiny::selectizeInput(
             inputId = ns("ComparisonPlatform"),
-            label ="3) Choose Comparison Platform",
+            label = "3) Choose Comparison Platform",
             choices = input_config$Comparisonplatforms,
             options = list(
-              placeholder = 'Choose Comparison Platform',
+              placeholder = "Choose Comparison Platform",
               onInitialize = I('function() { this.setValue(""); }'),
               closeAfterSelect = TRUE,
               selectOnTab = TRUE,
@@ -117,8 +127,8 @@ immunemap_correlates_inputs_ui <- function(id, input_config) {
             )
           )
         ),
-        tags$hr(),
-        tags$div(
+        shiny::tags$hr(),
+        shiny::tags$div(
           style = "display:inline-block; max-width:100%;margin-bottom:5px;font-weight:700",
           "4) Set Statistics (pre-calculated)"
         ),
@@ -131,24 +141,34 @@ immunemap_correlates_inputs_ui <- function(id, input_config) {
           icon = NULL,
           inline = FALSE,
           width = NULL,
-          choiceNames = list(CUSOMShinyHelpers::createTooltip("Beta Regression","","Beta regression is useful in situations where the dependent variable is continuous and restricted to the unit interval (0, 1), e.g., resulting from rates or proportions. It is modeled to be beta-distributed with parametrization using mean and precision parameter (called phi). The mean is linked, as in generalized linear models (GLMs), to the responses through a link function (logit) and a linear predictor.")),
+          choiceNames = list(
+            CUSOMShinyHelpers::createTooltip(
+              "Beta Regression",
+              "",
+              "Beta regression is useful in situations where the dependent variable is continuous and 
+              restricted to the unit interval (0, 1), e.g., resulting from rates or proportions. 
+              It is modeled to be beta-distributed with parametrization using mean and precision parameter 
+              (called phi). The mean is linked, as in generalized linear models (GLMs), 
+              to the responses through a link function (logit) and a linear predictor."
+            )
+          ),
           choiceValues = "Beta"
         ),
-        tags$br(),
-        tags$div(
+        shiny::tags$br(),
+        shiny::tags$div(
          id = ns("CovariateInput"),
          shinyjs::disabled(
            shinyWidgets::awesomeCheckboxGroup(
              inputId =  ns("Covariates"),
              label = "Adjust for covariates",
-             choices = c("Sex","Age","Source"),
-             selected = c("Sex","Age","Source"),
+             choices = c("Sex", "Age", "Source"),
+             selected = c("Sex", "Age", "Source"),
              inline = TRUE
            )
          )
-       )
-       ,tags$br()
-       ,shinyWidgets::prettyRadioButtons(
+       ),
+       shiny::tags$br(),
+       shinyWidgets::prettyRadioButtons(
          inputId = ns("AdjustmentMethod"),
          label = "Multiple hypothesis correction",
          choices = NULL,
@@ -160,175 +180,39 @@ immunemap_correlates_inputs_ui <- function(id, input_config) {
          choiceNames = input_config$adjustmentMethodsNames[1],
          choiceValues = input_config$adjustmentMethods[1]
        )
-       #)
-        # bs_accordion(id = ns("AccordionInputs")) |>
-        #   bs_set_opts(panel_type = "default", use_heading_link = TRUE) |>
-        #   bs_append(
-        #     title = "1) Choose Query Platform",
-        #     content = list(
-        #       prettyRadioButtons(
-        #         inputId = ns("QueryPlatform"),
-        #         label = "Platforms",
-        #         choices = sort(Queryplatforms),
-        #         selected = character(0),
-        #         status = "primary",
-        #         icon = NULL,
-        #         inline = FALSE
-        #       )
-        #     )
-        #   ) |>
-        #   bs_append(
-        #     title = "2) Choose Experiment",
-        #     content = list(
-        #       prettyRadioButtons(
-        #         inputId = ns("Experiment"),
-        #         label = "Experiments",
-        #         choices = NULL,
-        #         selected = character(0),
-        #         status = "primary",
-        #         icon = NULL,
-        #         inline = FALSE
-        #       )
-        #     )
-        #   ) |>
-        #   bs_append(
-        #     title = "3) Choose Query Analyte",
-        #     content = list(
-        #       selectizeInput(
-        #         inputId = ns("QueryAnalyte"),
-        #         label = "Analytes",
-        #         width = "300px",
-        #         choices = NULL,
-        #         multiple = FALSE,
-        #         options = list(
-        #           labelField ='name',
-        #           searchField ='name',
-        #           valueField = 'id',
-        #           placeholder = 'Choose an analyte',
-        #           onInitialize = I('function() { this.setValue(""); }'),
-        #           closeAfterSelect = TRUE,
-        #           selectOnTab = TRUE,
-        #           persist = FALSE,
-        #           `live-search` = TRUE,
-        #           #maxoptions = 1,
-        #           dropupAuto = FALSE,
-        #           onType = I(paste0("
-        #           function (str) {
-        #             if(this.currentResults.total == 0) {
-        #               Shiny.setInputValue(
-        #                 '",id,"-analyteSearchResults',
-        #                 {
-        #                   query: this.currentResults.query,
-        #                   total: this.currentResults.total
-        #                 },
-        #                 { priority: 'event' }
-        #               );
-        #             };
-        #           }"
-        #           ))
-        #         )
-        #       )
-        #     )
-        #   ) |>
-        #   bs_append(
-        #     title = "4) Choose Comparison Platform",
-        #     content = list(
-        #       selectizeInput(
-        #         inputId = ns("ComparisonPlatform"),
-        #         label= "Comparison Platform",
-        #         choices= Comparisonplatforms,
-        #         options = list(
-        #           placeholder = 'Choose Comparison Platform',
-        #           onInitialize = I('function() { this.setValue(""); }'),
-        #           closeAfterSelect = TRUE,
-        #           selectOnTab = TRUE,
-        #           persist = FALSE,
-        #           `live-search` = TRUE,
-        #           maxoptions = 1
-        #         )
-        #       )
-        #     )
-        #   ) |>
-        #   bs_append(
-        #     title = "5) Set Analysis Options (optional)",
-        #     content = list(
-        #
-        #       CUSOMShinyHelpers::createInputControl(
-        #         controlType = "checkboxGroupInput",
-        #         inputId = ns("Sex"),
-        #         label = "Sex",
-        #         choices = sexes,
-        #         selected = sexes,
-        #         inline=TRUE
-        #       ),
-        #       tags$br(),
-        #       numericRangeInput(
-        #         inputId =  ns("Age"),
-        #         label = "Age range",
-        #         value = c(min(ages), max(ages))
-        #       )
-        #     )
-        #   ) |>
-        #   bs_append(
-        #     title = "6) Set Statistics (optional)",
-        #     content = list(
-        #       prettyRadioButtons(
-        #         inputId = ns("StatTest"),
-        #         label = "Statistical test",
-        #         choices = NULL,
-        #         selected = NULL,
-        #         status = "primary",
-        #         icon = NULL,
-        #         inline = FALSE,
-        #         choiceNames = statTestschoiceNames,
-        #         choiceValues = statTests
-        #       )
-        #       ,tags$br()
-        #       ,div(
-        #         id=ns("CovariateInput"),
-        #         CUSOMShinyHelpers::createInputControl(
-        #           controlType = "checkboxGroupInput",
-        #           inputId = ns("Covariates"),
-        #           label = "Adjust for covariates",
-        #           choices = c("Sex","Age") ,
-        #           selected = c("Sex","Age"),
-        #           inline = TRUE
-        #         )
-        #       )
-        #       ,tags$br()
-        #       ,prettyRadioButtons(
-        #         inputId = ns("AdjustmentMethod"),
-        #         label = "Multiple hypothesis correction",
-        #         choices = NULL,
-        #         selected = NULL,
-        #         status = "primary",
-        #         icon = NULL,
-        #         inline = FALSE,
-        #         choiceNames = adjustmentMethodsNames,
-        #         choiceValues = adjustmentMethods
-        #       )
-        #     )
-        #   ),
-      ), footer = shiny::tagList(
-        actionButton(
+      ),
+      footer = shiny::tagList(
+        shiny::actionButton(
           ns("getData"),
           label = "Analyze & Plot",
           class = "refresh-btn",
           icon = icon("play")
-        )       
+        )
       )
     )
   )
-
-
 }
 
+#' Server-side logic / processing for TrisomExploreR Immune Maps specific cross-omics correlates analysis inputs
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic for inputs
+#' @import shinybusy
+#' @import shinyjs
+#' @import glue
+#' @importFrom gargoyle trigger
 #' @export
-immunemap_correlates_inputs_server <- function(id, r6, input_config, remoteDB, localDB) {
+immunemap_correlates_inputs_server <- function(id, r6) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
+
+    rv <- list(
+      QueryPlatform = "",
+      Queryanalyte = "",
+      ComparisonPlatform = "",
+      ComparisonAnalyte = ""
+    )
 
     TrisomExploreR::bind_events(
       ids = c(
@@ -348,7 +232,7 @@ immunemap_correlates_inputs_server <- function(id, r6, input_config, remoteDB, l
       parent_input = input
     )
 
-    observeEvent(c(input$QueryPlatform), {
+    shiny::observeEvent(c(input$QueryPlatform), {
 
       shinybusy::show_modal_spinner(
         spin = "atom",
@@ -356,18 +240,9 @@ immunemap_correlates_inputs_server <- function(id, r6, input_config, remoteDB, l
         text = glue::glue("Getting {input$QueryPlatform} Query Analytes...")
       )
 
-      analyteChoices <- remoteDB$getQuery(
-        "[shiny].[GetQueryAnalytes] ?",
-        tibble::tibble("QueryPlatform" = input$QueryPlatform)
-        ) |>
-        dplyr::rename("QueryAnalyteID" = QueryAnalyte) |>
-        tidyr::separate(QueryAnalyteID, sep = ";", into = c("CellType","Lineage","Analyte"), remove = FALSE) |>
-        dplyr::mutate(QueryAnalyte = glue::glue("{Lineage};{Analyte}")) |>
-        dplyr::select(QueryAnalyte,QueryAnalyteID) |>
-        dplyr::arrange(QueryAnalyte) |>
-        tibble::deframe()
+      analyteChoices <- r6$getQueryAnalytes()
 
-      updateSelectizeInput(
+      shiny::updateSelectizeInput(
         session = session,
         inputId = "QueryAnalyte",
         label = "2) Select Query Analyte",
@@ -384,20 +259,42 @@ immunemap_correlates_inputs_server <- function(id, r6, input_config, remoteDB, l
       )
 
       shinybusy::remove_modal_spinner()
-   
+
     }, ignoreInit = TRUE)
 
-    observeEvent(c(input$ComparisonPlatform),{
-      validate(
-        need(!is.null(input$ComparisonPlatform), ""),
-        need(input$ComparisonPlatform != "", "")
+    shiny::observeEvent(c(input$QueryAnalyte), {
+
+      if (input$QueryAnalyte == "") {
+
+        shinyjs::disable(id = "ComparisonPlatform")
+
+        purge_plot(session, ns, "VolcanoPlot", r6)
+        purge_plot(session, ns, "AnalytePlot", r6)
+
+        updateSelectizeInput(
+          session = session,
+          inputId = "ComparisonAnalyte",
+          selected = ""
+        )
+
+      }
+      else {
+        shinyjs::enable(id = "ComparisonPlatform")
+      }
+
+    }, ignoreInit = TRUE)
+
+    shiny::observeEvent(c(input$ComparisonPlatform),{
+      shiny::validate(
+        shiny::need(!is.null(input$ComparisonPlatform), ""),
+        shiny::need(input$ComparisonPlatform != "", "")
       )
       gargoyle::trigger("validate_GSEA", session = session)
 
     }, ignoreInit = TRUE)
 
-    observe({
-      if(input$QueryAnalyte == "" & input$ComparisonPlatform == "") {
+    shiny::observe({
+      if (input$QueryAnalyte == "" & input$ComparisonPlatform == "") {
         shinyjs::disable("getData")
         shinyjs::removeClass(id = "getData", class = "refresh-ready-btn")
         shinyjs::addClass(id = "getData", class = "refresh-btn")
@@ -409,10 +306,10 @@ immunemap_correlates_inputs_server <- function(id, r6, input_config, remoteDB, l
       }
     })
 
-    observeEvent(c(input$getData),{
+    shiny::observeEvent(c(input$getData), {
 
-      validate(
-        need(input$getData > 0, "")
+      shiny::validate(
+        shiny::need(input$getData > 0, "")
       )
 
       gargoyle::trigger("get_volcano_data", session = session)

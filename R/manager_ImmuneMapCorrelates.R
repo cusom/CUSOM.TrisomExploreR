@@ -1,12 +1,56 @@
+#' R6 Class to manage Correlates Analysis for Immune Maps data
+#' @description
+#' Enables analysis of cross-omics correlations for Immune Maps
+#' Subclass of CorrelatesManager
 #' @export
 ImmuneMapCorrelatesManager <- R6::R6Class(
   "ImmuneMapCorrelatesManager",
   inherit = CorrelatesManager,
   private = list(),
   public = list(
-    initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
+
+    #' @description
+    #' Create a new instance of ImmuneMapCorrelatesManager object
+    #' @param applicationName string - applicationName
+    #' @param id string - namespace for this class
+    #' @param namespace_config tibble - configuration values for this namespace instance of the object
+    #' @param remoteDB R6 class to manage remote database queries
+    #' @param localDB R6 class to manange local database queries
+    #' @return A new `ImmuneMapCorrelatesManager` object.
+    initialize = function(applicationName, id, namespace_config, remoteDB, localDB) {
       super$initialize(applicationName, id, namespace_config, remoteDB, localDB)
     },
+
+    #' @description
+    #' Get query analyte choices for the chosen QueryPlatform
+    #'
+    #' @return string vector
+    getQueryAnalytes = function() {
+      return(
+        self$remoteDB$getQuery(
+          "[shiny].[GetQueryAnalytes] ?",
+          tibble::tibble("QueryPlatform" = self$QueryPlatform)
+          ) |>
+          dplyr::rename("QueryAnalyteID" = QueryAnalyte) |>
+          tidyr::separate(
+            QueryAnalyteID,
+            sep = ";",
+            into = c("CellType", "Lineage", "Analyte"),
+            remove = FALSE
+          ) |>
+          dplyr::mutate(QueryAnalyte = glue::glue("{Lineage};{Analyte}")) |>
+          dplyr::select(QueryAnalyte, QueryAnalyteID) |>
+          dplyr::arrange(QueryAnalyte) |>
+          tibble::deframe()
+      )
+    },
+
+    #' @description
+    #' Get volcano plot
+    #' @param .data tibble - data for volcano plot
+    #' @param ns - namespace to apply to plot object
+    #'
+    #' @return plotly object
     getVolcanoPlot = function(.data, ns) {
 
       .data <- .data |>

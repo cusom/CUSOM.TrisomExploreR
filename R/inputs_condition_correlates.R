@@ -1,9 +1,18 @@
+#' Create input widgets for TrisomExploreR condition correlates explorer
+#' @param id - string - id for this module namespace
+#' @param input_config - list - list of default values for various input widgets
+#' @importFrom shinydashboard tabBox
+#' @import bsplus
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom shinyWidgets awesomeCheckboxGroup
+#' @importFrom shinyWidgets numericRangeInput
 #' @export
 condition_correlates_inputs_ui <- function(id, input_config) {
-  ns <- NS(id)
-  tagList(
+  ns <- shiny::NS(id)
+  shiny::tagList(
     shinydashboardPlus::box(
-      title = HTML(
+      title = shiny::HTML(
         '<div class="dataset-options-title">Dataset Options
           <span
             data-toggle="tooltip"
@@ -20,7 +29,7 @@ condition_correlates_inputs_ui <- function(id, input_config) {
       solidHeader = FALSE,
       collapsible = FALSE,
       headerBorder = FALSE,
-      tags$hr(style="margin-top:5px;margin-bottom:10px;"),
+      shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
       bsplus::bs_accordion(id = ns("AccordionInputs")) |>
         bsplus::bs_set_opts(panel_type = "default", use_heading_link = TRUE) |>
         bsplus::bs_append(
@@ -54,29 +63,28 @@ condition_correlates_inputs_ui <- function(id, input_config) {
         bsplus::bs_append(
           title = "3) Choose Query Analyte",
           content = list(
-            selectizeInput(
+            shiny::selectizeInput(
               inputId = ns("QueryAnalyte"),
               label = "Analytes",
               width = "300px",
               choices = NULL,
               multiple = FALSE,
               options = list(
-                labelField ='name',
-                searchField ='name',
-                valueField='id',
-                placeholder = 'Choose an analyte',
+                labelField = "name",
+                searchField = "name",
+                valueField = "id",
+                placeholder = "Choose an analyte",
                 onInitialize = I('function() { this.setValue(""); }'),
                 closeAfterSelect = TRUE,
                 selectOnTab = TRUE,
                 persist = FALSE,
                 `live-search` = TRUE,
-                #maxoptions = 1,
                 dropupAuto = FALSE,
                 onType = I(paste0("
                 function (str) {
                   if(this.currentResults.total == 0) {
                     Shiny.setInputValue(
-                      '",id,"-analyteSearchResults',
+                      '", ns("analyteSearchResults"), "',
                       {
                         query: this.currentResults.query,
                         total: this.currentResults.total
@@ -101,7 +109,7 @@ condition_correlates_inputs_ui <- function(id, input_config) {
                 selected = "Trisomy 21"
               )
             ),
-            tags$br(),
+            shiny::tags$br(),
             shiny::sliderInput(
               inputId = ns("MinComorbitityMembership"),
               label = "Minimum # of Participants for Co-occuring Condition",
@@ -111,7 +119,7 @@ condition_correlates_inputs_ui <- function(id, input_config) {
               step = 1,
               ticks = FALSE
             ),
-            tags$br(),
+            shiny::tags$br(),
             shinyWidgets::awesomeCheckboxGroup(
               inputId = ns("Sex"),
               label = "Sex",
@@ -119,7 +127,7 @@ condition_correlates_inputs_ui <- function(id, input_config) {
               selected = input_config$sexes,
               inline = TRUE
             ),
-            tags$br(),
+            shiny::tags$br(),
             shinyWidgets::numericRangeInput(
               inputId =  ns("Age"),
               label = "Age range",
@@ -141,65 +149,89 @@ condition_correlates_inputs_ui <- function(id, input_config) {
               choiceNames = input_config$statTestschoiceNames,
               choiceValues = input_config$statTests
             )
-            ,tags$br()
-            ,div(
-              id=ns("CovariateInput"),
+            , shiny::tags$br()
+            , shiny::tags$div(
+              id = ns("CovariateInput"),
               shinyWidgets::awesomeCheckboxGroup(
                 inputId = ns("Covariates"),
                 label = "Adjust for covariates",
-                choices = c("Sex","Age") ,
-                selected = c("Sex","Age"),
+                choices = c("Sex", "Age"),
+                selected = c("Sex", "Age"),
                 inline = TRUE
               )
             )
-            ,tags$br()
-            ,shinyWidgets::prettyRadioButtons(
-              inputId = ns("AdjustmentMethod"),
-              label = "Multiple hypothesis correction",
-              choices = NULL,
-              selected = NULL,
-              status = "primary",
-              icon = NULL,
-              inline = FALSE,
-              choiceNames = input_config$adjustmentMethodsNames,
-              choiceValues = input_config$adjustmentMethods
+            , shiny::tags$br()
+            , shinyWidgets::prettyRadioButtons(
+                inputId = ns("AdjustmentMethod"),
+                label = "Multiple hypothesis correction",
+                choices = NULL,
+                selected = NULL,
+                status = "primary",
+                icon = NULL,
+                inline = FALSE,
+                choiceNames = input_config$adjustmentMethodsNames,
+                choiceValues = input_config$adjustmentMethods
+              )
             )
+          ),
+          footer = shiny::tagList(
+          shiny::actionButton(
+            ns("getData"),
+            label = "Analyze & Plot",
+            class = "refresh-btn",
+            icon = icon("play")
           )
-        ),
-        footer = shiny::tagList(
-        actionButton(
-          ns("getData"),
-          label = "Analyze & Plot",
-          class = "refresh-btn",
-          icon = icon("play")
         )
       )
     )
-  )
 }
 
+#' Server-side logic / processing for TrisomExploreR condition correlates explorer inputs
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic to be utilized by all sub-modules
+#' @param input_config - list - list of default values for various input widgets to be used server-side
+#' @import dplyr
+#' @import tibble
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom shinyWidgets awesomeCheckboxGroup
+#' @importFrom shinyWidgets numericRangeInput
+#' @import shinybusy
+#' @import glue
+#' @import shinyjs
+#' @importFrom gargoyle trigger
 #' @export
 condition_correlates_inputs_server <- function(id, r6, input_config) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
     TrisomExploreR::bind_events(
-      ids = c("Platform","Experiment","QueryAnalyte","MinComorbitityMembership","Sex","Age","StatTest","Covariates","AdjustmentMethod"),
+      ids = c(
+        "Platform",
+        "Experiment",
+        "QueryAnalyte",
+        "MinComorbitityMembership",
+        "Sex",
+        "Age",
+        "StatTest",
+        "Covariates",
+        "AdjustmentMethod"
+      ),
       r6 = r6,
       session = session,
       parent_input = input
     )
 
-    observeEvent(c(input$Platform),{
+    shiny::observeEvent(c(input$Platform), {
 
       choices <- input_config$PlatformExperiments |>
         dplyr::filter(
           PlatformDisplayName == input$Platform,
           !is.na(ExperimentStudyName)
         ) |>
-        dplyr::select(ExperimentStudyName,ExperimentID) |>
+        dplyr::select(ExperimentStudyName, ExperimentID) |>
         dplyr::arrange(ExperimentStudyName) |>
         tibble::deframe()
 
@@ -214,10 +246,10 @@ condition_correlates_inputs_server <- function(id, r6, input_config) {
 
     }, ignoreNULL = TRUE)
 
-    observeEvent(c(input$Experiment), {
+    shiny::observeEvent(c(input$Experiment), {
 
-      validate(
-        need(input$Experiment != "","")
+      shiny::validate(
+        shiny::need(input$Experiment != "", "")
       )
 
       shinybusy::show_modal_spinner(
@@ -240,18 +272,18 @@ condition_correlates_inputs_server <- function(id, r6, input_config) {
 
     }, ignoreNULL = TRUE)
 
-    observeEvent(c(input$QueryAnalyte),{
-      if(input$QueryAnalyte != "") {
+    shiny::observeEvent(c(input$QueryAnalyte), {
+      if (input$QueryAnalyte != "") {
         shinyjs::click(glue::glue("AccordionInputs-3-heading"), asis = FALSE)
       }
     }, ignoreInit = TRUE)
 
-    observeEvent(c(input$getData),{
+    shiny::observeEvent(c(input$getData), {
       gargoyle::trigger("get_volcano_data")
     }, ignoreInit = TRUE)
 
-    observe({
-      if(input$QueryAnalyte == "") {
+    shiny::observe({
+      if (input$QueryAnalyte == "") {
         shinyjs::disable("getData")
         shinyjs::removeClass(id = "getData", class = "refresh-ready-btn")
         shinyjs::addClass(id = "getData", class = "refresh-btn")

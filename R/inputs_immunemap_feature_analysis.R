@@ -1,18 +1,30 @@
+#' Create input widgets for TrisomExploreR Immune Map specific feature analysis
+#' @param id - string - id for this module namespace
+#' @param input_config - list - list of default values for various input widgets
+#' @importFrom shinydashboard tabBox
+#' @import shinyjs
+#' @importFrom bsplus bs_embed_tooltip
+#' @importFrom CUSOMShinyHelpers prettyRadioButtonsFieldSet
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom shinyWidgets awesomeCheckboxGroup
+#' @importFrom shinyWidgets numericRangeInput
+#' @importFrom shinycustomloader withLoader
 #' @export
 immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
   ns <- shiny::NS(id)
   shiny::tagList(
     shinydashboardPlus::box(
       title = shiny::HTML(
-        '<div class="dataset-options-title">Dataset Options
+        "<div class=\"dataset-options-title\">Dataset Options
           <span
-            data-toggle="tooltip"
-            data-placement="auto right"
-            title = ""
-            class = "fas fa-filter"
-            data-original-title="Set options below to generate volcano plot">
+            data-toggle=\"tooltip\"
+            data-placement=\"auto right\"
+            title = \"\"
+            class = \"fas fa-filter\"
+            data-original-title=\"Set options below to generate volcano plot\">
           </span>
-        </div>'
+        </div>"
       ),
       height = "auto",
       width = NULL,
@@ -137,10 +149,20 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
 
 }
 
+#' Server-side logic / processing for TrisomExploreR Immune Map specific feature analysis inputs
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic to be utilized by all sub-modules
+#' @param input_config - list - list of default values for various input widgets to be used server-side
+#' @import shinyjs
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom shinyWidgets awesomeCheckboxGroup
+#' @importFrom shinyWidgets numericRangeInput
+#' @importFrom gargoyle trigger
 #' @export
 immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
@@ -161,14 +183,14 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
       parent_input = input
     )
 
-    CellTypeArgs <- reactive({
-      validate(
-        need(input$Study != "", "")
+    CellTypeArgs <- shiny::reactive({
+      shiny::validate(
+        shiny::need(input$Study != "", "")
       )
       r6$getCellTypes(input$Study)
     })
 
-    output$CellType <- renderUI({
+    output$CellType <- shiny::renderUI({
 
       widget <- selectizeInput(
         inputId = ns("CellType"),
@@ -178,7 +200,7 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
         selected = CellTypeArgs()$choices,
         multiple = CellTypeArgs()$MultipleSelect,
         options = list(
-          placeholder = 'Please select below',
+          placeholder = "Please select below",
           closeAfterSelect = FALSE,
           selectOnTab = TRUE,
           persist = FALSE,
@@ -187,7 +209,7 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
         )
       )
 
-      if(CellTypeArgs()$HideCellType) {
+      if (CellTypeArgs()$HideCellType) {
 
         widget <- shinyjs::hidden(widget)
 
@@ -197,15 +219,15 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
     })
 
-    observeEvent(c(input$CellType),{
+    shiny::observeEvent(c(input$CellType), {
 
-      validate(
-        need(input$Study != "", "")
+      shiny::validate(
+        shiny::need(input$Study != "", "")
       )
 
       Analysis <- r6$getAnalysisInputChoices()
 
-      updateSelectizeInput(
+      shiny::updateSelectizeInput(
         inputId = "Analysis",
         choices = Analysis,
         selected = Analysis
@@ -235,11 +257,11 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
     }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
-    output$Karyotype <- renderUI({
+    output$Karyotype <- shiny::renderUI({
 
-      validate(
-        need(input$CellType != "", ""),
-        need(input$Analysis != "", "")
+      shiny::validate(
+        shiny::need(input$CellType != "", ""),
+        shiny::need(input$Analysis != "", "")
       )
 
       karyotypeChoices <- r6$getKaryotypeChoices(input_config$karyotypes)
@@ -253,18 +275,20 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
         width = "90%"
       )
 
-      if(nrow(karyotypeChoices) == 1) {
+      if (nrow(karyotypeChoices) == 1) {
         shinyjs::disabled(
           input
         )
       } else {
         input |>
-          shiny::tagAppendAttributes(class = r6$addInputSpecialClass("Karyotype","disabled"))
+          shiny::tagAppendAttributes(
+            class = r6$addInputSpecialClass("Karyotype", "disabled")
+          )
       }
 
     })
 
-    output$Sex <- renderUI({
+    output$Sex <- shiny::renderUI({
 
       shinyWidgets::awesomeCheckboxGroup(
         inputId = ns("Sex"),
@@ -274,7 +298,9 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
         inline = TRUE,
         width = "90%"
       ) |>
-        shiny::tagAppendAttributes(class = r6$addInputSpecialClass("Sex","disabled"))
+        shiny::tagAppendAttributes(
+          class = r6$addInputSpecialClass("Sex", "disabled")
+        )
 
     })
 
@@ -285,9 +311,9 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
       parent = session
     )
 
-    output$Covariates <- renderUI({
+    output$Covariates <- shiny::renderUI({
 
-      if(input$StatTest == "Linear Model") {
+      if (input$StatTest == "Linear Model") {
 
         choices <- r6$getCovariateChoices()
 
@@ -309,10 +335,10 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
       }
     })
 
-    observeEvent(c(input$getData),{
+    shiny::observeEvent(c(input$getData), {
 
-      validate(
-        need(input$getData > 0, "")
+      shiny::validate(
+        shiny::need(input$getData > 0, "")
       )
 
       gargoyle::trigger("get_volcano_data", session = session)

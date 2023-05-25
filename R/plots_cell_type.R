@@ -49,7 +49,7 @@ cell_type_plot_ui <- function(id) {
 }
 
 #' @export
-cell_type_server <- function(id, r6) {
+cell_type_plot_server <- function(id, r6) {
 
   moduleServer(id, function(input, output, session) {
 

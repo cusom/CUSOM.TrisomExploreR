@@ -5,16 +5,16 @@
 #' @importFrom shinydashboard tabBox
 #' @export
 immunemap_correlates_ui <- function(id, ...) {
-  ns <- NS(id)
-  tagList(
-    fluidRow(
-      column(
-        width = 12, 
+  ns <- shiny::NS(id)
+  shiny::tagList(
+    shiny::fluidRow(
+      shiny::column(
+        width = 12,
         class = "col-lg-2 col-slim",
         TrisomExploreR::immunemap_correlates_inputs_ui(ns("inputs"), ...)
       ),
-      fluidRow(
-        column(
+      shiny::fluidRow(
+        shiny::column(
           width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
           shinydashboard::tabBox(
             id = ns("VolcanoPlotBox"),
@@ -23,7 +23,7 @@ immunemap_correlates_ui <- function(id, ...) {
             width = NULL,
             shiny::tabPanel(
               title = "Volcano Plot",
-              div(
+              shiny::tags$div(
                 id = ns("VolcanoContent"),
                 TrisomExploreR::volcano_plot_ui(ns("volcano-plot"))
               )
@@ -34,7 +34,7 @@ immunemap_correlates_ui <- function(id, ...) {
             )
           )
         ),
-        column(
+        shiny::column(
           width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
           shinydashboard::tabBox(
             id = ns("AnalytePlotBox"),
@@ -54,7 +54,7 @@ immunemap_correlates_ui <- function(id, ...) {
           )
         )
       ),
-      tags$div(
+      shiny::tags$div(
         id = ns("GSEA-Placeholder")
       )
     )

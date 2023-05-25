@@ -9,15 +9,15 @@
 #' @return ui module
 #' @export
 cohort_explorer_ui <- function(id, ...) {
-  ns <- NS(id)
-  tagList(
-    fluidPage(
+  ns <- shiny::NS(id)
+  shiny::tagList(
+    shiny::fluidPage(
       cohort_explorer_inputs_ui(ns("inputs"),  ...),
       cohort_explorer_kpi_ui(ns("kpi")),
-      fluidRow(
-        column(
+      shiny::fluidRow(
+        shiny::column(
           width = 12, class = "col-lg-6",
-          tags$div(
+          shiny::tags$div(
             shinycssloaders::withSpinner(
               plotly::plotlyOutput(
                 ns("SexesOverview"),
@@ -31,9 +31,9 @@ cohort_explorer_ui <- function(id, ...) {
             html = TRUE
           )
         ),
-        column(
+        shiny::column(
           width = 12, class = "col-lg-6",
-          tags$div(
+          shiny::tags$div(
             shinycssloaders::withSpinner(
               plotly::plotlyOutput(
                 ns("AgeDistributionOverview"),
@@ -48,11 +48,11 @@ cohort_explorer_ui <- function(id, ...) {
           )
         )
       ),
-      tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-      fluidRow(
-        column(
+      shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+      shiny::fluidRow(
+        shiny::column(
           width = 12, class = "col-lg-3",
-          tags$div(
+          shiny::tags$div(
             shinycssloaders::withSpinner(
               plotly::plotlyOutput(
                 ns("Probands"),
@@ -66,9 +66,9 @@ cohort_explorer_ui <- function(id, ...) {
             html = TRUE
           )
         ),
-        column(
+        shiny::column(
           width = 12, class = "col-lg-5",
-          tags$div(
+          shiny::tags$div(
             shinycssloaders::withSpinner(
               plotly::plotlyOutput(
                 ns("SamplesAvailable"),
@@ -82,9 +82,9 @@ cohort_explorer_ui <- function(id, ...) {
             html = TRUE
           )
         ),
-        column(
+        shiny::column(
           width = 12, class = "col-lg-4",
-          tags$div(
+          shiny::tags$div(
             shinycssloaders::withSpinner(
               plotly::plotlyOutput(
                 ns("OmicsSamplesAvailable"),
@@ -99,12 +99,12 @@ cohort_explorer_ui <- function(id, ...) {
           )
         )
       ),
-      tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-      fluidRow(
-        column(
+      shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+      shiny::fluidRow(
+        shiny::column(
           width = 12, class = "col-lg-5",
-          tags$div(
-            shinycssloaders::withSpinner( 
+          shiny::tags$div(
+            shinycssloaders::withSpinner(
               plotly::plotlyOutput(
                 ns("RaceEthnicityChart"),
                 height = "480px"
@@ -117,10 +117,10 @@ cohort_explorer_ui <- function(id, ...) {
             html = TRUE
           )
         ),
-        column(
+        shiny::column(
           width = 12, class = "col-lg-7",
           shinydashboardPlus::box(
-            title = HTML(
+            title = shiny::HTML(
               'State of Residence
               <span data-toggle="tooltip"
               data-placement="auto right"
@@ -148,7 +148,7 @@ cohort_explorer_ui <- function(id, ...) {
           )
         )
       ),
-      tags$hr(style = "margin-top:5px;margin-bottom:10px;")
+      shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;")
     )
   )
 
@@ -165,7 +165,7 @@ cohort_explorer_ui <- function(id, ...) {
 #' @export
 cohort_explorer_server <- function(id, r6, ...) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
@@ -175,7 +175,8 @@ cohort_explorer_server <- function(id, r6, ...) {
 
     cohort_explorer_kpi_server(id = "kpi", r6 = r6)
 
-    dataWithFilters <- eventReactive(c(gargoyle::watch("get_cohort_data")),{
+    dataWithFilters <- shiny::eventReactive(
+      c(gargoyle::watch("get_cohort_data")), {
       r6$ParticipantData
     })
 

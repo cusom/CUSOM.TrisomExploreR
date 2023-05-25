@@ -4,18 +4,18 @@
 #' @return ui module
 #' @export
 cell_type_analysis_ui <- function(id, ...) {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
   shiny::tagList(
-    fluidRow(
-      column(
+    shiny::fluidRow(
+      shiny::column(
         width = 12, class = "col-lg-2 col-slim",
-        div(
+        shiny::tags$div(
           id = ns("Dataset-Options"),
           class = "sidebar-text",
           TrisomExploreR::cell_type_inputs_ui(ns("inputs"), ...)
         )
       ),
-      column(
+      shiny::column(
         width = 12, class = "col-lg-10 col-slim",
         TrisomExploreR::cell_type_plot_ui(ns("plot"))
       )
@@ -30,7 +30,7 @@ cell_type_analysis_ui <- function(id, ...) {
 #' @export
 cell_type_analysis_server <- function(id, r6) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
@@ -41,7 +41,7 @@ cell_type_analysis_server <- function(id, r6) {
     TrisomExploreR::cell_type_inputs_server(id = "inputs", r6 = r6)
 
     # plot
-    TrisomExploreR::cell_type_server(id = "plot", r6 = r6)
+    TrisomExploreR::cell_type_plot_server(id = "plot", r6 = r6)
 
   })
 
