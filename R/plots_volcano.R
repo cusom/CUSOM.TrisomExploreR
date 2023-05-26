@@ -1,7 +1,6 @@
 #' Create Volcano Plot
 #' @param id namespace for this module instance
 #' @importFrom shinydashboardPlus box
-#' @importFrom bsplus bs_embed_tooltip
 #' @importFrom shinycustomloader withLoader
 #' @importFrom plotly renderPlotly
 #' @export
@@ -11,46 +10,7 @@ volcano_plot_ui <- function(id) {
     shinydashboardPlus::box(
       title = shiny::tags$div(
         class = "volcano-top-input-panel",
-        shiny::tags$span(
-          id = ns("AnalyteInput"),
-          shiny::selectizeInput(
-            inputId = ns("Analyte"),
-            label = "",
-            choices = NULL,
-            multiple = TRUE,
-            options = list(
-              labelField = "name",
-              searchField = "name",
-              valueField = "name",
-              placeholder = "Select analyte below",
-              onInitialize = I('function() { this.setValue(""); }'),
-              closeAfterSelect = TRUE,
-              selectOnTab = TRUE,
-              persist = FALSE,
-              `live-search` = TRUE,
-              dropupAuto = FALSE,
-              onType = I(paste0("
-                function (str) {
-                  if(this.currentResults.total == 0) {
-                    Shiny.setInputValue(
-                      '", ns("analyteSearchResults"), "',
-                      {
-                        query: this.currentResults.query,
-                        total: this.currentResults.total
-                      },
-                      { priority: 'event' }
-                    );
-                  };
-                }"))
-            )
-          ) |>
-          bsplus::bs_embed_tooltip(
-            title = "Select from this dropdown",
-            placement = "left",
-            html = TRUE
-          ),
-          shiny::htmlOutput(ns("AnalyteSearchError"))
-        ),
+        TrisomExploreR::volcano_plot_analyte_input_ui(ns("volcano-analyte")),
         TrisomExploreR::GSEA_analysis_inputs_ui(ns("GSEA"))
       ),
       height = "auto",
@@ -68,7 +28,9 @@ volcano_plot_ui <- function(id) {
         type = "html",
         loader = "dnaspin"
       ),
-      shiny::htmlOutput(ns("volcanoMultiSelectText"))
+      shiny::tags$div(
+        id = ns("volcanoMultiSelectTextPlaceholder")
+      )
     )
   )
 }
@@ -91,13 +53,6 @@ volcano_plot_server <- function(id, r6, ...) {
 
     ns <- session$ns
 
-    TrisomExploreR::bind_events(
-      ids = c("Analyte"),
-      r6 = r6,
-      session = session,
-      parent_input = input
-    )
-
     FoldChangeData <- shiny::eventReactive(
       c(gargoyle::watch("get_volcano_data", session = session)), {
 
@@ -115,18 +70,7 @@ volcano_plot_server <- function(id, r6, ...) {
 
         r6$getVolcanoSummaryData()
 
-        analytes <- r6$VolcanoSummaryData |>
-          dplyr::select(Analyte) |>
-          dplyr::distinct() |>
-          dplyr::arrange(Analyte) |>
-          data.table::as.data.table()
-
-        updateSelectizeInput(
-          session = session,
-          inputId = "Analyte",
-          choices = analytes,
-          selected = r6$Analyte
-        )
+        gargoyle::trigger("update_volcano_analytes", session = session)
 
         gargoyle::trigger("validate_GSEA", session = session)
 
@@ -162,130 +106,17 @@ volcano_plot_server <- function(id, r6, ...) {
 
     })
 
-    shiny::observeEvent(
-      plotly::event_data(
-        "plotly_click",
-        priority = "event",
-        source = ns("VolcanoPlot"),
-        session = session
-      ), {
+    TrisomExploreR::volcano_plot_analyte_input_server(
+      id = "volcano-analyte",
+      r6 = r6,
+      parent = session
+    )
 
-      e <- plotly::event_data(
-        "plotly_click",
-        source = ns("VolcanoPlot"),
-        session = session
-      )
-
-      updateSelectizeInput(
-        session = session,
-        inputId = "Analyte",
-        selected = e$key
-      )
-
-    }, domain = session)
-
-    shiny::observeEvent(
-      plotly::event_data(
-        "plotly_selected",
-        priority = "event",
-        source = ns("VolcanoPlot"),
-        session = session
-      ), {
-
-      e <- plotly::event_data(
-        "plotly_selected",
-        source = ns("VolcanoPlot"),
-        session = session
-      )
-
-      updateSelectizeInput(
-        session = session,
-        inputId = "Analyte",
-        selected = e$key
-      )
-    }, domain = session)
-
-    volcanoMultiSelectText <- shiny::eventReactive(c(input$Analyte), {
-      r6$volcanoMultiSelectText
-    }, domain = session)
-
-    output$volcanoMultiSelectText <- shiny::renderText({
-      volcanoMultiSelectText()
-    })
-
-    shiny::observeEvent(
-      c(gargoyle::watch("sync_analyte_choice", session = session)), {
-      shiny::updateSelectizeInput(
-        session = session,
-        inputId = "Analyte",
-        selected = r6$Analyte
-      )
-    }, ignoreInit = TRUE,  domain = session)
-
-    shiny::observeEvent(c(input$Analyte), {
-
-      plotName <- ns("VolcanoPlot")
-
-      if (all(input$Analyte != "")) {
-        if (length(input$Analyte) == 1) {
-          keys <- glue::glue_collapse(input$Analyte, sep = "|")
-          shinyjs::runjs(glue::glue('annotatePointByKey("{plotName}","{keys}",5);'))
-        } else {
-          keys <- ""
-          shinyjs::runjs(glue::glue('annotatePointByKey("{plotName}","{keys}",5);'))
-          keys <- glue::glue_collapse(input$Analyte, sep = "|")
-          shinyjs::runjs(glue::glue('updateSelectedKeys("{plotName}","{keys}");'))
-        }
-
-        shinyjs::runjs(
-          paste0("
-            Shiny.setInputValue(
-              '", ns("analyteSearchResults"), "',
-              {
-                query: '", input$Analyte, "',
-                total: ", length(input$Analyte), "
-              },
-              { priority: 'event' }
-            );"
-          )
-        )
-
-      } else {
-        keys <- ""
-        shinyjs::runjs(glue::glue('annotatePointByKey("{plotName}","{keys}",5);'))
-      }
-
-      gargoyle::trigger("show_analyte_plot", session = session)
-
-    }, ignoreInit = TRUE, domain = session)
-
-    AnalyteSearchErrorText <- shiny::eventReactive(
-      c(input$analyteSearchResults, input$Analyte), {
-      searchResultData <- input$analyteSearchResults
-      shiny::req(searchResultData)
-
-      if (length(input$Analyte) > 0) {
-        shiny::HTML("")
-      }
-      else if(searchResultData$total == 0) {
-        shiny::HTML(
-          paste0(
-            '<span style="color:black;font-size:smaller;padding-left:10px;"><b>"', 
-            searchResultData$query,
-            '"</b> not found. Please try another value</span>'
-          )
-        )
-      }
-      else {
-        shiny::HTML("")
-      }
-    }, domain = session)
-
-    output$AnalyteSearchError <- shiny::renderUI({
-      AnalyteSearchErrorText()
-    })
-
-    TrisomExploreR::GSEA_analysis_inputs_server(id = "GSEA", r6 = r6, ...)
+    TrisomExploreR::GSEA_analysis_inputs_server(
+      id = "GSEA",
+      r6 = r6,
+      ...
+    )
 
   })
 }
