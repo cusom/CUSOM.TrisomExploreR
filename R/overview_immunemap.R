@@ -1,12 +1,16 @@
+#' Create overview page for immune map application
+#' @param id - string - id for this module namespace
+#' @param ... dots - additional arguments (if any) to be passed to sub-modules
+#' @importFrom shinydashboardPlus box
 #' @export
 immunemap_overview_ui <- function(id, ...) {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
   shiny::tagList(
     shiny::fluidRow(
       shiny::column(
         width = 12, class = "col-lg-12",
         shinydashboardPlus::box(
-          id = NS(id,"Overview"),
+          id = ns("Overview"),
           title = "",
           height = "auto",
           width = 12,
@@ -20,14 +24,14 @@ immunemap_overview_ui <- function(id, ...) {
             height = "115px",
             style = "margin: auto;display:block"
           ),
-          tags$br(),
-          tags$div(
+          shiny::tags$br(),
+          shiny::tags$div(
             class = "overviewHeader",
             tags$h2("WHAT IS AN IMMUNE MAP?")
           ),
-          tags$div(
+          shiny::tags$div(
             class = "overviewBodyText", 
-            tags$html("An immune map is a detailed characterization of the types and amounts of immune cells present in an organism. 
+            shiny::tags$html("An immune map is a detailed characterization of the types and amounts of immune cells present in an organism. 
                   Altogether, these immune cells drive the immune response against infectious agents such as bacteria and viruses. 
                   Some immune cells also participate in the defense against tumors, and some can contribute to the appearance and severity 
                   of autoimmune disorders. Therefore, an immune map provides valuable information about how the immune system is functioning. 
@@ -35,36 +39,36 @@ immunemap_overview_ui <- function(id, ...) {
                   with Down syndrome versus typical people, and also reveal differences among those with Down syndrome affected by 
                   different co-occurring health conditions or \'comorbidities\'."
             ),
-            tags$br(),
-            tags$div(
+            shiny::tags$br(),
+            shiny::tags$div(
               class = "overviewHeader",
               tags$h3("OVERVIEW")
             ),
-            tags$div(
+            shiny::tags$div(
               class = "overviewBodyText",
-              tags$p("This dashboard contains data generated from circulating blood using two different platforms: 
+              shiny::tags$p("This dashboard contains data generated from circulating blood using two different platforms: 
                   mass-cytometry and flow-cytometry."
               ),
-              tags$p(
-                tags$b("Effect of trisomy 21"),
-                tags$p("Explore the differences in immune cell types between 
+              shiny::tags$p(
+                shiny::tags$b("Effect of trisomy 21"),
+                shiny::tags$p("Explore the differences in immune cell types between 
                   samples with trisomy 21 (T21, Down syndrome) versus those from typical people (controls). The data are searchable 
                   by cell type and can be filtered by experimental platform, age at time of blood collection, and sex. Significant 
                   differences between trisomy 21 and controls (p<0.05) are indicated within the selected parameters."
                 )
               ),
-              tags$p(
-                tags$b("Effect of Comorbidity"),
-                tags$html("Explore the differences in immune cell types between samples obtained from people with trisomy 21 
+              shiny::tags$p(
+                shiny::tags$b("Effect of Comorbidity"),
+                shiny::tags$html("Explore the differences in immune cell types between samples obtained from people with trisomy 21 
                   (T21, Down syndrome) <b><i>with</i></b> versus <b><i>without</i></b> selected comorbidities as defined 
                   by mass-cytometry. The data are searchable by cell type and can be filtered by age at time of blood collection, 
                   and sex. Significant differences between those <b><i>with</i></b> versus <b><i>without</i></b> selected 
                   comorbidities  (p<0.05) are indicated within the selected parameters."
                 )
               ),
-              tags$p(
-                tags$b("METHODS"),
-                tags$p("Mass-cytometry and flow-cytometry were used to generate cell counts. 
+              shiny::tags$p(
+                shiny::tags$b("METHODS"),
+                shiny::tags$p("Mass-cytometry and flow-cytometry were used to generate cell counts. 
                   All comparisons are reported using a Student\'s T-test and have not been corrected for multiple comparisons. 
                   For full methods and analysis, please see associated publications. 
                   Data are represented from two measurements: frequency of a given cell type among total non-granulocytes of 
@@ -73,34 +77,34 @@ immunemap_overview_ui <- function(id, ...) {
                 )
               )
             ),
-            tags$br(),
-            tags$div(
+            shiny::tags$br(),
+            shiny::tags$div(
               class = "overviewHeader",
-              tags$h3("DATASETS AND PUBLICATIONS")
+              shiny::tags$h3("DATASETS AND PUBLICATIONS")
             ),
-            tags$div(
+            shiny::tags$div(
               class = "overviewBodyText",
-              tags$p(
-                tags$a(
+              shiny::tags$p(
+                shiny::tags$a(
                   href = "https://doi.org/10.1016/j.celrep.2019.10.038",
                   target = "_blank",
-                  tags$b("Mass-cytometry reveals global immune remodeling with multi-lineage hypersensitivity to Type I Interferon in Down syndrome."),
+                  shiny::tags$b("Mass-cytometry reveals global immune remodeling with multi-lineage hypersensitivity to Type I Interferon in Down syndrome."),
                   .noWS = c("outside")
                 ),
-                tags$html("Waugh, KA, Araya P, Pandey A, Jordan KR, Smith KP, Granrath RE, Khanal S, Butcher ET, Enriquez Estrada B, 
+                shiny::tags$html("Waugh, KA, Araya P, Pandey A, Jordan KR, Smith KP, Granrath RE, Khanal S, Butcher ET, Enriquez Estrada B, 
                   Rachubinski AL, McWilliams JA, Minter R, Dimasi T, Colvin KL, 
                   Baturin D, Pham AT, Galbraith MD, Bartsch KW, Yeager ME, Porter CC, Sullivan KD, Hsieh EW, Espinosa JM. 
                   Cell Reports. 2019 Nov 12; 29(7):1893-1908.")
               ),
-              tags$br(),
-              tags$p(
-                tags$a(
+              shiny::tags$br(),
+              shiny::tags$p(
+                shiny::tags$a(
                   href = "https://www.pnas.org/content/early/2019/11/06/1908129116",
                   target = "_blank",
-                  tags$b("Trisomy 21 dysregulates T cell lineages toward an autoimmunity-prone state associated with interferon hyperactivity."),
+                  shiny::tags$b("Trisomy 21 dysregulates T cell lineages toward an autoimmunity-prone state associated with interferon hyperactivity."),
                   .noWS = c("outside")
                 ),
-                tags$html("Araya P, Waugh KA, Sullivan KD, Nunez NG, Roselli E, Smith KP, Granrath RE, Rachubinski AL, Butcher ET, 
+                shiny::tags$html("Araya P, Waugh KA, Sullivan KD, Nunez NG, Roselli E, Smith KP, Granrath RE, Rachubinski AL, Butcher ET, 
                   Minter R, Tuttle KD, 
                   Bruno TC, Maccioni M, and Espinosa JM. PNAS. 2019 Nov 7; PMID: 31699819.")
               )
@@ -114,6 +118,10 @@ immunemap_overview_ui <- function(id, ...) {
 }
 
 #' @export
-immunemap_overview_server <- function(input,output,session, id) {
+immunemap_overview_server <- function(id) {
+
+  shiny::moduleServer(id, function(input, output, session) {
+
+  })
 
 }
