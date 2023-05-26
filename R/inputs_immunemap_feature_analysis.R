@@ -37,7 +37,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
           ns("PrimaryTutorial"),
           label = "Take Tutorial",
           class = "tutorial-btn",
-          icon = icon("question-circle")
+          icon = shiny::icon("question-circle")
         ) |>
           bsplus::bs_embed_tooltip(
             title = "Click here to learn about setting dataset options to generate the volcano plot",
@@ -46,7 +46,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
           )
       ),
       shiny::tags$div(
-        id = NS(id, "scrollableOptions"),
+        id = ns("scrollableOptions"),
         style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shiny::tags$div(
@@ -65,14 +65,14 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
         ),
         shiny::tags$br(),
         shinycustomloader::withLoader(
-          uiOutput(ns("CellType")),
+          shiny::uiOutput(ns("CellType")),
           type = "html",
           loader = "loader6",
           proxy.height = "20px"
         ),
         shinyjs::hidden(
-          selectizeInput(
-            inputId = NS(id,"Analysis"),
+          shiny::selectizeInput(
+            inputId = ns("Analysis"),
             label = "Analysis",
             width = "90%",
             choices = NULL,
@@ -81,7 +81,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shinycustomloader::withLoader(
-          uiOutput(ns("Karyotype")),
+          shiny::uiOutput(ns("Karyotype")),
           type = "html",
           loader = "loader6",
           proxy.height = "20px"
@@ -89,7 +89,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         conditions_feature_analysis_inputs_ui(ns("conditions")),
         shinycustomloader::withLoader(
-          uiOutput(ns("Sex")),
+          shiny::uiOutput(ns("Sex")),
           type = "html",
           loader = "loader6",
           proxy.height = "20px"
@@ -115,7 +115,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
           choiceValues = input_config$statTests
         ),
         shinycustomloader::withLoader(
-          uiOutput(ns("Covariates")),
+          shiny::uiOutput(ns("Covariates")),
           type = "html",
           loader = "loader6",
           proxy.height = "20px"
@@ -140,7 +140,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
             ns("getData"),
             label = "Analyze & Plot",
             class = "refresh-btn",
-            icon = icon("play")
+            icon = shiny::icon("play")
           )
         )
       )
@@ -192,7 +192,7 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
     output$CellType <- shiny::renderUI({
 
-      widget <- selectizeInput(
+      widget <- shiny::selectizeInput(
         inputId = ns("CellType"),
         label = "Analysis Choices",
         width = "90%",

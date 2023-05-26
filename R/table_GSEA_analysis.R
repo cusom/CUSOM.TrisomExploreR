@@ -1,8 +1,8 @@
 #' @export
 feature_analysis_GSEA_summary_data_ui <- function(id) {
-  ns <- NS(id)
-  tagList(
-    tags$div(
+  ns <- shiny::NS(id)
+  shiny::tagList(
+    shiny::tags$div(
       id = ns("GSEAPathwayTableBox"),
       shinydashboardPlus::box(
         title = "GSEA Pathway Data",
@@ -14,7 +14,7 @@ feature_analysis_GSEA_summary_data_ui <- function(id) {
         headerBorder = FALSE,
         shinycustomloader::withLoader(
           DT::dataTableOutput(
-            NS(id,"GSEADataTable"),
+            ns("GSEADataTable"),
             width = "99%",
             height = "400px"
           ),
@@ -29,11 +29,12 @@ feature_analysis_GSEA_summary_data_ui <- function(id) {
 #' @export
 feature_analysis_GSEA_summary_data_server <- function(id, r6, parent) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    GSEAPathwayData <- eventReactive(c(gargoyle::watch("get_GSEA_path_data", session = session)),{
+    GSEAPathwayData <- shiny::eventReactive(
+      c(gargoyle::watch("get_GSEA_path_data", session = session)), {
 
       r6$GSEAPathwayData
 
@@ -47,8 +48,8 @@ feature_analysis_GSEA_summary_data_server <- function(id, r6, parent) {
           data = GSEAPathwayData(),
           caption = htmltools::tags$caption(
             style = 'caption-side: top; text-align: left;',
-            HTML(glue::glue('<a href="https://www.gsea-msigdb.org/gsea/msigdb/cards/{r6$GSEAGenesetName}" target="_blank" title="Click here to learn more about this gene set">{r6$GSEAGenesetName} GENE SET</a>')),
-            htmltools::em('')
+            shiny::HTML(glue::glue('<a href="https://www.gsea-msigdb.org/gsea/msigdb/cards/{r6$GSEAGenesetName}" target="_blank" title="Click here to learn more about this gene set">{r6$GSEAGenesetName} GENE SET</a>')),
+            htmltools::em("")
           ),
           #filter = "top",
           extensions = c('Buttons','Responsive','Scroller'),
@@ -90,9 +91,9 @@ feature_analysis_GSEA_summary_data_server <- function(id, r6, parent) {
         )
       }
 
-    }, server=FALSE)
+    }, server = FALSE)
 
-    observeEvent(c(input$DataDownload),{
+    shiny::observeEvent(c(input$DataDownload), {
       CUSOMShinyHelpers::downloadFile(
         id = ns("download"),
         fileName = glue::glue('{self$applicationName} - GSEA {r6$GSEAGenesetName} {format(Sys.time(),\"%Y%m%d_%H%M%S\")}'),

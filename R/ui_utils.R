@@ -15,6 +15,8 @@ create_menu_items <- function(namespaces, ui_config) {
 #' @export
 create_menu_item <- function(id, ui_config) {
 
+  Namespace <- NULL
+
   menu_config <- ui_config |>
     dplyr::filter(Namespace == id)
 
@@ -46,6 +48,8 @@ create_tab_items <- function(namespaces, ui_config, input_config) {
 
 #' @export
 create_tab_item <- function(id, ui_config, input_config) {
+
+  Namespace <- NULL
 
   tab_config <- ui_config |>
     dplyr::filter(Namespace == id)

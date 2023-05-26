@@ -17,7 +17,7 @@ condition_frequency_ui <- function(id) {
       ),
       shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
       shiny::fluidRow(
-        column(
+        shiny::column(
           width = 12, class = "col-lg-6",
           condition_frequency_class_sex_plot_ui(ns("class_sex_plot"))
         ),

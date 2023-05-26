@@ -64,6 +64,8 @@ purge_plot <- function(session, ns, plot_name, r6) {
 #' @importFrom stringr str_split_i
 get_object_name_from_namespace_session <- function(session, namespace, object_name) {
 
+  obj_name <- object <- id <- property <- full_object_name <- NULL
+
   matching_objects <- tibble::tibble(
     "obj_name"  = names(session$clientData)
     ) |>

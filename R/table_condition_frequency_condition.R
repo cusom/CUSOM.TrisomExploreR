@@ -1,8 +1,8 @@
 #' @export
 condition_frequency_condition_table_ui <- function(id) {
-  ns <- NS(id)
-  tagList(
-    tags$h3('Choose (up to 5) Specific Conditions'),
+  ns <- shiny::NS(id)
+  shiny::tagList(
+    shiny::tags$h3("Choose (up to 5) Specific Conditions"),
     shinycssloaders::withSpinner(
       DT::dataTableOutput(
         ns("ChildConditionsTable"),
@@ -12,7 +12,7 @@ condition_frequency_condition_table_ui <- function(id) {
     shinycssloaders::withSpinner(
       DT::dataTableOutput(
         ns("ChildConditionsSummary"),
-        height="auto"
+        height = "auto"
       )
     )
   )
@@ -21,24 +21,26 @@ condition_frequency_condition_table_ui <- function(id) {
 #' @export
 condition_frequency_condition_table_server <- function(id, r6) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    childConditions <- eventReactive(c(gargoyle::watch("get_child_conditions")),{
+    childConditions <- shiny::eventReactive(
+      c(gargoyle::watch("get_child_conditions")), {
       r6$updateConditions()
       r6$updateSummaryConditionCounts()
       r6$conditionCounts
-    },ignoreInit = TRUE)
+    }, ignoreInit = TRUE)
 
-    childConditionSummary <- eventReactive(c(gargoyle::watch("get_child_conditions_summary")),{
+    childConditionSummary <- shiny::eventReactive(
+      c(gargoyle::watch("get_child_conditions_summary")), {
       r6$conditionSummary
-    },ignoreInit = TRUE)
+    }, ignoreInit = TRUE)
 
     output$ChildConditionsTable <- DT::renderDataTable({
 
-      validate(
-        need(!is.null(childConditions()),"")
+      shiny::validate(
+        shiny::need(!is.null(childConditions()), "")
       )
 
       formattable::as.datatable(
@@ -151,8 +153,8 @@ condition_frequency_condition_table_server <- function(id, r6) {
 
     output$ChildConditionsSummary <- DT::renderDataTable({
 
-      validate(
-        need(!is.null(childConditionSummary()),"")
+      shiny::validate(
+        shiny::need(!is.null(childConditionSummary()), "")
       )
 
       formattable::as.datatable(
@@ -185,7 +187,7 @@ condition_frequency_condition_table_server <- function(id, r6) {
 
     })
 
-    observeEvent(input$ChildConditionsTable_rows_selected,{
+    shiny::observeEvent(input$ChildConditionsTable_rows_selected, {
 
       s <- input$ChildConditionsTable_rows_selected
 

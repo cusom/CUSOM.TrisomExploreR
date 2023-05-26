@@ -40,6 +40,8 @@ condition_correlates_heatmap_plot_ui <- function(id) {
 #' @export
 condition_correlates_heatmap_plot_server <- function(id, r6) {
 
+  z <- r <- Analyte <- NULL
+
   shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns

@@ -62,6 +62,8 @@ volcano_plot_analyte_input_ui <- function(id) {
 #' @export
 volcano_plot_analyte_input_server <- function(id, r6, parent) {
 
+  Analyte <- NULL
+
   shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns

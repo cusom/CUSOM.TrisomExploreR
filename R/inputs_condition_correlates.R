@@ -179,7 +179,7 @@ condition_correlates_inputs_ui <- function(id, input_config) {
             ns("getData"),
             label = "Analyze & Plot",
             class = "refresh-btn",
-            icon = icon("play")
+            icon = shiny::icon("play")
           )
         )
       )
@@ -202,6 +202,8 @@ condition_correlates_inputs_ui <- function(id, input_config) {
 #' @importFrom gargoyle trigger
 #' @export
 condition_correlates_inputs_server <- function(id, r6, input_config) {
+
+  PlatformDisplayName <- ExperimentStudyName <- ExperimentID <- NULL
 
   shiny::moduleServer(id, function(input, output, session) {
 
@@ -262,7 +264,7 @@ condition_correlates_inputs_server <- function(id, r6, input_config) {
 
       shinybusy::remove_modal_spinner()
 
-      updateSelectizeInput(
+      shiny::updateSelectizeInput(
         session = session,
         inputId = "QueryAnalyte",
         choices = queryAnalytes

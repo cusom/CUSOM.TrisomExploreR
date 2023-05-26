@@ -38,7 +38,7 @@ feature_analysis_analyte_plot_ui <- function(id) {
             label = "close",
             style = "simple",
             color = "primary",
-            icon = icon("bars")
+            icon = shiny::icon("bars")
           ),
           shiny::tags$hr(),
           shiny::htmlOutput(ns("ExternalLinksText")),
@@ -75,6 +75,8 @@ feature_analysis_analyte_plot_ui <- function(id) {
 #' @importFrom shinydashboardPlus updateBoxSidebar
 #' @export
 feature_analysis_analyte_plot_server <- function(id, r6) {
+
+  z <- r <- Analyte <- NULL
 
   shiny::moduleServer(id, function(input, output, session) {
 

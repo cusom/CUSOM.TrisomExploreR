@@ -1,6 +1,8 @@
 #' @export
 load_modules <- function(id, module_config) {
 
+  Namespace <- NULL
+
   namespace_config <- dplyr::filter(module_config, Namespace == id)
 
   if (namespace_config$UseR6Class) {

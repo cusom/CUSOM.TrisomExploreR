@@ -24,6 +24,8 @@ conditions_feature_analysis_inputs_ui <- function(id, input_config) {
 #' @export
 conditions_feature_analysis_inputs_server <- function(id, r6, input_config, parent) {
 
+  ConditionClass <- Condition <- NULL
+
   shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns

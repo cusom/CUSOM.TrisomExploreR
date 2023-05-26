@@ -51,6 +51,8 @@ feature_analysis_GSEA_plot_ui <- function(id) {
 #' @export
 feature_analysis_GSEA_plot_server <- function(id, r6, parent) {
 
+  Gene <- Analyte <- text <- NULL
+
   shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
@@ -103,7 +105,7 @@ feature_analysis_GSEA_plot_server <- function(id, r6, parent) {
 
       r6$GSEATraceName <- e$y
 
-      updateSelectizeInput(
+      shiny::updateSelectizeInput(
         session = session,
         inputId = "GSEASelectedAnalytes",
         choices = e$customdata,

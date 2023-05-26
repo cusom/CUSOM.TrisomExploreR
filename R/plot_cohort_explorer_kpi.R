@@ -59,6 +59,8 @@ cohort_explorer_kpi_ui <- function(id) {
 #' @export
 cohort_explorer_kpi_server <- function(id, r6) {
 
+  Karyotype <- ParticipantCount <- record_id <- NULL
+
   shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
@@ -108,7 +110,7 @@ cohort_explorer_kpi_server <- function(id, r6) {
           dplyr::select(ParticipantCount) |>
           dplyr::pull(),
         subtitle = "Controls (D21)",
-        icon = icon("user-minus", lib = "font-awesome"),
+        icon = shiny::icon("user-minus", lib = "font-awesome"),
         color = "teal",
         width = 3
       )
@@ -119,7 +121,7 @@ cohort_explorer_kpi_server <- function(id, r6) {
       shinydashboard::valueBox(
         value = r6$AllN,
         subtitle = "Total in database",
-        icon = icon("database", lib = "font-awesome"),
+        icon = shiny::icon("database", lib = "font-awesome"),
         color = "green",
         width = 3
       )
@@ -147,7 +149,7 @@ cohort_explorer_kpi_server <- function(id, r6) {
       shinydashboard::valueBox(
         value = n,
         subtitle = "Total currently selected",
-        icon = icon("hashtag", lib = "font-awesome"),
+        icon = shiny::icon("hashtag", lib = "font-awesome"),
         color = "olive",
         width = 3
       )

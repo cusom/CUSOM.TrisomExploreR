@@ -2,54 +2,49 @@
 volcano_data_table_ui <- function(id) {
   ns <- shiny::NS(id)
   shiny::tagList(
-    # shinydashboardPlus::box(
-    #   title = "",
-    #   height = "auto",
-    #   width = NULL,
-    #   closable = FALSE,
-    #   solidHeader = FALSE,
-    #   collapsible = FALSE,
-    #   headerBorder = FALSE,
-      fluidRow(
-        column(
-          width = 12, class = "col-md-5",
-          uiOutput(ns("FoldChangeTableFilter"))
-        ),
-        column(
-          offset = 1,
-          width = 12, class = "col-md-5",
-          uiOutput(ns("SignificanceLevelTableFilter"))
-        )
+    shiny::fluidRow(
+      shiny::column(
+        width = 12, class = "col-md-5",
+        shiny::uiOutput(ns("FoldChangeTableFilter"))
       ),
-      tags$hr(),
-      fluidRow(
-        column(
-          width = 12,
-          shinycustomloader::withLoader(
-            DT::dataTableOutput(
-              ns("FoldChangeDataTable")
-            ),
-            type = "html",
-            loader = "dnaspin"
-          )
+      shiny::column(
+        offset = 1,
+        width = 12, class = "col-md-5",
+        shiny::uiOutput(ns("SignificanceLevelTableFilter"))
+      )
+    ),
+    shiny::tags$hr(),
+    shiny::fluidRow(
+      shiny::column(
+        width = 12,
+        shinycustomloader::withLoader(
+          DT::dataTableOutput(
+            ns("FoldChangeDataTable")
+          ),
+          type = "html",
+          loader = "dnaspin"
         )
       )
-    # )
+    )
   )
 }
 
 #' @export
 volcano_data_table_server <- function(id, r6) {
+
+  p.value <- pvalueCutoff <- NULL
+
   shiny::moduleServer(id, function(input, output, session) {
+
     ns <- session$ns
 
-    output$FoldChangeTableFilter <- renderUI({
+    output$FoldChangeTableFilter <- shiny::renderUI({
 
       lim <- ceiling(r6$VolcanoSummaryMaxFoldChange)
 
       shiny::sliderInput(
         inputId = ns("FoldChangeTableFilter"),
-        label = HTML(glue::glue("Filter by {r6$VolcanoSummaryDataXAxisLabel}")),
+        label = shiny::HTML(glue::glue("Filter by {r6$VolcanoSummaryDataXAxisLabel}")),
         min = -lim,
         max = lim,
         step = round(1 / (lim * 2), 1),
@@ -57,7 +52,7 @@ volcano_data_table_server <- function(id, r6) {
       )
     })
 
-    output$SignificanceLevelTableFilter <- renderUI({
+    output$SignificanceLevelTableFilter <- shiny::renderUI({
       label <- "Filter by p-value significance level"
       choices <- c("all", " * p &le; 0.05", " ** p &le; 0.01", " *** p &le; 0.001")
 
@@ -69,7 +64,7 @@ volcano_data_table_server <- function(id, r6) {
       shinyWidgets::prettyRadioButtons(
         inputId = ns("SignificanceLevelTableFilter"),
         label = label,
-        choiceNames = lapply(choices, HTML),
+        choiceNames = lapply(choices, shiny::HTML),
         choiceValues = choices,
         status = "primary"
       )
@@ -80,10 +75,10 @@ volcano_data_table_server <- function(id, r6) {
         input$SignificanceLevelTableFilter, input$FoldChangeTableFilter
       ), {
 
-      validate(
-        need(!is.null(r6$VolcanoSummaryData), ""),
-        need(!is.null(input$SignificanceLevelTableFilter), ""),
-        need(!is.null(input$FoldChangeTableFilter), "")
+      shiny::validate(
+        shiny::need(!is.null(r6$VolcanoSummaryData), ""),
+        shiny::need(!is.null(input$SignificanceLevelTableFilter), ""),
+        shiny::need(!is.null(input$FoldChangeTableFilter), "")
       )
 
       r6$VolcanoSummaryData |>
@@ -104,10 +99,9 @@ volcano_data_table_server <- function(id, r6) {
         r6$getFormattedVolcanoSummaryData()
     })
 
-    output$FoldChangeDataTable <- DT::renderDataTable(
-      {
-        validate(
-          need(!is.null(FoldChangeDataTableData()), "")
+    output$FoldChangeDataTable <- DT::renderDataTable({
+        shiny::validate(
+          shiny::need(!is.null(FoldChangeDataTableData()), "")
         )
 
         DT::datatable(
@@ -154,7 +148,7 @@ volcano_data_table_server <- function(id, r6) {
       server = FALSE
     )
 
-    observeEvent(c(input$DataDownload), {
+    shiny::observeEvent(c(input$DataDownload), {
       CUSOMShinyHelpers::downloadFile(
         id = ns("download"),
         fileName = glue::glue('{r6$Study}_Summary_Data_{format(Sys.time(),\"%Y%m%d_%H%M%S\")}'),

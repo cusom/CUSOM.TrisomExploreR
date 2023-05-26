@@ -1,8 +1,8 @@
 #' @export
 condition_frequency_class_table_ui <- function(id) {
-  ns <- NS(id)
-  tagList(
-    HTML(
+  ns <- shiny::NS(id)
+  shiny::tagList(
+    shiny::HTML(
       '<h3>Choose (up to 3) Condition Classes
         <span data-toggle="tooltip"
           data-placement="auto right"
@@ -19,17 +19,17 @@ condition_frequency_class_table_ui <- function(id) {
           If more than one specific condition is selected, only participants with all selected conditions appear in the reported total.">
         </span>
       </h3>'
-    )
-    ,shinycssloaders::withSpinner(
+    ),
+    shinycssloaders::withSpinner(
       DT::dataTableOutput(
         ns("TopConditionsTable"),
         height = "420px"
       )
-    )
-    ,shinycssloaders::withSpinner(
+    ),
+    shinycssloaders::withSpinner(
       DT::dataTableOutput(
         ns("TopConditionsSummary"),
-        height="auto"
+        height = "auto"
       )
     )
 
@@ -39,14 +39,14 @@ condition_frequency_class_table_ui <- function(id) {
 #' @export
 condition_frequency_class_table_server <- function(id, r6) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
    ns <- session$ns
 
    output$TopConditionsTable <- DT::renderDataTable({
 
-    validate(
-      need(!is.null(r6$conditionClassCounts),"")
+    shiny::validate(
+      shiny::need(!is.null(r6$conditionClassCounts), "")
     )
 
      formattable::as.datatable(
@@ -129,15 +129,15 @@ condition_frequency_class_table_server <- function(id, r6) {
        )),
        rownames = FALSE,
        options = list(
-         dom = 't',
-         autowidth=TRUE,
+         dom = "t",
+         autowidth = TRUE,
          columnDefs = list(
-           list(targets = c(0), visible = TRUE, width = '50%'),
-           list(targets = c(1), visible = TRUE, width = '25%'),
-           list(targets = c(2), visible = TRUE, width = '25%')
+           list(targets = c(0), visible = TRUE, width = "50%"),
+           list(targets = c(1), visible = TRUE, width = "25%"),
+           list(targets = c(2), visible = TRUE, width = "25%")
          ),
          scrollX = TRUE,
-         scrollY = '400px',
+         scrollY = "400px",
          pageLength = 150,
          initComplete = DT::JS(
            paste0(
@@ -158,7 +158,7 @@ condition_frequency_class_table_server <- function(id, r6) {
    }, server = FALSE)
 
    # Observe Table Row clicks -> update Condition Class Inputs
-   observeEvent(input$TopConditionsTable_rows_selected,{
+   shiny::observeEvent(input$TopConditionsTable_rows_selected, {
 
      s <- input$TopConditionsTable_rows_selected
 
@@ -173,7 +173,8 @@ condition_frequency_class_table_server <- function(id, r6) {
 
    })
 
-   conditionClassSummary <- eventReactive(c(input$GetConditionClassSummary,input$TopConditionsTable_rows_selected ),{
+   conditionClassSummary <- shiny::eventReactive(
+    c(input$GetConditionClassSummary, input$TopConditionsTable_rows_selected), {
       r6$updateSummaryConditionClassCounts()
       r6$conditionClassSummary
    })
@@ -193,13 +194,13 @@ condition_frequency_class_table_server <- function(id, r6) {
        rownames = FALSE,
        colnames = c("", "", ""),
        options = list(
-         dom = 't',
+         dom = "t",
          ordering = FALSE,
          autowidth = FALSE,
          columnDefs = list(
-           list(targets=c(0), visible=TRUE, width='50%'),
-           list(targets=c(1), visible=TRUE, width='25%'),
-           list(targets=c(2), visible=TRUE, width='25%')
+           list(targets = c(0), visible = TRUE, width = "50%"),
+           list(targets = c(1), visible = TRUE, width = "25%"),
+           list(targets = c(2), visible = TRUE, width = "25%")
 
          ),
          initComplete = DT::JS(

@@ -22,21 +22,21 @@
 #' @importFrom CUSOMShinyHelpers getSOMStandardFooter
 #' @export
 app_ui <- function (
-  app_title, 
-  app_label, 
-  app_url, 
-  header_links, 
-  ui_config, 
-  app_namespaces, 
+  app_title,
+  app_label,
+  app_url,
+  header_links,
+  ui_config,
+  app_namespaces,
   input_config
   ){
 
   ui <- shinydashboardPlus::dashboardPage(
       preloader = list(
-        html = tagList(
+        html = shiny::tagList(
           waiter::spin_orbiter(),
           glue::glue("Loading {app_label} Explorer...")
-        ), 
+        ),
         color = "#3c8dbc"
       ),
       title = app_title,
@@ -45,7 +45,7 @@ app_ui <- function (
           href = app_url,
           shiny::tags$img(
             src = "www/htp_logo.png",
-            height = '30'
+            height = "30"
           ),
           app_label,
           style = "color:#fff;"

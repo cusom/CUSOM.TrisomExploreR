@@ -69,7 +69,7 @@ immunemap_correlates_ui <- function(id, ...) {
 #' @export
 immunemap_correlates_server <- function(id, r6, ...) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 

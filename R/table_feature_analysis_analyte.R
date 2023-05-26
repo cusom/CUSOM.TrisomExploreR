@@ -1,7 +1,7 @@
 #' @export
 feature_analysis_analyte_summary_data_ui <- function(id) {
-  ns <- NS(id)
-  tagList(
+  ns <- shiny::NS(id)
+  shiny::tagList(
     shinydashboardPlus::box(
       title = "",
       id = ns("AnalyteDataTablePanelBox"),
@@ -26,27 +26,29 @@ feature_analysis_analyte_summary_data_ui <- function(id) {
 
 #' @export
 feature_analysis_analyte_summary_data_server <- function(id, r6) {
-  moduleServer(id, function(input, output, session) {
+
+  shiny::moduleServer(id, function(input, output, session) {
+
     ns <- session$ns
 
-    AnalyteDataTableDownload <- eventReactive(c(gargoyle::watch("show_analyte_plot", session = session)),{
+    AnalyteDataTableDownload <- shiny::eventReactive(
+      c(gargoyle::watch("show_analyte_plot", session = session)), {
 
-      validate(
-        need(!is.null(r6$Analyte),""),
-        need(r6$Analyte != "", ""),
-        need(!is.null(r6$VolcanoSummaryData), "")
+      shiny::validate(
+        shiny::need(!is.null(r6$Analyte), ""),
+        shiny::need(r6$Analyte != "", ""),
+        shiny::need(!is.null(r6$VolcanoSummaryData), "")
       )
 
       r6$getFormattedAnalyteSummaryData()
 
-    },ignoreInit = FALSE)
+    }, ignoreInit = FALSE)
 
 
-    output$AnalyteDataTable <- DT::renderDataTable(
-      {
-        validate(
-          need(r6$Analyte != "", ""),
-          need(!is.null(AnalyteDataTableDownload()), "")
+    output$AnalyteDataTable <- DT::renderDataTable({
+        shiny::validate(
+          shiny::need(r6$Analyte != "", ""),
+          shiny::need(!is.null(AnalyteDataTableDownload()), "")
         )
 
         DT::datatable(
@@ -94,7 +96,7 @@ feature_analysis_analyte_summary_data_server <- function(id, r6) {
       server = FALSE
     )
 
-    observeEvent(c(input$DataDownload), {
+    shiny::observeEvent(c(input$DataDownload), {
       CUSOMShinyHelpers::downloadFile(
         id = ns("download"),
         fileName = glue::glue('{r6$Analyte}_Sample_Level_Data_{format(Sys.time(),\"%Y%m%d_%H%M%S\")}'),
