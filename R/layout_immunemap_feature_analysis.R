@@ -73,6 +73,7 @@ immunemap_feature_analysis_server <- function(id, r6, ...) {
 
     gargoyle::init(
       "get_volcano_data",
+      "update_volcano_analytes",
       "show_analyte_plot",
       "sync_analyte_choice",
       "validate_GSEA",
