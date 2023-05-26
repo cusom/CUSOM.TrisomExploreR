@@ -114,7 +114,7 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
         session = parent
       )
 
-      shinym::updateSelectizeInput(
+      shiny::updateSelectizeInput(
         session = session,
         inputId = "Analyte",
         selected = e$key
