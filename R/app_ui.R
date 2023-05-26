@@ -75,7 +75,7 @@ app_ui <- function (
         TrisomExploreR::create_tab_items(as.list(app_namespaces), ui_config, input_config)
       ),
       footer = shinydashboardPlus::dashboardFooter(
-        HTML(
+        shiny::HTML(
           CUSOMShinyHelpers::getSOMStandardFooter(footerImageFilePath = "www/medicine_h_clr.png")
         )
       )

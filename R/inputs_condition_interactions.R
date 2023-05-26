@@ -29,7 +29,7 @@ condition_interactions_inputs_ui <- function(id, input_config) {
       collapsible = FALSE,
       headerBorder = FALSE,
       shiny::tags$div(
-        id = NS(id, "scrollableOptions"),
+        id = ns("scrollableOptions"),
         style = "height:600px;padding-left:10px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
         shinyWidgets::prettyRadioButtons(
           inputId = ns("selectedAnnotationLevel"),
@@ -86,14 +86,14 @@ condition_interactions_inputs_ui <- function(id, input_config) {
           ns("getData"),
           label = "Analyze & Plot",
           class = "refresh-ready-btn",
-          icon = icon("play")
+          icon = shiny::icon("play")
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shiny::actionButton(
           ns("Reset"),
           label = "Reset Inputs",
           class = "refresh-btn",
-          icon = icon("undo")
+          icon = shiny::icon("undo")
         )
       )
     )

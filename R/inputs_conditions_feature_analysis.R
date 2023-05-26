@@ -37,7 +37,7 @@ conditions_feature_analysis_inputs_server <- function(id, r6, input_config, pare
       parent_input = input
     )
 
-    output$ConditionsInputs <- renderUI({
+    output$ConditionsInputs <- shiny::renderUI({
 
       if (r6$namespace  == "Comorbidity") {
         shiny::tagList(
@@ -76,7 +76,7 @@ conditions_feature_analysis_inputs_server <- function(id, r6, input_config, pare
                 shinyWidgets::actionBttn(
                   inputId = ns("ConditionsReset"),
                   label = "Reset Selected Conditions",
-                  icon = icon("undo"),
+                  icon = shiny::icon("undo"),
                   style = "minimal",
                   size = "xs",
                   color = "primary",
@@ -88,7 +88,7 @@ conditions_feature_analysis_inputs_server <- function(id, r6, input_config, pare
           shiny::actionButton(
             inputId = ns("SetConditions"),
             label = "Choose Co-Occuring Conditions",
-            icon = icon("file-medical"),
+            icon = shiny::icon("file-medical"),
             width = "99%"
           ) |>
             bsplus::bs_attach_modal(id_modal = ns("Conditions-Picker"))

@@ -1,24 +1,39 @@
+#' Create boxplot UI for TrisomExploreR condition correlates analysis
+#' @param id - string - id for this module namespace
 #' @export
 condition_correlates_boxplot_ui <- function(id) {
-  ns <- NS(id)
-  tagList(
+  ns <- shiny::NS(id)
+  shiny::tagList(
 
   )
 }
 
+#' Server for KPI outputs for TrisomExploreR condition correlates analysis
+#' Entire logic is server-side contained within a modal 
+#' only invoked from `gargoyle::watch("show_analyte_plot")`
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic
+#' @import glue
+#' @import plotly 
+#' @import DT 
+#' @importFrom gargoyle watch
+#' @importFrom shinycustomloader withLoader
+#' @importFrom htmltools tags
+#' @importFrom CUSOMShinyHelpers downloadFile
 #' @export
 condition_correlates_boxplot_server <- function(id, r6) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    observeEvent(c(gargoyle::watch("show_analyte_plot", session = session)),{
+    shiny::observeEvent(
+      c(gargoyle::watch("show_analyte_plot", session = session)), {
 
-      showModal(
-        modalDialog(
-          tabsetPanel(
-            tabPanel(
+      shiny::showModal(
+        shiny::modalDialog(
+          shiny::tabsetPanel(
+            shiny::tabPanel(
               title = glue::glue("Sina Plot"),
               plotly::plotlyOutput(
                 ns("AnalytePlot"),
@@ -26,7 +41,7 @@ condition_correlates_boxplot_server <- function(id, r6) {
                 width = "100%"
               )
             ),
-            tabPanel(
+            shiny::tabPanel(
               title = glue::glue("Sample Level Data"),
               shinycustomloader::withLoader(
                 DT::dataTableOutput(
@@ -35,28 +50,32 @@ condition_correlates_boxplot_server <- function(id, r6) {
                 type = "html",
                 loader = "dnaspin"
               )
-
             )
           ),
           easyClose = FALSE,
           size = "l",
-          footer = actionButton(ns("closeAnalyteModal"), label = "Close")
+          footer = shiny::actionButton(
+            ns("closeAnalyteModal"),
+            label = "Close"
+          )
         )
       )
 
 
     }, ignoreInit = TRUE)
 
-    observeEvent(input$closeAnalyteModal,{
-      removeModal()
+    shiny::observeEvent(input$closeAnalyteModal, {
+      shiny::removeModal()
     })
 
-    AnalyteData <- eventReactive(c(gargoyle::watch("show_analyte_plot", session = session)),{
+    AnalyteData <- shiny::eventReactive(
+      c(gargoyle::watch("show_analyte_plot", session = session)), {
       r6$getBoxPlotData()
       r6$BoxplotData
     })
 
-    AnalyteDataTableDownload <- eventReactive(c(gargoyle::watch("show_analyte_plot", session = session)),{
+    AnalyteDataTableDownload <- shiny::eventReactive(
+      c(gargoyle::watch("show_analyte_plot", session = session)), {
       r6$BoxplotData |>
         r6$getFormattedBoxplotData()
     })
@@ -71,24 +90,28 @@ condition_correlates_boxplot_server <- function(id, r6) {
       DT::datatable(
         data = AnalyteDataTableDownload(),
         caption = htmltools::tags$caption(
-          style = 'caption-side: bottom; text-align: center;',
-          ifelse(length(r6$Analyte)>1,"Selected Analytes Data",glue::glue("{r6$Analyte} Data"))
+          style = "caption-side: bottom; text-align: center;",
+          ifelse(
+            length(r6$Analyte) > 1,
+            "Selected Analytes Data",
+            glue::glue("{r6$Analyte} Data")
+          )
         ),
-        filter = 'top',
-        extensions = c('Buttons','ColReorder','Responsive','Scroller'),
-        selection = 'none',
+        filter = "top",
+        extensions = c("Buttons", "ColReorder", "Responsive", "Scroller"),
+        selection = "none",
         rownames = FALSE,
-        style = 'bootstrap',
+        style = "bootstrap",
         escape = FALSE,
         options = list(
-          dom = 'Brftip',
+          dom = "Brftip",
           colReorder = TRUE,
           autowidth = FALSE,
           deferRender = TRUE,
           scrollY = 400,
           scroller = TRUE,
           buttons = list(
-            'colvis',
+            "colvis",
             list(
               extend = "collection",
               text = "Download Data",
@@ -104,12 +127,12 @@ condition_correlates_boxplot_server <- function(id, r6) {
         )
       )
 
-    }, server=FALSE)
+    }, server = FALSE)
 
-    observeEvent(c(input$DataDownload), {
+    shiny::observeEvent(c(input$DataDownload), {
       CUSOMShinyHelpers::downloadFile(
         id = ns("download"),
-        fileName = glue::glue('{r6$Condition}_Sample_Level_Data_{format(Sys.time(),\"%Y%m%d_%H%M%S\")}'),
+        fileName = glue::glue("{r6$Condition}_Sample_Level_Data_{format(Sys.time(),\"%Y%m%d_%H%M%S\")}"),
         dataForDownload = AnalyteDataTableDownload()
       )
     })

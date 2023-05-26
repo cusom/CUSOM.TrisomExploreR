@@ -1,7 +1,9 @@
+#' Create celltype boxplots for TrisomExploreR cell type analysis
+#' @param id - string - id for this module namespace
 #' @export
 cell_type_plot_ui <- function(id) {
-  ns <- NS(id)
-  tagList(
+  ns <- shiny::NS(id)
+  shiny::tagList(
     shinydashboardPlus::box(
       id = ns("AnalyteContent"),
       title = "",
@@ -15,8 +17,8 @@ cell_type_plot_ui <- function(id) {
         id = ns("sidebarLinks"),
         width = 30,
         icon = shiny::icon("highlighter"),
-        tags$h4("Plot tools:"),
-        tags$hr(),
+        shiny::tags$h4("Plot tools:"),
+        shiny::tags$hr(),
         CUSOMShinyHelpers::createInputControl(
           controlType = "pickerInput",
           inputId = ns("GroupA"),
@@ -29,7 +31,7 @@ cell_type_plot_ui <- function(id) {
           ),
           multiple = TRUE
         ),
-        tags$hr(),
+        shiny::tags$hr(),
         shiny::actionButton(
           ns("ClearHighlights"),
           "Clear Highlighted Points",
@@ -48,26 +50,36 @@ cell_type_plot_ui <- function(id) {
   )
 }
 
+#' Server logic for TrisomExploreR celltype boxplots
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic
+#' @importFrom gargoyle watch
+#' @importFrom shinyWidgets updatePickerInput
+#' @importFrom plotly renderPlotly
+#' @importFrom plotly plotlyProxy
+#' @importFrom plotly plotlyProxyInvoke
+#' @importFrom shinyjs runjs
 #' @export
 cell_type_plot_server <- function(id, r6) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    AnalyteData <- shiny::eventReactive(c(gargoyle::watch("render_analyte_plot", session = session)),{
+    AnalyteData <- shiny::eventReactive(
+      c(gargoyle::watch("render_analyte_plot", session = session)), {
 
-      validate(
-        need(r6$Platform != "",""),
-        need(r6$Analyte != "",""),
-        need(r6$CellType != "","")
+      shiny::validate(
+        shiny::need(r6$Platform != "", ""),
+        shiny::need(r6$Analyte != "", ""),
+        shiny::need(r6$CellType != "", "")
       )
 
       r6$getAnalyteData()
 
       shinyWidgets::updatePickerInput(
         session = session,
-        inputId = 'GroupA',
+        inputId = "GroupA",
         choices = list("D21" = r6$cids, "T21" = r6$tids)
       )
 
@@ -76,20 +88,17 @@ cell_type_plot_server <- function(id, r6) {
     }, ignoreInit = TRUE)
 
     output$AnalyteBoxPlot <- plotly::renderPlotly({
-
-      validate(
-        need(!is.null(AnalyteData()), "")
+      shiny::validate(
+        shiny::need(!is.null(AnalyteData()), "")
       )
-
       AnalyteData() |>
         r6$getPlot(ns)
-
     })
 
-    observeEvent(c(input$GroupA), {
+    shiny::observeEvent(c(input$GroupA), {
 
       data_update <- list(
-        'selectedpoints' = NA
+        "selectedpoints" = NA
       )
 
       plotName <- ns("AnalyteBoxPlot")
@@ -131,10 +140,10 @@ cell_type_plot_server <- function(id, r6) {
 
     }, ignoreInit = TRUE)
 
-    observeEvent(c(input$ClearHighlights), {
+    shiny::observeEvent(c(input$ClearHighlights), {
 
       data_update <- list(
-        'selectedpoints' = NA
+        "selectedpoints" = NA
       )
 
       plotly::plotlyProxy(ns("AnalyteBoxPlot"), session) |>
@@ -142,11 +151,11 @@ cell_type_plot_server <- function(id, r6) {
 
       shinyWidgets::updatePickerInput(
         session = session,
-        inputId = 'GroupA',
-        selected = ''
+        inputId = "GroupA",
+        selected = ""
       )
 
-    },ignoreInit = TRUE)
+    }, ignoreInit = TRUE)
 
   })
 

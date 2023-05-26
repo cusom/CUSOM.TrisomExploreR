@@ -1,7 +1,12 @@
+#' Create GSEA plot for TrisomExploreR GSEA pathway analysis
+#' @param id - string - id for this module namespace
+#' @importFrom shinydashboardPlus box
+#' @importFrom shinyjs hidden
+#' @importFrom plotly plotlyOutput
 #' @export
 feature_analysis_GSEA_plot_ui <- function(id) {
-  ns <- NS(id)
-  tagList(
+  ns <- shiny::NS(id)
+  shiny::tagList(
     shinydashboardPlus::box(
       title = "",
       height = "auto",
@@ -11,7 +16,7 @@ feature_analysis_GSEA_plot_ui <- function(id) {
       collapsible = FALSE,
       headerBorder = FALSE,
       shinyjs::hidden(
-        selectizeInput(
+        shiny::selectizeInput(
           inputId = ns("GSEASelectedAnalytes"),
           label = "",
           choices = NULL,
@@ -28,32 +33,55 @@ feature_analysis_GSEA_plot_ui <- function(id) {
   )
 }
 
+#' Server logic / processing for TrisomExploreR GSEA plot
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic
+#' @param parent shiny session - parent shiny session
+#' @importFrom gargoyle watch
+#' @importFrom gargoyle trigger
+#' @importFrom plotly renderPlotly
+#' @importFrom plotly event_data
+#' @import dplyr
+#' @import tidyr
+#' @import tibble
+#' @importFrom CUSOMShinyHelpers parseDelimitedString
+#' @importFrom stringr str_split
+#' @importFrom shinybusy show_modal_spinner
+#' @importFrom shinybusy remove_modal_spinner
 #' @export
 feature_analysis_GSEA_plot_server <- function(id, r6, parent) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-
-    GSEAData <- eventReactive(c(gargoyle::watch("run_GSEA", session = session)),{
+    GSEAData <- shiny::eventReactive(
+      c(gargoyle::watch("run_GSEA", session = session)), {
       r6$GSEAData
     })
 
     output$GSEAPlot <- plotly::renderPlotly({
-
-      validate(
-        need(!is.null(GSEAData()), "")
+      shiny::validate(
+        shiny::need(!is.null(GSEAData()), "")
       )
-
       GSEAData() |>
         r6$getGSEAPlot(ns)
-
     })
 
-    observeEvent(plotly::event_data("plotly_click", priority = "event", source = ns("GSEAPlot"), session = session),{
+    shiny::observeEvent(
+      plotly::event_data(
+        "plotly_click",
+        priority = "event",
+        source = ns("GSEAPlot"),
+        session = session
+        ), {
 
-      e <- plotly::event_data("plotly_click", priority = "event", source = ns("GSEAPlot"), session = session)
+      e <- plotly::event_data(
+        "plotly_click",
+        priority = "event",
+        source = ns("GSEAPlot"),
+        session = session
+      )
 
       keys <- tibble::tibble("Gene" = e$customdata) |>
         tidyr::separate_rows(Gene, sep = ",") |>
@@ -61,7 +89,9 @@ feature_analysis_GSEA_plot_server <- function(id, r6, parent) {
           r6$VolcanoSummaryData |>
             dplyr::select(Analyte) |>
             dplyr::rowwise() |>
-            dplyr::mutate("Gene" = CUSOMShinyHelpers::parseDelimitedString(Analyte, 1)),
+            dplyr::mutate(
+              "Gene" = CUSOMShinyHelpers::parseDelimitedString(Analyte, 1)
+            ),
           by = "Gene"
         ) |>
         dplyr::select(Analyte) |>

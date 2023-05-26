@@ -35,7 +35,7 @@ correlates_inputs_ui <- function(id, input_config) {
           ns("PrimaryTutorial"),
           label = "Take Tutorial",
           class = "tutorial-btn",
-          icon = icon("question-circle")
+          icon = shiny::icon("question-circle")
         ) |>
         bsplus::bs_embed_tooltip(
           title = "Click here to learn about setting dataset options to generate the volcano plot",
@@ -44,7 +44,7 @@ correlates_inputs_ui <- function(id, input_config) {
         )
       ),
       shiny::tags$div(
-        id = NS(id, "scrollableOptions"),
+        id = ns("scrollableOptions"),
         style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shinyjs::hidden(
@@ -147,7 +147,7 @@ correlates_inputs_ui <- function(id, input_config) {
           ns("getData"),
           label = "Analyze & Plot",
           class = "refresh-btn",
-          icon = icon("play")
+          icon = shiny::icon("play")
         )
       )
     )
@@ -232,7 +232,7 @@ correlates_inputs_server <- function(id, r6) {
         purge_plot(session, ns, "VolcanoPlot", r6)
         purge_plot(session, ns, "AnalytePlot", r6)
 
-        updateSelectizeInput(
+        shiny::updateSelectizeInput(
           session = session,
           inputId = "ComparisonAnalyte",
           selected = ""

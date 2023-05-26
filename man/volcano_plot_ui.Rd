@@ -2,7 +2,7 @@
 % Please edit documentation in R/plots_volcano.R
 \name{volcano_plot_ui}
 \alias{volcano_plot_ui}
-\title{Volcano Plot Module}
+\title{Create Volcano Plot}
 \usage{
 volcano_plot_ui(id)
 }
@@ -10,5 +10,5 @@ volcano_plot_ui(id)
 \item{id}{namespace for this module instance}
 }
 \description{
-Volcano Plot Module
+Create Volcano Plot
 }

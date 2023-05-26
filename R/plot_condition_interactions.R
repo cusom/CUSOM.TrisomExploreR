@@ -1,11 +1,14 @@
+#' Create upset plot for TrisomExploreR condition interactions analysis
+#' @param id - string - id for this module namespace
+#' @importFrom plotly plotlyOutput
 #' @export
 condition_interactions_plot_ui <- function(id) {
-  ns <- NS(id)
-  tagList(
-    div(
+  ns <- shiny::NS(id)
+  shiny::tagList(
+    shiny::tags$div(
       id = ns("UpsetPlotContent"),
       shinydashboardPlus::box(
-        title = htmlOutput(
+        title = shiny::htmlOutput(
           ns("UpsetPlotTitle")
         ),
         height = "auto",
@@ -15,7 +18,7 @@ condition_interactions_plot_ui <- function(id) {
         collapsible = FALSE,
         headerBorder = FALSE,
         shinycustomloader::withLoader(
-          plotOutput(
+          shiny::plotOutput(
             ns("ConditionUpsetPlot"),
             height = "610px"
           ),
@@ -27,53 +30,64 @@ condition_interactions_plot_ui <- function(id) {
   )
 }
 
+#' Server logic for TrisomExploreR condition interactions upset plot
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic
+#' @importFrom gargoyle watch
+#' @importFrom UpSetR upset
 #' @export
 condition_interactions_plot_server <- function(id, r6) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
    ns <- session$ns
 
-   output$UpsetPlotTitle <- renderText({
+   output$UpsetPlotTitle <- shiny::renderText({
 
-     if(length(r6$SelectedConditions)>=2) {
+     if (length(r6$SelectedConditions) >= 2) {
+       plotTitle <- "
+       <h3>Conditions Upset Plot
+        <span 
+        data-toggle=\"tooltip\"
+        data-placement=\"auto right\"
+        title=\"\"
+        class=\"fas fa-info-circle gtooltip info-tooltip\"
+        data-original-title=\"
+        In this upset plot, each participant appears only once. 
+        The Set Size, on the left hand side, represents the total number of
+        participants by each Condition Class, or Specific Condition, that is selected. 
+        The bar graph displays the breakdown of each
+        condition class to show overlap of co-occurring conditions.
+        Note that a maximum of six Condition Classes, or Specific Conditions, can be selected at a time.\">
+        </span>
+      </h3>"
+     } 
+     else {
 
-       plotTitle <- '
-          <h3>Conditions Upset Plot
-            <span data-toggle="tooltip"
-            data-placement="auto right"
-            title=""
-            class="fas fa-info-circle gtooltip info-tooltip"
-            data-original-title="
-            In this upset plot, each participant appears only once. The Set Size, on the left hand side, represents the total number of
-            participants by each Condition Class, or Specific Condition, that is selected. The bar graph displays the breakdown of each
-            condition class to show overlap of co-occurring conditions.
-            Note that a maximum of six Condition Classes, or Specific Conditions, can be selected at a time.">
-            </span>
-          </h3>
-          '
-
-     } else {
-
-       plotTitle <- '
-          <h3>Conditions Upset Plot <i class="fa fa-info-circle info-tooltip" data-toggle="collapse" data-target="#information"></i></h3>
-            <div id="information" class="collapse in">
-              Please choose at least 2 conditions in the dataset filters to render the plot
-          </div>'
+       plotTitle <- "
+        <h3>Conditions Upset Plot 
+          <i class=\"fa fa-info-circle info-tooltip\" 
+            data-toggle=\"collapse\" 
+            data-target=\"#information\">
+          </i>
+        </h3>
+          <div id=\"information\" class=\"collapse in\">
+            Please choose at least 2 conditions in the dataset filters to render the plot
+        </div>"
      }
 
-     HTML(plotTitle)
+     shiny::HTML(plotTitle)
 
    })
 
-   upsetData <- eventReactive(c(gargoyle::watch("get_interactions_plot")),{
+   upsetData <- shiny::eventReactive(
+    c(gargoyle::watch("get_interactions_plot")), {
      r6$upsetPlotData
    }, ignoreInit = TRUE)
 
+   output$ConditionUpsetPlot <- shiny::renderPlot({
 
-   output$ConditionUpsetPlot <- renderPlot({
-
-     if(is.null(upsetData())) {
+     if (is.null(upsetData())) {
        NULL
      }
      else {
@@ -90,7 +104,7 @@ condition_interactions_plot_server <- function(id, r6) {
          sets.x.label = "Set Size",
          sets.bar.color = "#3E99CD",
          order.by = "freq",
-         decreasing = T,
+         decreasing = TRUE,
          empty.intersections = NULL,
          # intersection size title, intersection sizetick labels,
          # set size title, set size tick labels, set names, numbers above bars

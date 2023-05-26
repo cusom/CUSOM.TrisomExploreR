@@ -1,4 +1,4 @@
-#' Volcano Plot Module
+#' Create Volcano Plot
 #' @param id namespace for this module instance
 #' @importFrom shinydashboardPlus box
 #' @importFrom bsplus bs_embed_tooltip
@@ -7,7 +7,7 @@
 #' @export
 volcano_plot_ui <- function(id) {
   ns <- shiny::NS(id)
-  tagList(
+  shiny::tagList(
     shinydashboardPlus::box(
       title = shiny::tags$div(
         class = "volcano-top-input-panel",
@@ -49,7 +49,7 @@ volcano_plot_ui <- function(id) {
             placement = "left",
             html = TRUE
           ),
-          htmlOutput(ns("AnalyteSearchError"))
+          shiny::htmlOutput(ns("AnalyteSearchError"))
         ),
         TrisomExploreR::GSEA_analysis_inputs_ui(ns("GSEA"))
       ),
@@ -68,7 +68,7 @@ volcano_plot_ui <- function(id) {
         type = "html",
         loader = "dnaspin"
       ),
-      htmlOutput(ns("volcanoMultiSelectText"))
+      shiny::htmlOutput(ns("volcanoMultiSelectText"))
     )
   )
 }
@@ -87,7 +87,7 @@ volcano_plot_ui <- function(id) {
 #' @export
 volcano_plot_server <- function(id, r6, ...) {
 
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
@@ -98,10 +98,11 @@ volcano_plot_server <- function(id, r6, ...) {
       parent_input = input
     )
 
-    FoldChangeData <- eventReactive(c(gargoyle::watch("get_volcano_data", session = session)), {
+    FoldChangeData <- shiny::eventReactive(
+      c(gargoyle::watch("get_volcano_data", session = session)), {
 
-      validate(
-        need(!is.null(r6$Study),"")
+      shiny::validate(
+        shiny::need(!is.null(r6$Study), "")
       )
 
       shinybusy::show_modal_spinner(
@@ -137,8 +138,8 @@ volcano_plot_server <- function(id, r6, ...) {
 
     output$VolcanoPlot <- plotly::renderPlotly({
 
-      validate(
-        need(!is.null(FoldChangeData()), "")
+      shiny::validate(
+        shiny::need(!is.null(FoldChangeData()), "")
       )
 
       shiny::isolate({
@@ -161,9 +162,19 @@ volcano_plot_server <- function(id, r6, ...) {
 
     })
 
-    observeEvent(plotly::event_data("plotly_click", priority = "event", source = ns("VolcanoPlot"), session = session), {
+    shiny::observeEvent(
+      plotly::event_data(
+        "plotly_click",
+        priority = "event",
+        source = ns("VolcanoPlot"),
+        session = session
+      ), {
 
-      e <- plotly::event_data("plotly_click", source = ns("VolcanoPlot"), session = session)
+      e <- plotly::event_data(
+        "plotly_click",
+        source = ns("VolcanoPlot"),
+        session = session
+      )
 
       updateSelectizeInput(
         session = session,
@@ -173,9 +184,19 @@ volcano_plot_server <- function(id, r6, ...) {
 
     }, domain = session)
 
-    observeEvent(plotly::event_data("plotly_selected", priority = "event", source = ns("VolcanoPlot"), session = session), {
+    shiny::observeEvent(
+      plotly::event_data(
+        "plotly_selected",
+        priority = "event",
+        source = ns("VolcanoPlot"),
+        session = session
+      ), {
 
-      e <- plotly::event_data("plotly_selected", source = ns("VolcanoPlot"), session = session)
+      e <- plotly::event_data(
+        "plotly_selected",
+        source = ns("VolcanoPlot"),
+        session = session
+      )
 
       updateSelectizeInput(
         session = session,
@@ -184,23 +205,24 @@ volcano_plot_server <- function(id, r6, ...) {
       )
     }, domain = session)
 
-    volcanoMultiSelectText <- eventReactive(c(input$Analyte), {
+    volcanoMultiSelectText <- shiny::eventReactive(c(input$Analyte), {
       r6$volcanoMultiSelectText
     }, domain = session)
 
-    output$volcanoMultiSelectText <- renderText({
+    output$volcanoMultiSelectText <- shiny::renderText({
       volcanoMultiSelectText()
     })
 
-    observeEvent(c(gargoyle::watch("sync_analyte_choice", session = session)), {
-      updateSelectizeInput(
+    shiny::observeEvent(
+      c(gargoyle::watch("sync_analyte_choice", session = session)), {
+      shiny::updateSelectizeInput(
         session = session,
         inputId = "Analyte",
         selected = r6$Analyte
       )
     }, ignoreInit = TRUE,  domain = session)
 
-    observeEvent(c(input$Analyte),{
+    shiny::observeEvent(c(input$Analyte), {
 
       plotName <- ns("VolcanoPlot")
 
@@ -237,22 +259,29 @@ volcano_plot_server <- function(id, r6, ...) {
 
     }, ignoreInit = TRUE, domain = session)
 
-    AnalyteSearchErrorText <- eventReactive(c(input$analyteSearchResults, input$Analyte), {
+    AnalyteSearchErrorText <- shiny::eventReactive(
+      c(input$analyteSearchResults, input$Analyte), {
       searchResultData <- input$analyteSearchResults
-      req(searchResultData)
+      shiny::req(searchResultData)
 
       if (length(input$Analyte) > 0) {
-        HTML("")
+        shiny::HTML("")
       }
       else if(searchResultData$total == 0) {
-        HTML(paste0('<span style="color:black;font-size:smaller;padding-left:10px;"><b>"', searchResultData$query, '"</b> not found. Please try another value</span>'))
+        shiny::HTML(
+          paste0(
+            '<span style="color:black;font-size:smaller;padding-left:10px;"><b>"', 
+            searchResultData$query,
+            '"</b> not found. Please try another value</span>'
+          )
+        )
       }
       else {
-        HTML("")
+        shiny::HTML("")
       }
     }, domain = session)
 
-    output$AnalyteSearchError <- renderUI({
+    output$AnalyteSearchError <- shiny::renderUI({
       AnalyteSearchErrorText()
     })
 
