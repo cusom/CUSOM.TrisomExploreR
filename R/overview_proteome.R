@@ -109,6 +109,8 @@ proteome_overview_ui <- function(id, ...) {
 
 }
 
+#' overview page for proteome application
+#' @param id - string - id for this module namespace
 #' @export
 proteome_overview_server <- function(id) {
 

@@ -117,6 +117,8 @@ immunemap_overview_ui <- function(id, ...) {
 
 }
 
+#' overview page for immune map application
+#' @param id - string - id for this module namespace
 #' @export
 immunemap_overview_server <- function(id) {
 

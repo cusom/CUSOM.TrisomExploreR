@@ -89,6 +89,8 @@ transcriptome_overview_ui <- function(id, ...) {
 
 }
 
+#' overview page for transcriptome application
+#' @param id - string - id for this module namespace
 #' @export
 transcriptome_overview_server <- function(id) {
 

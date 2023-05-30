@@ -86,6 +86,8 @@ clinical_overview_ui <- function(id, ...) {
 
 }
 
+#' overview page for clinical application
+#' @param id - string - id for this module namespace
 #' @export
 clinical_overview_server <- function(id) {
 

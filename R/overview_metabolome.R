@@ -107,6 +107,8 @@ metabolome_overview_ui <- function(id, ...) {
 
 }
 
+#' Create overview page for metabolome application
+#' @param id - string - id for this module namespace
 #' @export
 metabolome_overview_server <- function(id) {
 
