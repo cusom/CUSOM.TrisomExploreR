@@ -1,3 +1,7 @@
+#' Create condition frequency table output for TrisomExploreR Clinical data analysis
+#' @param id - string - id for this module namespace
+#' @importFrom shinycssloaders withSpinner
+#' @importFrom DT dataTableOutput
 #' @export
 condition_frequency_condition_table_ui <- function(id) {
   ns <- shiny::NS(id)
@@ -18,6 +22,13 @@ condition_frequency_condition_table_ui <- function(id) {
   )
 }
 
+#' Server logic for condition frequency table output for TrisomExploreR Clinical data analysis
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic
+#' @import dplyr
+#' @import DT 
+#' @importFrom gargoyle watch
+#' @importFrom gargoyle trigger
 #' @export
 condition_frequency_condition_table_server <- function(id, r6) {
 
@@ -42,110 +53,125 @@ condition_frequency_condition_table_server <- function(id, r6) {
       shiny::validate(
         shiny::need(!is.null(childConditions()), "")
       )
-
-      formattable::as.datatable(
-        formattable::formattable(
-          childConditions(),
-          list(
-            formattable::area(col = 2) ~ formattable::color_tile("#f2f2f3","#BBBDC0"),
-            formattable::area(col = 3) ~ formattable::color_tile("#E9F1F6", "#287BA5")
-          )
+      
+      DT::datatable(
+        data = childConditions(),
+        rownames = FALSE,
+        options = list(
+          dom = "t",
+          autowidth = TRUE,
+          columnDefs = list(
+            list(targets = c(0), visible = TRUE, width = "50%"),
+            list(targets = c(1), visible = TRUE, width = "25%"),
+            list(targets = c(2), visible = TRUE, width = "25%")
+          ),
+          scrollX = TRUE,
+          scrollY = "400px",
+          pageLength = 150,
+          select = list(style = "multi", selector = "td:not(.notselectable)")
         ),
         callback = DT::JS(
           paste0(
-          "table.on('click', 'tbody tr', function(){
+            "table.on('click', 'tbody tr', function(){
 
-            setTimeout(function() {
+              setTimeout(function() {
 
-              var selectedindexes = table.rows({selected:true}).indexes();
-              var selectedindices = Array(selectedindexes.length);
-              var unselectedindexes = table.rows({selected:false}).indexes();
-              var unselectedindices = Array(unselectedindexes.length);
+                var selectedindexes = table.rows({selected:true}).indexes();
+                var selectedindices = Array(selectedindexes.length);
+                var unselectedindexes = table.rows({selected:false}).indexes();
+                var unselectedindices = Array(unselectedindexes.length);
 
-              for(var i = 0; i < selectedindices.length; ++i){
-                selectedindices[i] = selectedindexes[i]+1;
-              }
-
-              for(var i = 0; i < unselectedindices.length; ++i){
-                unselectedindices[i] = unselectedindexes[i];
-              }
-
-              if(selectedindexes.length <= 5) {
-
-                table.$('td:first-child').each(function() {
-
-                  $(this).removeClass('notselectable');
-                  $(this).removeClass('selectable');
-
-                });
-
-                Shiny.setInputValue('",ns("ChildConditionsTable_rows_selected"),"',selectedindices);
-
-                if(selectedindexes.length == 0) {
-
-                  Shiny.setInputValue('SelectedConditions',null,{priority:'event'});
-
+                for(var i = 0; i < selectedindices.length; ++i){
+                  selectedindices[i] = selectedindexes[i]+1;
                 }
 
-              }
+                for(var i = 0; i < unselectedindices.length; ++i){
+                  unselectedindices[i] = unselectedindexes[i];
+                }
 
-              if(selectedindexes.length == 5) {
+                if(selectedindexes.length <= 5) {
 
-                table.$('td:first-child').each(function() {
-
-                  if($.inArray($(this)[0]._DT_CellIndex.row,unselectedindices)!= -1) {
+                  table.$('td:first-child').each(function() {
 
                     $(this).removeClass('notselectable');
                     $(this).removeClass('selectable');
-                    $(this).addClass('notselectable');
+
+                  });
+
+                  Shiny.setInputValue('",ns("ChildConditionsTable_rows_selected"),"',selectedindices);
+
+                  if(selectedindexes.length == 0) {
+
+                    Shiny.setInputValue('SelectedConditions',null,{priority:'event'});
 
                   }
 
-                });
+                }
 
-              }
+                if(selectedindexes.length == 5) {
 
-              if(selectedindexes.length >5) {
+                  table.$('td:first-child').each(function() {
 
-                table.$('td:first-child').each(function() {
+                    if($.inArray($(this)[0]._DT_CellIndex.row,unselectedindices)!= -1) {
 
-                  if($.inArray($(this)[0]._DT_CellIndex.row,unselectedindices)!= -1) {
+                      $(this).removeClass('notselectable');
+                      $(this).removeClass('selectable');
+                      $(this).addClass('notselectable');
 
-                    $(this).removeClass('selectable');
-                    $(this).addClass('notselectable');
+                    }
 
-                  }
+                  });
 
-                });
+                }
 
-              }
+                if(selectedindexes.length >5) {
 
-            }, 0);
+                  table.$('td:first-child').each(function() {
 
-          });"
-        )),
-        rownames = FALSE,
-        options = list(
-          dom = 't',
-          autowidth=TRUE,
-          columnDefs = list(
-            list(targets = c(0), visible = TRUE, width = '50%'),
-            list(targets = c(1), visible = TRUE, width = '25%'),
-            list(targets = c(2), visible = TRUE, width = '25%')
-          ),
-          scrollX = TRUE,
-          scrollY = '400px',
-          pageLength = 150
-          ,
-          initComplete = DT::JS(
-            "function(settings, json) {",
-            "$(this.api().table().container()).css({'font-size': '80%'});",
-            "}"
-          ),
-          select = list(style = "multi", selector = "td:not(.notselectable)")
+                    if($.inArray($(this)[0]._DT_CellIndex.row,unselectedindices)!= -1) {
+
+                      $(this).removeClass('selectable');
+                      $(this).addClass('notselectable');
+
+                    }
+
+                  });
+
+                }
+
+              }, 0);
+
+            });"
+          )
         ),
         extensions = "Select",
         selection = "none"
+      ) |>
+      DT::formatStyle(
+        columns = colnames(childConditions()),
+        fontSize = "80%"
+      ) |>
+      DT::formatStyle(
+        "Control %",
+        backgroundColor = DT::styleInterval(
+          quantile(
+            childConditions()$`Control %`,
+            probs = seq(.05, .95, .05),
+            na.rm = TRUE
+          ),
+          colorRampPalette(c("#f2f2f3", "#BBBDC0"))(20)
+        )
+      ) |>
+      DT::formatStyle(
+        "Trisomy 21 %",
+        backgroundColor = styleInterval(
+          quantile(
+            childConditions()$`Trisomy 21 %`,
+            probs = seq(.05, .95, .05),
+            na.rm = TRUE
+          ),
+          colorRampPalette(c("#E9F1F6", "#287BA5"))(20)
+        )
       )
 
     }, server = FALSE)
@@ -156,33 +182,34 @@ condition_frequency_condition_table_server <- function(id, r6) {
       shiny::validate(
         shiny::need(!is.null(childConditionSummary()), "")
       )
-
-      formattable::as.datatable(
-        formattable::formattable(
-          childConditionSummary(),
-          list(
-            Condition = formattable::formatter("span", style = ~ formattable::style(font.weight = "bold")),
-            `Control %` = formattable::formatter("span", x ~ scales::percent(x/100), style = ~ formattable::style(font.weight = "bold")),
-            `Trisomy 21 %` = formattable::formatter("span", x ~ scales::percent(x/100), style = ~ formattable::style(font.weight = "bold",color="#287BA5"))
-          )
-        )
-        ,rownames = FALSE
-        ,colnames = c("", "", "")
-        ,options = list(
-          dom = 't',
-          ordering=FALSE,
+      
+      DT::datatable(
+        data = childConditionSummary(),
+        rownames = FALSE,
+        colnames = c("", "", ""),
+        options = list(
+          dom = "t",
+          ordering = FALSE,
+          autowidth = FALSE,
           columnDefs = list(
-            list(targets=c(0), visible=TRUE, width='50%'),
-            list(targets=c(1), visible=TRUE, width='25%'),
-            list(targets=c(2), visible=TRUE, width='25%')
-
-          ),
-          initComplete = DT::JS(
-            "function(settings, json) {",
-            "$(this.api().table().container()).css({'font-size': '100%'});",
-            "}"
+            list(targets = c(0), visible = TRUE, width = "50%"),
+            list(targets = c(1), visible = TRUE, width = "25%"),
+            list(targets = c(2), visible = TRUE, width = "25%")
           )
         )
+      ) |>
+      DT::formatStyle(
+        columns = colnames(childConditionSummary()),
+        fontWeight = "bold",
+        fontSize = "100%"
+      ) |>
+      DT::formatPercentage(
+        columns = colnames(childConditionSummary())[2:3],
+        digits = 2
+      ) |>
+      DT::formatStyle(
+        "Trisomy 21 %",
+        color = "#287BA5"
       )
 
     })
@@ -191,7 +218,7 @@ condition_frequency_condition_table_server <- function(id, r6) {
 
       s <- input$ChildConditionsTable_rows_selected
 
-      r6$conditions <- r6$conditionCounts[s,1] |> dplyr::pull()
+      r6$conditions <- r6$conditionCounts[s, 1] |> dplyr::pull()
 
       r6$updateSummaryConditionCounts()
 

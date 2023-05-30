@@ -1,3 +1,8 @@
+#' Create GSEA pathway table output for TrisomExploreR pathway analysis
+#' @param id - string - id for this module namespace
+#' @importFrom shinydashboardPlus box
+#' @importFrom shinycustomloader withLoader
+#' @importFrom DT dataTableOutput
 #' @export
 feature_analysis_GSEA_summary_data_ui <- function(id) {
   ns <- shiny::NS(id)
@@ -26,6 +31,14 @@ feature_analysis_GSEA_summary_data_ui <- function(id) {
   )
 }
 
+#' Server logic for GSEA pathway table output for TrisomExploreR pathway analysis
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic
+#' @param parent - shiny session object - parent session
+#' @import DT
+#' @import glue
+#' @importFrom gargoyle watch
+#' @importFrom CUSOMShinyHelpers downloadFile
 #' @export
 feature_analysis_GSEA_summary_data_server <- function(id, r6, parent) {
 
@@ -42,25 +55,24 @@ feature_analysis_GSEA_summary_data_server <- function(id, r6, parent) {
 
     output$GSEADataTable <- DT::renderDataTable({
 
-      if(nrow(GSEAPathwayData()) > 0) {
+      if (nrow(GSEAPathwayData()) > 0) {
 
         DT::datatable(
           data = GSEAPathwayData(),
           caption = htmltools::tags$caption(
-            style = 'caption-side: top; text-align: left;',
+            style = "caption-side: top; text-align: left;",
             shiny::HTML(glue::glue('<a href="https://www.gsea-msigdb.org/gsea/msigdb/cards/{r6$GSEAGenesetName}" target="_blank" title="Click here to learn more about this gene set">{r6$GSEAGenesetName} GENE SET</a>')),
             htmltools::em("")
           ),
-          #filter = "top",
-          extensions = c('Buttons','Responsive','Scroller'),
-          selection = 'none',
+          extensions = c("Buttons", "Responsive", "Scroller"),
+          selection = "none",
           rownames = FALSE,
-          style = 'bootstrap',
+          style = "bootstrap",
           escape = FALSE,
           options = list(
             pageLength = 5,
             lengthMenu = c(5, 10, 15, 20),
-            dom = 'Bfti',
+            dom = "Bfti",
             searchHighlight = TRUE,
             initComplete = DT::JS("function(settings) {
               var table=settings.oInstance.api();
@@ -74,7 +86,7 @@ feature_analysis_GSEA_summary_data_server <- function(id, r6, parent) {
             scrollY = 200,
             scroller = TRUE,
             buttons = list(
-              'colvis',
+              "colvis",
               list(
                 extend = "collection",
                 text = "Download Data",

@@ -1,3 +1,7 @@
+#' Create volcano summary data table output for TrisomExploreR feature analysis
+#' @param id - string - id for this module namespace
+#' @importFrom shinycustomloader withLoader
+#' @importFrom DT dataTableOutput
 #' @export
 volcano_data_table_ui <- function(id) {
   ns <- shiny::NS(id)
@@ -29,6 +33,15 @@ volcano_data_table_ui <- function(id) {
   )
 }
 
+#' Server logic for volcano summary data table output for TrisomExploreR feature analysis#' 
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic
+#' @import dplyr
+#' @import glue
+#' @importFrom stringr str_replace
+#' @importFrom shinyWidgets prettyRadioButtons
+#' @importFrom gargoyle watch
+#' @importFrom CUSOMShinyHelpers downloadFile
 #' @export
 volcano_data_table_server <- function(id, r6) {
 
@@ -113,7 +126,6 @@ volcano_data_table_server <- function(id, r6) {
           extensions = list(
             "Buttons" = NULL,
             "ColReorder" = NULL,
-            #"Responsive" = NULL,
             "Scroller" = NULL
           ),
           selection = "none",

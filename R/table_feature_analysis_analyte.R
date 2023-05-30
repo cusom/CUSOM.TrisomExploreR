@@ -1,3 +1,8 @@
+#' Create Analyte table output for TrisomExploreR feature analysis
+#' @param id - string - id for this module namespace
+#' @importFrom shinydashboardPlus box
+#' @importFrom shinycustomloader withLoader
+#' @importFrom DT dataTableOutput
 #' @export
 feature_analysis_analyte_summary_data_ui <- function(id) {
   ns <- shiny::NS(id)
@@ -24,6 +29,13 @@ feature_analysis_analyte_summary_data_ui <- function(id) {
   )
 }
 
+#' Server logic for Analyte table output for TrisomExploreR feature analysis
+#' @param id - string - id for this module namespace
+#' @param r6 - R6 class defining server-side logic
+#' @import DT 
+#' @import glue
+#' @importFrom gargoyle watch
+#' @importFrom CUSOMShinyHelpers downloadFile
 #' @export
 feature_analysis_analyte_summary_data_server <- function(id, r6) {
 
@@ -55,13 +67,16 @@ feature_analysis_analyte_summary_data_server <- function(id, r6) {
           data = AnalyteDataTableDownload(),
           caption = htmltools::tags$caption(
             style = "caption-side: bottom; text-align: center;",
-            ifelse(length(r6$Analyte) > 1, "Selected Analytes Data", glue::glue("{r6$Analyte} Data"))
+            ifelse(
+              length(r6$Analyte) > 1,
+              "Selected Analytes Data",
+              glue::glue("{r6$Analyte} Data")
+            )
           ),
           filter = "top",
           extensions = list(
             "Buttons" = NULL,
             "ColReorder" = NULL,
-            #"Responsive" = NULL,
             "Scroller" = NULL
           ),
           selection = "none",
