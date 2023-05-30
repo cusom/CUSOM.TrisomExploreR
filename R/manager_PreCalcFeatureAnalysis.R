@@ -1,3 +1,8 @@
+#' R6 Class to  manage precalculated Feature Analysis - DESeq2
+#' @description
+#' subclass of FeatureAnalysisManager - overrides several class methods
+#' @field Age - numeric vector of chosen ages
+#' @field Sex - character vecotr of chosen sex(s)
 #' @export
 PreCalcFeatureAnalysisManager <- R6::R6Class(
   "PreCalcFeatureAnalysisManager",
@@ -6,11 +11,22 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
   public = list(
     Age = c(0, 99),
     Sex = c("Male", "Female"),
+
+    #' @description
+    #' Create a new instance of a PreCalcFeatureAnalysisManager
+    #' @param applicationName string - name of application
+    #' @param id string - namespace for this instance
+    #' @param namespace_config list - configurations for this namespace
+    #' @param remoteDB R6 class - query manager for remote database queries
+    #' @param localDB R6 class - query manager for local database queries
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
       super$initialize(applicationName, id, namespace_config, remoteDB, localDB)
     },
 
-    getKaryotypeChoices = function(karyotypes, localDBLocation) {
+    #' @description
+    #' helper function to get Karyotype input options based on namespace
+    #' @param karyotypes string vector of karyotypes for input widget
+    getKaryotypeChoices = function(karyotypes) {
 
       if (self$analysisVariable == "Karyotype") {
         return(
@@ -63,6 +79,8 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' Set Volcano Summary Data along with other volcano plot properties
     getVolcanoSummaryData = function() {
 
       self$VolcanoSummaryData <- self$localDB$getQuery(
@@ -74,8 +92,8 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
           AND selected_parameters = ({covariates})",
           tibble::tibble(
             namespace = self$namespace,
-            karyotypes = glue::glue_collapse(self$Karyotype,';'),
-            covariates = ifelse(is.null(self$Covariates),'none',glue::glue_collapse(self$Covariates,';'))
+            karyotypes = glue::glue_collapse(self$Karyotype, ";"),
+            covariates = ifelse(is.null(self$Covariates), "none", glue::glue_collapse(self$Covariates, ";"))
           )
         ) |>
         dplyr::rename(
@@ -83,11 +101,11 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
           "p.value" = padj
         ) |>
         dplyr::mutate(
-          log2FoldChange= log2(FoldChange),
+          log2FoldChange = log2(FoldChange),
           `-log10pvalue` = -log10(p.value),
           `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
           formattedPValue = unlist(purrr::pmap(.l = list(p.value,p.value.adjustment.method), CUSOMShinyHelpers::formatPValue)),
-          text = glue::glue('Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}'),
+          text = glue::glue("Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"),
           "lmFormula" = "<a href='https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html' target='_blank'>DESeq2 model</a>",
           ivs = ""
         )
@@ -99,6 +117,8 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' get sample level data for selected analyte(s)
     getAnalyteData = function() {
 
       self$AnalytePlotMethod <- getAnalytePlotMethod(self$analysisType, length(self$Analyte))
@@ -123,8 +143,6 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
           log2Measurement = glue::glue("log<sub>2</sub>({Measurement})"),
           highlightGroup = dplyr::case_when(
             1 == 1 ~ NA
-            # LabID %in% r6$GroupA ~ "A",
-            # LabID %in% r6$GroupB ~ "B"
           )
         ) |>
         dplyr::filter(
@@ -132,7 +150,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
           log2MeasuredValue != -Inf
         )
 
-        if(self$AnalytePlotMethod == "boxplot") {
+        if (self$AnalytePlotMethod == "boxplot") {
 
           self$AnalyteData <- self$AnalyteData |>
             dplyr::rowwise() |>
@@ -167,13 +185,16 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
       }
     },
 
+    #' @description
+    #' Get GSEA data
+    #' ### NO NEED TO PENALIZE SINCE THE MODEL IS DESEQ**
+    #'
     getGSEAData = function() {
 
       ranks <- self$VolcanoSummaryData |>
         dplyr::rowwise() |>
         dplyr::mutate(ParsedComparisonAnalyte = CUSOMShinyHelpers::parseDelimitedString(Analyte, 1)) |>
         dplyr::ungroup() |>
-        ### NO NEED TO PENALIZE SINCE THE MODEL IS DESEQ
         # dplyr::mutate(
         #   ID = ParsedComparisonAnalyte,
         #   t = (`-log10pvalue` * CorrelationValue)
@@ -191,228 +212,13 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
           Leading.edge.genes = gsub(" ", "", Leading.edge.genes)
         ) |>
         dplyr::select("Gene.set" = pathway, "Size" = size, ES, NES, "p.value" = pval, "q.value" = padj, Leading.edge.genes) |>
-        dplyr::mutate(Gene.set = stringr::str_to_title(trimws(gsub('_',' ',gsub('HALLMARK','',Gene.set)))))
+        dplyr::mutate(Gene.set = stringr::str_to_title(trimws(gsub("_", " ", gsub("HALLMARK", "", Gene.set)))))
 
       self$GSEAData <- list(
         "ranks" = ranks,
         "hallmarks" = GSEA_hallmarks,
         "gsea" = gsea
       )
-    },
-
-    getGSEAPlot = function(.data, ns) {
-
-      data <- .data$gsea |>
-        dplyr::mutate(
-          `-log10qvalue` = -log(q.value),
-          text = glue::glue("Gene Set: {Gene.set}<br />NES: {NES} <br />-log<sub>10</sub>(q-value): {`-log10qvalue`}")
-        ) |>
-        dplyr::top_n(25, wt = abs(NES))
-
-      limit <- data |>
-        dplyr::pull(NES) |>
-        abs() |>
-        max() |>
-        plyr::round_any(1, f = ceiling) * 1.15
-
-      p <- data |>
-        dplyr::arrange(`-log10qvalue`) |>
-        plotly::plot_ly(
-          type = "bar",
-          x = ~ `-log10qvalue`,
-          y = ~ reorder(Gene.set,NES),
-          hoverinfo = "text",
-          hovertext = ~ text,
-          customdata = ~ Leading.edge.genes,
-          marker = list(
-            color = ~ NES,
-            autocolorscale = FALSE,
-            colorscale = "RdBlu",
-            cauto  = FALSE,
-            cmax = limit,
-            cmid = 0,
-            cmin = -limit,
-            colorbar = list(
-              title = "NES",
-              tickmode = "auto",
-              len = 0.5,
-              yanchor = "middle",
-              y = 0.5
-            )
-          )
-        ) |>
-        plotly::layout(
-          title = list(
-            text = "GSEA: Top 25 Hallmark gene sets <br />T21 vs. Control"
-          ),
-          showlegend = FALSE,
-          xaxis = list(
-            title = list(
-              text = "-log<sub>10</sub>(q-value)"
-            ),
-            showlines = FALSE,
-            showgrid = FALSE
-          ),
-          yaxis = list(
-            title = list(
-              text = ""
-            ),
-            showlines = FALSE
-          ),
-          margin = list(
-            t = 65
-          ),
-          shapes = list(
-            list(
-              type = "line",
-              xref = "x",
-              yref = "paper",
-              axref = "paper",
-              ayref = "y",
-              y0 = 0,
-              y1 = 1,
-              x0 = -log(0.1),
-              x1 = -log(0.1),
-              line = list(
-                color = "black",
-                dash = "dot"
-              )
-            )
-          )
-        ) |>
-        plotly::config(
-          displayModeBar = TRUE,
-          displaylogo = FALSE,
-          toImageButtonOptions = list(
-            format = "svg",
-            filename = glue::glue("{self$applicationName} - GSEA Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}") ,
-            width = NULL,
-            height = NULL
-          ),
-          modeBarButtons = list(
-            list("toImage")
-          )
-        )
-
-      p$x$source <- ns("GSEAPlot")
-
-      return(p)
-
-    },
-
-    getGSEAPathwayData = function(pathName) {
-
-      gseaParam <- 0
-
-      stats <- self$GSEAData$ranks
-
-      pathwayNammed <- self$GSEAData$gsea |>
-        dplyr::filter(Gene.set == pathName) |>
-        dplyr::select(Leading.edge.genes) |>
-        dplyr::mutate(id = dplyr::row_number()) |>
-        tidyr::separate_rows(Leading.edge.genes, sep = ",") |>
-        dplyr::select(-id) |>
-        purrr::simplify()
-
-      rnk <- rank(-stats)
-      ord <- order(rnk)
-      statsAdj <- stats[ord]
-      statsAdj <- sign(statsAdj) * (abs(statsAdj)^gseaParam)
-      statsAdj <- statsAdj / max(abs(statsAdj))
-
-      pathway <- unname(as.vector(na.omit(match(pathwayNammed, names(statsAdj)))))
-      pathway <- sort(pathway)
-
-      gseaRes <- fgsea::calcGseaStat(
-        statsAdj,
-        selectedStats = pathway,
-        returnAllExtremes = TRUE
-      )
-
-      bottoms <- gseaRes$bottoms
-      tops <- gseaRes$tops
-      n <- length(statsAdj)
-      xs <- as.vector(rbind(pathway - 1, pathway))
-      ys <- as.vector(rbind(bottoms, tops))
-
-      GSEAScores <- tibble::tibble(
-        x = c(0, xs, n + 1),
-        y = c(0, ys, 0)
-      ) |>
-        dplyr::inner_join(
-          tibble::tibble(x = pathway, Gene = pathwayNammed),
-          by = "x"
-        ) |>
-        dplyr::rename("Rank" = x, "ES" = y) |>
-        dplyr::relocate("Gene")
-
-      self$GSEAPathwayData <- self$VolcanoSummaryData |>
-        dplyr::filter(Analyte %in% self$Analyte) |>
-        dplyr::select("Gene" = Analyte, log2FoldChange, `-log10pvalue`) |>
-        dplyr::left_join( GSEAScores, by = "Gene" ) |>
-        dplyr::group_by(Gene) |>
-        dplyr::arrange(-log2FoldChange) |>
-        dplyr::mutate(r = dplyr::row_number()) |>
-        dplyr::ungroup() |>
-        dplyr::filter(r == 1) |>
-        dplyr::select(-c(ES,r)) |>
-        dplyr::mutate(
-          log2FoldChange = format(log2FoldChange,scientific = TRUE),
-          `-log10pvalue` = format(`-log10pvalue`,scientific = TRUE),
-          Analyte = Gene,
-          Gene = glue::glue("<a href=\"https://www.genecards.org/Search/Keyword?queryString={Gene}\" target=\"_blank\">{Gene}</a>")
-        ) |>
-        dplyr::relocate(Gene) |>
-        dplyr::rename("log<sub>2</sub>(Fold Change)" = log2FoldChange,"-log<sub>10</sub>(q-value)" = `-log10pvalue`) |>
-        dplyr::arrange(Rank)
-
-      self$GSEAAnalytes <- self$GSEAPathwayData |>
-        dplyr::select(Analyte) |>
-        dplyr::summarise(text = toString(Analyte)) |>
-        dplyr::mutate(text = gsub(", ", "|",text)) |>
-        dplyr::pull()
-
-      self$GSEAGenesetName <- glue::glue("HALLMARK_{gsub(' ','_',stringr::str_to_upper(self$GSEATraceName))}")
-
-    },
-    getGSEAEnrichmentPlot = function(.data, ns) {
-
-      p <- CUSOMShinyHelpers::plotGSEAEnrichment(
-        pathName = self$GSEATraceName,
-        stats = .data$ranks,
-        res = .data$gsea,
-        title = glue::glue("T21 vs. Control:\n{self$GSEATraceName}")
-      ) |>
-      plotly::layout(
-        margin = list(
-          autoexpand = TRUE,
-          l = 10,
-          r = 30,
-          t = 75
-        )
-      ) |>
-      plotly::config(
-        displayModeBar = TRUE,
-        displaylogo = FALSE,
-        toImageButtonOptions = list(
-          format = "svg",
-          filename = glue::glue('{self$applicationName} - {self$Study} GSEA Enrichment Plot {format(Sys.time(),"%Y%m%d_%H%M%S")}') ,
-          width = NULL,
-          height = NULL
-        ),
-        modeBarButtons = list(
-          list("zoom2d"),
-          list("zoomIn2d"),
-          list("zoomOut2d"),
-          list("resetScale2d"),
-          list("toImage")
-        )
-      )
-
-      p$x$source <- ns("GSEAEnrichmentPlot")
-
-      p
-
     }
 
   )

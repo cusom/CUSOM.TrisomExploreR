@@ -1233,9 +1233,9 @@ FeatureAnalysisManager <- R6::R6Class(
         dplyr::group_by(Gene) |>
         dplyr::arrange(-log2FoldChange) |>
         dplyr::mutate(r = dplyr::row_number()) |>
-        dplyr:: ungroup() |>
+        dplyr::ungroup() |>
         dplyr::filter(r == 1) |>
-        dplyr::select(-c(ES,r)) |>
+        dplyr::select(-c(ES, r)) |>
         dplyr::mutate(
           log2FoldChange = format(log2FoldChange, scientific = TRUE),
           `-log10pvalue` = format(`-log10pvalue`, scientific = TRUE),

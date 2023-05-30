@@ -1,3 +1,9 @@
+#' R6 Class to  manage Immune Map specific Feature Analysis
+#' @description
+#' subclass of FeatureAnalysisManager - overrides several class methods
+#' @field analysisMetadata - tibble - defines UI analysis choice metadata
+#' @field analysisChoices - tibble - values available for analysis choices on UI side
+#' @field Analysis - string - chosen analysis
 #' @export
 ImmuneMapFeatureAnalysisManager <- R6::R6Class(
   "ImmuneMapFeatureAnalysisManager",
@@ -7,9 +13,21 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
     analysisMetadata = NULL,
     analysisChoices = NULL,
     Analysis = NULL,
+
+    #' @description
+    #' Create a new instance of a ImmuneMapFeatureAnalysisManager
+    #' @param applicationName string - name of application
+    #' @param id string - namespace for this instance
+    #' @param namespace_config list - configurations for this namespace
+    #' @param remoteDB R6 class - query manager for remote database queries
+    #' @param localDB R6 class - query manager for local database queries
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
       super$initialize(applicationName, id, namespace_config, remoteDB, localDB)
     },
+    
+    #' @description
+    #' #' helper function to get analysis choices for UI inputs based on chosen study
+    #' @param study - string - chosen study
     getAnalysisChoices = function(study) {
 
       AnalysisCellTypes <- self$localDB$getQuery(
@@ -40,6 +58,10 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
         )
 
     },
+
+    #' @description
+    #' helper function to get cell type choices for UI inputs based on chosen study
+    #' @param study - string - chosen study
     getCellTypes = function(study) {
 
       self$getAnalysisChoices(study)
@@ -53,7 +75,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
             TRUE ~ as.numeric(n)
           )
         ) |>
-        dplyr::arrange(AnalysisGroup,desc(SortOrder))
+        dplyr::arrange(AnalysisGroup, desc(SortOrder))
 
       nestedSelect <- choices |>
         dplyr::select(NestedSelect) |>
@@ -70,13 +92,13 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
         dplyr::distinct() |>
         dplyr::pull()
 
-      if(nestedSelect) {
+      if (nestedSelect) {
 
         choices <- choices |>
-          dplyr::select(Analysis,AnalysisGroup) |>
+          dplyr::select(Analysis, AnalysisGroup) |>
           dplyr::distinct()
 
-        choices <- purrr::imap(split(choices$Analysis,choices$AnalysisGroup), ~ setNames(.x, stringr::str_c(.x)))
+        choices <- purrr::imap(split(choices$Analysis, choices$AnalysisGroup), ~ setNames(.x, stringr::str_c(.x)))
 
       }
 
@@ -98,6 +120,9 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
         )
       )
     },
+
+    #' @description
+    #' helper function to get analysis input choices
     getAnalysisInputChoices = function() {
 
       return(
@@ -110,6 +135,10 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
           dplyr::pull()
       )
     },
+
+    #' @description
+    #' helper function to get Karyotype input options based on namespace
+    #' @param karyotypes string vector of karyotypes for input widget
     getKaryotypeChoices = function(karyotypes) {
 
       if (self$namespace == "Karyotype") {
@@ -172,7 +201,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
           ) |>
           dplyr::arrange(sort)
 
-        if(self$analysisType == "Continuous") {
+        if (self$analysisType == "Continuous") {
           return(
             karyotypeInputCounts |>
               dplyr::bind_rows(
@@ -204,8 +233,9 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
         }
       }
     },
-    
 
+    #' @description
+    #' Get / set sample level data with filers applied
     getBaseData = function() {
 
       self$BaseData <- self$localDB$getQuery(
@@ -242,18 +272,20 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
 
     },
 
+    #' @description
+    #' Set Volcano Summary Data along with other volcano plot properties
     getVolcanoSummaryData = function() {
 
       self$getBaseData()
 
       self$Adjusted <- self$AdjustmentMethod != "none"
 
-      if(self$analysisType == "Categorical") {
+      if (self$analysisType == "Categorical") {
 
         dataframe <- self$BaseData |>
           dplyr::select(LabID, Analysis, CellType, Analyte, MeasuredValue, self$analysisVariable, self$Covariates) |>
-          tidyr::separate(Analysis, into = c("ParsedAnalysis1","ParsedAnalysis2"), sep = ";", remove = FALSE) |>
-          tidyr::separate(Analyte, into = c("ParsedAnalyte1","ParsedAnalyte2"), sep = ";", remove = FALSE) |>
+          tidyr::separate(Analysis, into = c("ParsedAnalysis1", "ParsedAnalysis2"), sep = ";", remove = FALSE) |>
+          tidyr::separate(Analyte, into = c("ParsedAnalyte1", "ParsedAnalyte2"), sep = ";", remove = FALSE) |>
           dplyr::mutate(
             CompoundAnalyte = dplyr::case_when(
               Analysis == "Cluster" ~ glue::glue("{Analysis};{CellType};{Analyte}"),
@@ -263,7 +295,10 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
               TRUE ~ glue::glue(";;{Analyte}")
             )
           ) |>
-          dplyr::mutate_at(dplyr::vars(self$analysisVariable), ~forcats::fct_relevel(.x, self$groupBaselineLabel)) |>
+          dplyr::mutate_at(
+            dplyr::vars(self$analysisVariable), 
+            ~forcats::fct_relevel(.x, self$groupBaselineLabel)
+          ) |>
           CUSOMShinyHelpers::getStatTestByKeyGroup(
             id = LabID,
             key = CompoundAnalyte,
@@ -274,20 +309,25 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
             adjustmentMethod = self$AdjustmentMethod,
             covariates = self$Covariates
           ) |>
-          tidyr::separate(col = CompoundAnalyte, into = c("Analysis", "CellType","Analyte","Analyte2"), sep = ";", remove = FALSE) |>
+          tidyr::separate(
+            col = CompoundAnalyte, 
+            into = c("Analysis", "CellType", "Analyte", "Analyte2"),
+            sep = ";", 
+            remove = FALSE
+          ) |>
           dplyr::mutate(
             Analyte = ifelse(is.na(Analyte2), Analyte, glue::glue("{Analyte};{Analyte2}")),
             Analysis = dplyr::case_when(
               Analysis == "" ~ "Lineage",
-              Analysis %in% c('Baseline','+ IFNA2A') ~ "Signaling Eiptope",
+              Analysis %in% c("Baseline", "+ IFNA2A") ~ "Signaling Eiptope",
               TRUE ~ Analysis
             ),
             formattedPValue = unlist(purrr::pmap(.l = list(p.value,p.value.adjustment.method), CUSOMShinyHelpers::formatPValue)),
-            text = glue::glue('{Analysis}: {CellType} <br />Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}')
+            text = glue::glue("{Analysis}: {CellType} <br />Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}")
           ) |>
           dplyr::ungroup() |>
-          dplyr::select(-c(CompoundAnalyte,Analyte2)) |>
-          dplyr::relocate(Analysis,CellType,Analyte)
+          dplyr::select(-c(CompoundAnalyte, Analyte2)) |>
+          dplyr::relocate(Analysis, CellType, Analyte)
 
       }
 
@@ -332,7 +372,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
           dplyr::relocate(Analysis,CellType,Analyte)
       }
 
-      if(nrow(dataframe)>0) {
+      if (nrow(dataframe) > 0) {
 
         self$VolcanoSummaryData <- dataframe |>
           dplyr::mutate(
@@ -350,7 +390,5 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
 
       }
     }
-
-
   )
 )
