@@ -115,7 +115,7 @@ GSEA_analysis_inputs_server <-  function(id, r6, parent) {
 
       shinybusy::remove_modal_spinner()
 
-      shiny::removeModal()
+      shinyjs::click("configure-GSEA")
 
     }, ignoreInit = TRUE)
 
@@ -144,7 +144,7 @@ GSEA_analysis_inputs_server <-  function(id, r6, parent) {
         action = "remove"
       )
 
-      shiny::removeModal()
+      shinyjs::click("configure-GSEA")
 
     }, ignoreInit = TRUE)
 
