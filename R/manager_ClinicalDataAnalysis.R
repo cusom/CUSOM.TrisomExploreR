@@ -1,10 +1,10 @@
-#' R6 Class to manage Clincal Data Analysis 
-#' @description 
+#' R6 Class to manage Clincal Data Analysis
+#' @description
 #' R6 Class to manage all data analysis within various modules in the Clinical Data application
-#' @field applicationName - string - application name 
-#' @field namespace - string - namespace for this instance 
-#' @field remoteDB - R6 Class to manage remote database queries 
-#' @field localDB - R6 Class to manange local database queries 
+#' @field applicationName - string - application name
+#' @field namespace - string - namespace for this instance
+#' @field remoteDB - R6 Class to manage remote database queries
+#' @field localDB - R6 Class to manange local database queries
 #' @field ParticipantEncounter - deprecated
 #' @field AllParticipants - deprecated
 #' @field AllN - numeric - count of all Participants
@@ -12,12 +12,12 @@
 #' @field SamplesAvailable - deprecated
 #' @field ParticipantOMICSAvailable - deprecated
 #' @field Karyotypes - character vector - selected karotypes
-#' @field Sex - character vector - selected sexes 
-#' @field Age - numeric vector - selected ages 
-#' @field OmicsSamples - character vector - selected omics 
+#' @field Sex - character vector - selected sexes
+#' @field Age - numeric vector - selected ages
+#' @field OmicsSamples - character vector - selected omics
 #' @field Samples - character vector - selected samples
 #' @field ParticipantData - tibble of participant level data filtered from inputs
-#' @field ConditionClassData - tibble of condition class data 
+#' @field ConditionClassData - tibble of condition class data
 #' @field conditionClasses - character vector - selected condition classes
 #' @field conditions - character vector - selected conditions
 #' @field conditionClassCounts - tibble - counts of condition classes by Karyotype
@@ -28,7 +28,7 @@
 #' @field ConditionSexCounts - tibble - counts of conditions by Sex and Karyotype
 #' @field selectedAnnotationLevel - string - chosen annotation level for conditions - Condition Class vs Condition
 #' @field SelectedConditions - character vector - chosen condition classes or conditions
-#' @field upsetPlotData - tibble - wide-form matrix / data frame of condition counts vs. records 
+#' @field upsetPlotData - tibble - wide-form matrix / data frame of condition counts vs. records
 #' @import dplyr
 #' @import tibble
 #' @import tidyr
@@ -78,10 +78,10 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' @description
     #' Create a new instance of a ClinicalDataAnalysisManager object
     #' @param applicationName string - applicationName
-    #' @param id string - namespace for this class 
-    #' @param namespace_config tibble - configuration values for this namespace instance of the object  
-    #' @param remoteDB R6 class to manage remote database queries 
-    #' @param localDB R6 class to manange local database queries 
+    #' @param id string - namespace for this class
+    #' @param namespace_config tibble - configuration values for this namespace instance of the object
+    #' @param remoteDB R6 class to manage remote database queries
+    #' @param localDB R6 class to manange local database queries
     #' @return A new `ClinicalDataAnalysisManager` object.
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
 
@@ -174,7 +174,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
     #' @description
     #' Get participant sex distribution plot
-    #' @param .data - tibble  
+    #' @param .data - tibble
     #' @return plotly object
     getSexesOverviewPlot = function(.data) {
 
@@ -290,7 +290,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
     #' @description
     #' Get Age distribution plot
-    #' @param .data - tibble  
+    #' @param .data - tibble
     #' @return plotly object
     getAgeDistributionOverviewPlot = function(.data) {
 
@@ -363,7 +363,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
     #' @description
     #' Get Probands  plot
-    #' @param .data - tibble  
+    #' @param .data - tibble
     #' @return plotly object
     getProbandsPlot = function(.data) {
 
@@ -446,7 +446,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
     #' @description
     #' Get Samples Availble plot
-    #' @param .data - tibble  
+    #' @param .data - tibble
     #' @return plotly object
     getSamplesAvailablePlot = function(.data) {
 
@@ -547,7 +547,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
     #' @description
     #' Get OMICS Samples Availble plot
-    #' @param .data - tibble  
+    #' @param .data - tibble
     #' @return plotly object
     getOmicsSamplesAvailablePlot = function(.data) {
 
@@ -643,7 +643,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
     #' @description
     #' Get Race/Ethnicity plot
-    #' @param .data - tibble  
+    #' @param .data - tibble
     #' @return plotly object
     getRaceEthnicityPlot = function(.data) {
 
@@ -745,7 +745,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
     #' @description
     #' Get Participants States plot
-    #' @param .data - tibble  
+    #' @param .data - tibble
     #' @return plotly object
     getParticipantStatesPlot = function(.data) {
 
@@ -822,7 +822,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     },
 
     #' @description
-    #' set summary condition class counts tibble 
+    #' set summary condition class counts tibble
     #' @return none
     updateSummaryConditionClassCounts = function() {
 
@@ -868,7 +868,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           dplyr::mutate(frequency = n.x / n.y) |>
           dplyr::select(-c(n.x, n.y)) |>
           dplyr::mutate(
-            frequency = round(frequency, 4) * 100,
+            frequency = round(frequency, 4),
             Karyotype = dplyr::case_when(
               Karyotype == "Control" ~ "Control %",
               TRUE ~ "Trisomy 21 %"
@@ -887,7 +887,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           dplyr::filter(HasCondition == "True") |>
           dplyr::group_by(Karyotype) |>
           dplyr::summarize(n = dplyr::n_distinct(record_id), .groups = "drop")
- 
+
         if (nrow(p[p$Karyotype == "Control", ]) == 0) {
           p <- dplyr::bind_rows(
             p,
@@ -920,7 +920,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           dplyr::mutate(frequency = n.x / n.y) |>
           dplyr::select(-c(n.x, n.y)) |>
           dplyr::mutate(
-            frequency = round(frequency, 4) * 100,
+            frequency = round(frequency, 4),
             Karyotype = dplyr::case_when(
               Karyotype == "Control" ~ "Control %",
               TRUE ~ "Trisomy 21 %"
@@ -935,14 +935,14 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     },
 
     #' @description
-    #' get summary condition class counts tibble 
+    #' get summary condition class counts tibble
     #' @return tibble
     getConditionClassSummary = function() {
       return(self$conditionClassSummary)
     },
 
     #' @description
-    #' set conditions counts tibble 
+    #' set conditions counts tibble
     #' @return none
     updateConditions = function() {
 
@@ -986,7 +986,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     },
 
     #' @description
-    #' set conditions summary counts tibble 
+    #' set conditions summary counts tibble
     #' @return none
     updateSummaryConditionCounts = function() {
 
@@ -1033,14 +1033,14 @@ ClinicalDataAnalysisManager <- R6::R6Class(
         }
 
         self$conditionSummary <- dplyr::inner_join(
-            p, 
-            a, 
+            p,
+            a,
             by = c("Karyotype")
           ) |>
           dplyr::mutate(frequency = n.x / n.y) |>
           dplyr::select(-c(n.x, n.y)) |>
           dplyr::mutate(
-            frequency = round(frequency, 4) * 100,
+            frequency = round(frequency, 4),
             Karyotype = dplyr::case_when(
               Karyotype == "Control" ~ "Control %",
               TRUE ~ "Trisomy 21 %"
@@ -1078,7 +1078,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           dplyr::mutate(frequency = n.x / n.y) |>
           dplyr::select(-c(n.x, n.y)) |>
           dplyr::mutate(
-            frequency = round(frequency, 4) * 100,
+            frequency = round(frequency, 4),
             Karyotype = dplyr::case_when(
               Karyotype == "Control" ~ "Control %",
               TRUE ~ "Trisomy 21 %"
@@ -1095,7 +1095,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     },
 
     #' @description
-    #' set conditions class sex counts tibble 
+    #' set conditions class sex counts tibble
     #' @return none
     updateConditionClassSexCounts = function() {
       if(!is.null(self$conditionClasses)) {
@@ -1121,7 +1121,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     },
 
     #' @description
-    #' set conditions sex counts tibble 
+    #' set conditions sex counts tibble
     #' @return none
     updateConditionSexCounts = function() {
       if(!is.null(self$conditionClasses) & !is.null(self$conditions)) {
@@ -1162,8 +1162,9 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
     #' @description
     #' get condition sex plot
-    #' @param .data tibble 
-    #' @param type - string - condition annotation level  
+    #' @param .data tibble
+    #' @param type - string - condition annotation level
+    #' @importFrom formattable percent
     #' @return plotly object
     getGetConditionStackedSexPlot = function(.data, type = "Classes") {
 
@@ -1238,7 +1239,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
               x0 = 0.5,
               x1 = 0.5,
               line = list(
-                color = "red", 
+                color = "red",
                 dash = "dash"
               )
             )
@@ -1389,7 +1390,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     },
 
     #' @description
-    #' set condition upset plot data 
+    #' set condition upset plot data
     #' @return none
     update_upset_plot_data = function() {
 
