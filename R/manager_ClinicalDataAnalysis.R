@@ -681,8 +681,8 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           color = ~ Ethnicity,
           colors = c("#1D4D7C", "#3E99CD", "#BBBDC0"),
           legendgroup = ~ Ethnicity,
-          text = ~ glue::glue("{scales::percent(race_pct)} of Participants identify as <b>{Race}</b><br />
-                    {scales::percent(race_eth_subgroup_pct)} of {Race} Participants <br /> identify as <b>{Ethnicity}</b>"
+          text = ~ glue::glue("{formattable::percent(race_pct)} of Participants identify as <b>{Race}</b><br />
+                    {formattable::percent(race_eth_subgroup_pct)} of {Race} Participants <br /> identify as <b>{Ethnicity}</b>"
           ),
           hoverinfo = "text",
           textposition = "none"

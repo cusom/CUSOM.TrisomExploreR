@@ -26,9 +26,11 @@ condition_frequency_condition_table_ui <- function(id) {
 #' @param id - string - id for this module namespace
 #' @param r6 - R6 class defining server-side logic
 #' @import dplyr
-#' @import DT 
+#' @import DT
 #' @importFrom gargoyle watch
 #' @importFrom gargoyle trigger
+#' @importFrom stats quantile
+#' @importFrom grDevices colorRampPalette
 #' @export
 condition_frequency_condition_table_server <- function(id, r6) {
 
@@ -154,23 +156,23 @@ condition_frequency_condition_table_server <- function(id, r6) {
       DT::formatStyle(
         "Control %",
         backgroundColor = DT::styleInterval(
-          quantile(
+          stats::quantile(
             childConditions()$`Control %`,
             probs = seq(.05, .95, .05),
             na.rm = TRUE
           ),
-          colorRampPalette(c("#f2f2f3", "#BBBDC0"))(20)
+          grDevices::colorRampPalette(c("#f2f2f3", "#BBBDC0"))(20)
         )
       ) |>
       DT::formatStyle(
         "Trisomy 21 %",
         backgroundColor = styleInterval(
-          quantile(
+          stats::quantile(
             childConditions()$`Trisomy 21 %`,
             probs = seq(.05, .95, .05),
             na.rm = TRUE
           ),
-          colorRampPalette(c("#E9F1F6", "#287BA5"))(20)
+          grDevices::colorRampPalette(c("#E9F1F6", "#287BA5"))(20)
         )
       )
 

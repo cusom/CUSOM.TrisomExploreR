@@ -46,6 +46,8 @@ condition_frequency_class_table_ui <- function(id) {
 #' @import dplyr
 #' @import DT
 #' @importFrom gargoyle trigger
+#' @importFrom stats quantile
+#' @importFrom grDevices colorRampPalette
 #' @export
 condition_frequency_class_table_server <- function(id, r6) {
 
@@ -160,23 +162,23 @@ condition_frequency_class_table_server <- function(id, r6) {
     DT::formatStyle(
       "Control %",
       backgroundColor = DT::styleInterval(
-        quantile(
+        stats::quantile(
           r6$conditionClassCounts$`Control %`,
           probs = seq(.05, .95, .05),
           na.rm = TRUE
         ),
-        colorRampPalette(c("#f2f2f3", "#BBBDC0"))(20)
+        grDevices::colorRampPalette(c("#f2f2f3", "#BBBDC0"))(20)
       )
     ) |>
     DT::formatStyle(
       "Trisomy 21 %",
       backgroundColor = styleInterval(
-        quantile(
+        stats::quantile(
           r6$conditionClassCounts$`Trisomy 21 %`,
           probs = seq(.05, .95, .05),
           na.rm = TRUE
         ),
-        colorRampPalette(c("#E9F1F6", "#287BA5"))(20)
+        grDevices::colorRampPalette(c("#E9F1F6", "#287BA5"))(20)
       )
     )
 
