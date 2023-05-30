@@ -1,3 +1,7 @@
+#' Utility UI function to dynamically create `shinydashboard::sidebarMenu` items from config
+#' @param namespaces - list of namespaces / tab items
+#' @param ui_config - list of ui configurations for menu item (`text`,`name`,`icon`)
+#' @importFrom shinydashboard sidebarMenu
 #' @export
 create_menu_items <- function(namespaces, ui_config) {
   do.call(
@@ -10,7 +14,10 @@ create_menu_items <- function(namespaces, ui_config) {
   )
 }
 
-
+#' Utility UI function to create `shinydashboard::menuItem` from config
+#' @param id - string - namespace for this instance of `menuItem` object
+#' @param ui_config - list of ui configurations to build `menuItem` object
+#' @import dplyr
 #' @importFrom shinydashboard menuItem
 #' @export
 create_menu_item <- function(id, ui_config) {
@@ -32,7 +39,11 @@ create_menu_item <- function(id, ui_config) {
   )
 }
 
-
+#' Utility UI function to dynamically create `shinydashboard::tabItems` from config
+#' @param namespaces - list of namespaces / tab items
+#' @param ui_config - list of ui configurations to build `tabItem`
+#' @param input_config - list of ui input configurations to be passed as argument to ui module
+#' @importFrom shinydashboard tabItems
 #' @export
 create_tab_items <- function(namespaces, ui_config, input_config) {
   do.call(
@@ -46,6 +57,13 @@ create_tab_items <- function(namespaces, ui_config, input_config) {
   )
 }
 
+#' Utility UI function to create `shinydashboard::tabItem` from config
+#' @param id - string - namespace for this instance of `tabItem`
+#' @param ui_config - list of ui configuration for this instance of `tabItem`
+#' @param input_config - list of input configurations to be passed to appropriate ui module
+#' @import dplyr
+#' @importFrom stringr str_replace
+#' @importFrom shinydashboard tabItem
 #' @export
 create_tab_item <- function(id, ui_config, input_config) {
 
