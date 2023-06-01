@@ -30,7 +30,7 @@ ImmuneMapComorbidityManager <- R6::R6Class(
     #' Overrides super method with data model specific to Immune Maps data
     getBaseData = function() {
 
-      baseData <- localDB$getQuery(
+      baseData <- self$localDB$getQuery(
           "SELECT ExperimentStudyName, LabID, record_id, Karyotype, Sex, Age, Analysis, CellType, Analyte, MeasuredValue, Measurement
             FROM sourceData
             WHERE ExperimentStudyName = ({study})
@@ -63,7 +63,7 @@ ImmuneMapComorbidityManager <- R6::R6Class(
           log2Measurement = glue::glue("log<sub>2</sub>({Measurement})")
         )
 
-      conditionData <- localDB$getQuery(
+      conditionData <- self$localDB$getQuery(
         "SELECT record_id, Condition, HasCondition
           FROM ParticipantConditions
           WHERE Condition IN ({conditions*})",
