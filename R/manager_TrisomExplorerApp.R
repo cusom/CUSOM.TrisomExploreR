@@ -82,16 +82,16 @@ TrisomExplorerAppManager <- R6::R6Class(
         ,tibble::tibble('ApplicationId' = ApplicationId)
       )
 
-      self$app_config$tutorials <- remoteDB$getQuery(
-        "[shiny].[GetApplicationTutorials] ?"
-        ,tibble::tibble('ApplicationId' = ApplicationId)
-      )
+      # self$app_config$tutorials <- remoteDB$getQuery(
+      #   "[shiny].[GetApplicationTutorials] ?"
+      #   ,tibble::tibble('ApplicationId' = ApplicationId)
+      # )
 
       self$module_config <- ApplicationNamespaceConfig |>
-        dplyr::select(Namespace, TabText, TabIcon, ModuleServerName, UseR6Class, R6ClassName )
+        dplyr::select(ApplicationId, Namespace, TabText, TabIcon, ModuleServerName, UseR6Class, R6ClassName )
 
       self$analysis_config <- ApplicationNamespaceConfig |>
-        dplyr::select(Namespace, AnalysisVariableName, AnalysisVariableLabel, AnalysisType, AnalysisVariableBaselineLabel, AnalysisVolcanoPlotTopAnnotation)
+        dplyr::select(ApplicationId, Namespace, AnalysisVariableName, AnalysisVariableLabel, AnalysisType, AnalysisVariableBaselineLabel, AnalysisVolcanoPlotTopAnnotation)
 
       #self$plotlyCustomIcons = readRDS('config/plotlyCustomIcons.rds')
 
@@ -124,28 +124,6 @@ TrisomExplorerAppManager <- R6::R6Class(
       ) |>
         dplyr::pull()
 
-      ## CROSS OMICS INPUTS
-      ## SLOW - LOAD TO MODULE?
-      self$input_config$PlatformExperiments <- remoteDB$getQuery(
-        "[shiny].[GetAplicationPlatformExperiments] ?"
-        ,tibble::tibble("ApplicationID" = ApplicationId)
-      )
-
-      self$input_config$Queryplatforms <- remoteDB$getQuery(
-        "[shiny].[GetQueryPlatforms] ?",
-        tibble::tibble("ApplicationID" = ApplicationId)
-      ) |>
-        dplyr::arrange(QueryPlatform) |>
-        dplyr::pull()
-
-      ## SLOW -- LOAD TO MODULE?
-      self$input_config$Comparisonplatforms <- remoteDB$getQuery(
-        "[shiny].[GetComparisonPlatforms] ?",
-        tibble::tibble("ApplicationID" = ApplicationId)
-      ) |>
-        dplyr::arrange(ComparisonPlatform) |>
-        dplyr::pull()
-
       self$input_config$experimentIDs <- remoteDB$getQuery(
         "[shiny].[GetApplicationStudies] ?",
         tibble::tibble("ApplicationID" = ApplicationId)
@@ -167,10 +145,6 @@ TrisomExplorerAppManager <- R6::R6Class(
           PlatformGroupDisplayName = ifelse(is.na(PlatformGroupDisplayName),"Study",PlatformGroupDisplayName)
         ) |>
         dplyr::select("Text" = "ExperimentStudyName", "URL" = "ExperimentStudyURL", "TooltipText" = "TooltipText", "ShowTooltip", "FieldSet" = "PlatformGroupDisplayName")
-
-      #self$studyChoiceNames <- purrr::pmap(self$studiesTibble,CUSOMShinyHelpers::createTooltip)
-      #self$studyNames <- self$studies$ExperimentStudyName
-
 
       self$input_config$LabIDs <- localDB$getQuery(
         "SELECT distinct LabID FROM ParticipantEncounter"
@@ -194,7 +168,7 @@ TrisomExplorerAppManager <- R6::R6Class(
         tidyr::drop_na() |>
         dplyr::summarise(
           min = round(min(AgeAtTimeOfVisit)),
-          max = round(max(AgeAtTimeOfVisit))+1
+          max = round(max(AgeAtTimeOfVisit)) + 1
         ) |>
         dplyr::reframe(
           age = seq(min,max,1)
@@ -239,7 +213,7 @@ TrisomExplorerAppManager <- R6::R6Class(
           )
         ) |>
         dplyr::select(-ConditionCensorshipAgeGroup,n) |>
-        tidyr::separate_rows(sep = ';', 'ConditionClass',convert=TRUE)
+        tidyr::separate_rows(sep = ';', 'ConditionClass', convert = TRUE)
 
     }
   )

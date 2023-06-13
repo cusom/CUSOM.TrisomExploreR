@@ -63,6 +63,7 @@ CorrelatesManager <- R6::R6Class(
   private = list(),
   public = list(
     applicationName = NULL,
+    ApplicationId = NULL,
     namespace = NULL,
     remoteDB = NULL,
     localDB = NULL,
@@ -132,6 +133,17 @@ CorrelatesManager <- R6::R6Class(
       namespace_config <- namespace_config |>
         dplyr::filter(Namespace == id)
       self$namespace <- namespace_config$Namespace
+      self$ApplicationId <- namespace_config$ApplicationId
+    },
+
+    getQueryPlatforms = function() {
+
+      self$remoteDB$getQuery(
+        "[shiny].[GetQueryPlatforms] ?",
+        tibble::tibble("ApplicationID" = self$ApplicationId)
+      ) |>
+        dplyr::arrange(QueryPlatform) |>
+        dplyr::pull()
     },
 
     #' @description
@@ -168,6 +180,15 @@ CorrelatesManager <- R6::R6Class(
           dplyr::arrange(QueryAnalyte) |>
           dplyr::pull()
       )
+    },
+
+    getComparisonPlatforms = function() {
+      self$remoteDB$getQuery(
+        "[shiny].[GetComparisonPlatforms] ?",
+        tibble::tibble("ApplicationID" = self$ApplicationId)
+      ) |>
+        dplyr::arrange(ComparisonPlatform) |>
+        dplyr::pull()
     },
 
     #' @description

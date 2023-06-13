@@ -56,12 +56,11 @@ correlates_inputs_ui <- function(id, input_config) {
             selected = "NA"
           )
         ),
-        shinyWidgets::prettyRadioButtons(
-          inputId = ns("QueryPlatform"),
-          label = "1) Select Query Platform",
-          choiceNames = input_config$Queryplatforms,
-          choiceValues = input_config$Queryplatforms,
-          selected = character(0)
+        shinycustomloader::withLoader(
+          shiny::uiOutput(ns("QueryPlatform")),
+          type = "html",
+          loader = "loader6",
+          proxy.height = "20px"
         ),
         shiny::tags$br(),
         shinyjs::hidden(
@@ -129,7 +128,7 @@ correlates_inputs_ui <- function(id, input_config) {
           shiny::selectizeInput(
             inputId = ns("ComparisonPlatform"),
             label = "3) Choose Comparison Platform",
-            choices = input_config$Comparisonplatforms,
+            choices = NULL,
             options = list(
               placeholder = "Choose Comparison Platform",
               onInitialize = I('function() { this.setValue(""); }'),
@@ -193,6 +192,20 @@ correlates_inputs_server <- function(id, r6) {
       parent_input = input
     )
 
+    output$QueryPlatform <- shiny::renderUI({
+
+      platforms <- r6$getQueryPlatforms()
+
+      shinyWidgets::prettyRadioButtons(
+        inputId = ns("QueryPlatform"),
+        label = "1) Select Query Platform",
+        choiceNames = platforms,
+        choiceValues = platforms,
+        selected = character(0)
+      )
+
+    })
+
     shiny::observeEvent(c(input$QueryPlatform), {
 
       shinybusy::show_modal_spinner(
@@ -219,6 +232,31 @@ correlates_inputs_server <- function(id, r6) {
         )
       )
 
+      shinybusy::show_modal_spinner(
+        spin = "atom",
+        color = "#3c8dbc",
+        text = glue::glue("Getting {input$QueryPlatform} Comparison Platforms...")
+      )
+
+      comparisonPlatforms <- r6$getComparisonPlatforms()
+
+      shiny::updateSelectizeInput(
+        session = session,
+        inputId = "ComparisonPlatform",
+        label = "3) Choose Comparison Platform",
+        choices = comparisonPlatforms,
+        options = list(
+          placeholder = "Choose Comparison Platform",
+          onInitialize = I('function() { this.setValue(""); }'),
+          closeAfterSelect = TRUE,
+          selectOnTab = TRUE,
+          persist = FALSE,
+          `live-search` = TRUE,
+          maxoptions = 1
+        )
+
+      )
+
       shinybusy::remove_modal_spinner()
 
     }, ignoreInit = TRUE)
@@ -240,7 +278,9 @@ correlates_inputs_server <- function(id, r6) {
 
       }
       else {
+
         shinyjs::enable(id = "ComparisonPlatform")
+
       }
 
     }, ignoreInit = TRUE)
@@ -271,7 +311,8 @@ correlates_inputs_server <- function(id, r6) {
     }, ignoreInit = TRUE)
 
     shiny::observe({
-      if (input$QueryAnalyte == "" & input$ComparisonPlatform == "") {
+
+      if (length(input$QueryPlatform) != 1 |  input$QueryAnalyte == "" | input$ComparisonPlatform == "") {
         shinyjs::disable("getData")
         shinyjs::removeClass(id = "getData", class = "refresh-ready-btn")
         shinyjs::addClass(id = "getData", class = "refresh-btn")
