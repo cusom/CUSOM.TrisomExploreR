@@ -180,7 +180,10 @@ condition_frequency_class_table_server <- function(id, r6) {
         ),
         grDevices::colorRampPalette(c("#E9F1F6", "#287BA5"))(20)
       )
-    )
+    ) |>
+      DT::formatRound(
+        columns = c("Control %","Trisomy 21 %")
+      )
 
    }, server = FALSE)
 

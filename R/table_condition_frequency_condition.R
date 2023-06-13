@@ -55,7 +55,7 @@ condition_frequency_condition_table_server <- function(id, r6) {
       shiny::validate(
         shiny::need(!is.null(childConditions()), "")
       )
-      
+
       DT::datatable(
         data = childConditions(),
         rownames = FALSE,
@@ -174,6 +174,9 @@ condition_frequency_condition_table_server <- function(id, r6) {
           ),
           grDevices::colorRampPalette(c("#E9F1F6", "#287BA5"))(20)
         )
+      ) |>
+      DT::formatRound(
+        columns = c("Control %","Trisomy 21 %")
       )
 
     }, server = FALSE)
@@ -184,7 +187,7 @@ condition_frequency_condition_table_server <- function(id, r6) {
       shiny::validate(
         shiny::need(!is.null(childConditionSummary()), "")
       )
-      
+
       DT::datatable(
         data = childConditionSummary(),
         rownames = FALSE,
