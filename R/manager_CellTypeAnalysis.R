@@ -1,37 +1,37 @@
 #' R6 Class to manage Cell Type Analysis Modules
-#' @description 
-#' R6 Class to manage analysis within the Cell Type module. 
-#' Retains chosen values from inputs, performs data retrieval, analysis, and plotting. 
-#' 
+#' @description
+#' R6 Class to manage analysis within the Cell Type module.
+#' Retains chosen values from inputs, performs data retrieval, analysis, and plotting.
+#'
 #' @field applicationName - string - name of application
-#' @field namespace - string - namespace for this instance 
-#' @field remoteDB - R6 class to manage remote database queries 
-#' @field localDB - R6 class to manage local database queries 
-#' @field analysisVariable - string - target feature for analysis in this instance-namespace 
-#' @field analysisVariableLabel - string - label for analysis variable  
+#' @field namespace - string - namespace for this instance
+#' @field remoteDB - R6 class to manage remote database queries
+#' @field localDB - R6 class to manage local database queries
+#' @field analysisVariable - string - target feature for analysis in this instance-namespace
+#' @field analysisVariableLabel - string - label for analysis variable
 #' @field analysisType - string - type of analysis - should be one of Categorical or Continuous
-#' @field analytesLabel - string - label to be used to refer to set of anlaysis variables 
+#' @field analytesLabel - string - label to be used to refer to set of anlaysis variables
 #' @field groupBaselineLabel - string - if analysis type if continous, label for baseline level (Control, Female, Without Condition, etc.)
 #' @field FoldChangeVar - string - name of variable indicating fold change or difference (log2FoldChange)
 #' @field SignificanceVariable - string - name of variable indiciating significance value (p-value)
-#' @field Platform - string vector - Platform values chosen for analysis 
-#' @field CellType - string vector - Cell Type values chosen for analysis 
-#' @field Sex - string vector - Sex values chosen for analysis 
-#' @field Age - numeric vector - Age values chosen fo analysis 
+#' @field Platform - string vector - Platform values chosen for analysis
+#' @field CellType - string vector - Cell Type values chosen for analysis
+#' @field Sex - string vector - Sex values chosen for analysis
+#' @field Age - numeric vector - Age values chosen fo analysis
 #' @field StatTest - string - name of statistical test to apply for analysis (Linear Model, etc.)
 #' @field Covariates - string vector - names of features to include as covariates in Linear Model analysis
-#' @field AdjustmentMethod - string - name of multiple hypothesis correction method to apply to statistical output 
-#' @field Analyte - character vector - name(s) of Analytes chosen for analysis 
+#' @field AdjustmentMethod - string - name of multiple hypothesis correction method to apply to statistical output
+#' @field Analyte - character vector - name(s) of Analytes chosen for analysis
 #' @field AnalyteData - tibble - sample level data for chosen analyte(s)
 #' @field cids - character vector - control id values chosen to highlight on plot
 #' @field tids - character vector - trisomy 21 id values chosen to highlight on plot
-#' 
+#'
 #' @import dplyr
 #' @import tibble
 #' @import purrr
-#' @import plotly 
+#' @import plotly
 #' @import glue
-#' @importFrom CUSOMShinyHelpers getGroupedStatTestByKeyGroup  
+#' @importFrom CUSOMShinyHelpers getGroupedStatTestByKeyGroup
 #' @importFrom CUSOMShinyHelpers getGroupedBoxplot
 #' @importFrom CUSOMShinyHelpers getStatAnnotationAnchorLines
 #' @importFrom CUSOMShinyHelpers getGroupedStatAnnotations
@@ -68,10 +68,10 @@ CellTypeAnalysisManager <- R6::R6Class(
     #' @description
     #' Create a new CellTypeAnalysisManager object
     #' @param applicationName string - applicationName
-    #' @param id string - namespace for this class 
-    #' @param namespace_config tibble - configuration values for this namespace instance of the object  
-    #' @param remoteDB R6 class to manage remote database queries 
-    #' @param localDB R6 class to manange local database queries 
+    #' @param id string - namespace for this class
+    #' @param namespace_config tibble - configuration values for this namespace instance of the object
+    #' @param remoteDB R6 class to manage remote database queries
+    #' @param localDB R6 class to manange local database queries
     #' @return A new `CellTypeAnalysisManager` object.
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB) {
 
@@ -83,7 +83,7 @@ CellTypeAnalysisManager <- R6::R6Class(
 
     #' @description
     #' Get data for chosen analyte and platform
-    #' @return tibble 
+    #' @return tibble
     getAnalyteData = function() {
 
       dataframe <- self$remoteDB$getQuery(
@@ -104,9 +104,9 @@ CellTypeAnalysisManager <- R6::R6Class(
         dplyr::rename( "CellType" = Specimen ) |>
         dplyr::filter(
           CellType %in% self$CellType,
-          (Sex %in% self$Sex || is.na(self$Sex)),
-          (Age >= min(self$Age) || is.na(self$Age)),
-          (Age <= max(self$Age) || is.na(self$Age)),
+          (Sex %in% self$Sex | is.na(Sex)),
+          (Age >= min(self$Age) | is.na(Age)),
+          (Age <= max(self$Age) | is.na(Age)),
           outlier == FALSE
         ) |>
         dplyr::mutate(
@@ -168,10 +168,10 @@ CellTypeAnalysisManager <- R6::R6Class(
     },
 
     #' @description
-    #' get Cell Type plot 
+    #' get Cell Type plot
     #' @param .data - tibble of analyte data to use for plot
-    #' @param ns - namespace to apply to plot  
-    #' @return plotly object 
+    #' @param ns - namespace to apply to plot
+    #' @return plotly object
     getPlot = function(.data, ns) {
 
       CellTypes <- self$localDB$getQuery(
