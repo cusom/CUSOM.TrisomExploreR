@@ -11,7 +11,6 @@ ODBCConnectionManager <- R6::R6Class(
   "ODBCConnectionManager",
   private = list(
     conn_args = NULL,
-    connection_string = NULL,
     dbhandle = NULL
   ),
   public = list(
@@ -22,29 +21,23 @@ ODBCConnectionManager <- R6::R6Class(
     #' @param conn_args list - list of connection arguments to connect to database
     #' @return A new `ODBCConnectionManager` object.
     initialize = function(conn_args){
-      private$conn_args = conn_args
-      private$connection_string = glue::glue(
-        "Driver={conn_args$driver};
-        Server=tcp:{conn_args$server},{conn_args$port};
-        Database={conn_args$database};
-        Uid={conn_args$uid};
-        Pwd={conn_args$pwd};
-        Encrypt=yes;
-        TrustServerCertificate=no;
-        Connection Timeout=90;"
-      )
+      private$conn_args = conn_args     
     },
 
     #' @description
     #' Connect to target database
     #' @return none
     connect = function() {
-
       conn_args <- private$conn_args
       before <- getTaskCallbackNames()
       private$dbhandle <- DBI::dbConnect(
         odbc::odbc(),
-        .connection_string = private$connection_string
+        Driver   = conn_args$driver,
+        Server   = conn_args$server,
+        Database = conn_args$database,
+        UID      = conn_args$uid,
+        PWD      = conn_args$pwd,
+        Port     = conn_args$port
       )
       after <- getTaskCallbackNames()
       removeTaskCallback(which(!after %in% before))
