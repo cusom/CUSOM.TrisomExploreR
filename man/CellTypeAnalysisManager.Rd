@@ -4,7 +4,7 @@
 \alias{CellTypeAnalysisManager}
 \title{R6 Class to manage Cell Type Analysis Modules}
 \description{
-R6 Class to manage analysis within the Cell Type module. 
+R6 Class to manage analysis within the Cell Type module.
 Retains chosen values from inputs, performs data retrieval, analysis, and plotting.
 }
 \section{Public fields}{

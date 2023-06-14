@@ -3,6 +3,7 @@
 #' Enables analysis of cross-omics correlations
 #'
 #' @field applicationName - string - name of application
+#' @field ApplicationId - string - application ID
 #' @field namespace - string - namespace for this instance
 #' @field remoteDB - R6 class to manage remote database queries
 #' @field localDB - R6 class to manage local database queries
@@ -136,6 +137,8 @@ CorrelatesManager <- R6::R6Class(
       self$ApplicationId <- namespace_config$ApplicationId
     },
 
+    #' @description
+    #' gets query platforms for cross-omics analysis
     getQueryPlatforms = function() {
 
       self$remoteDB$getQuery(
@@ -182,6 +185,8 @@ CorrelatesManager <- R6::R6Class(
       )
     },
 
+    #' @description
+    #' gets comparison platforms for cross-omics analysis
     getComparisonPlatforms = function() {
       self$remoteDB$getQuery(
         "[shiny].[GetComparisonPlatforms] ?",

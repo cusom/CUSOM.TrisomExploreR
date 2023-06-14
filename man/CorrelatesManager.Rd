@@ -11,6 +11,8 @@ Enables analysis of cross-omics correlations
 \describe{
 \item{\code{applicationName}}{- string - name of application}
 
+\item{\code{ApplicationId}}{- string - application ID}
+
 \item{\code{namespace}}{- string - namespace for this instance}
 
 \item{\code{remoteDB}}{- R6 class to manage remote database queries}
@@ -105,8 +107,10 @@ Enables analysis of cross-omics correlations
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-CorrelatesManager-new}{\code{CorrelatesManager$new()}}
+\item \href{#method-CorrelatesManager-getQueryPlatforms}{\code{CorrelatesManager$getQueryPlatforms()}}
 \item \href{#method-CorrelatesManager-addGSEAInputClass}{\code{CorrelatesManager$addGSEAInputClass()}}
 \item \href{#method-CorrelatesManager-getQueryAnalytes}{\code{CorrelatesManager$getQueryAnalytes()}}
+\item \href{#method-CorrelatesManager-getComparisonPlatforms}{\code{CorrelatesManager$getComparisonPlatforms()}}
 \item \href{#method-CorrelatesManager-getVolcanoSummaryData}{\code{CorrelatesManager$getVolcanoSummaryData()}}
 \item \href{#method-CorrelatesManager-getVolcanoPlot}{\code{CorrelatesManager$getVolcanoPlot()}}
 \item \href{#method-CorrelatesManager-getFormattedVolcanoSummaryData}{\code{CorrelatesManager$getFormattedVolcanoSummaryData()}}
@@ -150,6 +154,16 @@ A new `CorrelatesManager` object.
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-CorrelatesManager-getQueryPlatforms"></a>}}
+\if{latex}{\out{\hypertarget{method-CorrelatesManager-getQueryPlatforms}{}}}
+\subsection{Method \code{getQueryPlatforms()}}{
+gets query platforms for cross-omics analysis
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$getQueryPlatforms()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CorrelatesManager-addGSEAInputClass"></a>}}
 \if{latex}{\out{\hypertarget{method-CorrelatesManager-addGSEAInputClass}{}}}
 \subsection{Method \code{addGSEAInputClass()}}{
@@ -175,6 +189,16 @@ Get query analyte choices for the chosen QueryPlatform
 \subsection{Returns}{
 string vector
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-CorrelatesManager-getComparisonPlatforms"></a>}}
+\if{latex}{\out{\hypertarget{method-CorrelatesManager-getComparisonPlatforms}{}}}
+\subsection{Method \code{getComparisonPlatforms()}}{
+gets comparison platforms for cross-omics analysis
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$getComparisonPlatforms()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CorrelatesManager-getVolcanoSummaryData"></a>}}
