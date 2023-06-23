@@ -33,7 +33,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
       AnalysisCellTypes <- self$localDB$getQuery(
         "SELECT Analysis, CellType, count(1) [n]
         FROM sourceData
-        WHERE ExperimentStudyName  = ({study})
+        WHERE ExperimentID  = ({study})
         GROUP BY Analysis, CellType",
         tibble::tibble(study = study)
       )
