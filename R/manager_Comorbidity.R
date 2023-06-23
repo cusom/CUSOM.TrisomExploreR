@@ -36,7 +36,7 @@ ComorbidityManager <- R6::R6Class(
       baseData <- self$localDB$getQuery(
         "SELECT ExperimentStudyName, LabID, record_id, Karyotype, Sex, Age, Analyte, MeasuredValue, Measurement
          FROM sourceData
-         WHERE ExperimentStudyName = ({study})
+         WHERE ExperimentID = ({study})
          AND (Age >= ({minAge}) OR Age IS NULL)
          AND (Age <= ({maxAge}) OR Age IS NULL)
          AND Sex IN ({sexes*})

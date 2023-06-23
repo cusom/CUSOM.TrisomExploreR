@@ -201,7 +201,7 @@ FeatureAnalysisManager <- R6::R6Class(
         karyotypeInputCounts <- self$localDB$getQuery(
           "SELECT LabID,Analyte,Karyotype
           FROM sourceData
-          WHERE ExperimentStudyName  = ({study})",
+          WHERE ExperimentID  = ({study})",
           tibble::tibble(study = self$Study)
           ) |>
           dplyr::group_by(Analyte,Karyotype) |>
@@ -356,7 +356,7 @@ FeatureAnalysisManager <- R6::R6Class(
       hide <- "hide"
       disabled <- "disabled"
       if (!is.null(self$Study)) {
-        if (grepl("SOMA", self$Study) | grepl("RNA", self$Study)) {
+        if (grepl("SOMA", self$Study, ignore.case = TRUE) | grepl("RNA", self$Study, ignore.case = TRUE)) {
           hide <- "show"
         }
         if (!is.null(self$VolcanoSummaryData)) {
@@ -375,7 +375,7 @@ FeatureAnalysisManager <- R6::R6Class(
       self$BaseData <- self$localDB$getQuery(
         "SELECT ExperimentStudyName, LabID, Karyotype, Sex, Age, BMI, Analyte, MeasuredValue, Measurement
           FROM sourceData
-          WHERE ExperimentStudyName = ({study})
+          WHERE ExperimentID = ({study})
           AND (Age >= ({minAge}) OR Age IS NULL)
           AND (Age <= ({maxAge}) OR Age IS NULL)
           AND Sex IN ({sexes*})

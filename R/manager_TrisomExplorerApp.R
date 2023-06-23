@@ -144,7 +144,7 @@ TrisomExplorerAppManager <- R6::R6Class(
           ShowTooltip = TRUE,
           PlatformGroupDisplayName = ifelse(is.na(PlatformGroupDisplayName),"Study",PlatformGroupDisplayName)
         ) |>
-        dplyr::select("Text" = "ExperimentStudyName", "URL" = "ExperimentStudyURL", "TooltipText" = "TooltipText", "ShowTooltip", "FieldSet" = "PlatformGroupDisplayName")
+        dplyr::select("Values" = "ExperimentID", "Text" = "ExperimentStudyName", "URL" = "ExperimentStudyURL", "TooltipText" = "TooltipText", "ShowTooltip", "FieldSet" = "PlatformGroupDisplayName")
 
       self$input_config$LabIDs <- localDB$getQuery(
         "SELECT distinct LabID FROM ParticipantEncounter"

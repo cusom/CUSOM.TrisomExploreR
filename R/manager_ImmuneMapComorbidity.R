@@ -33,7 +33,7 @@ ImmuneMapComorbidityManager <- R6::R6Class(
       baseData <- self$localDB$getQuery(
           "SELECT ExperimentStudyName, LabID, record_id, Karyotype, Sex, Age, Analysis, CellType, Analyte, MeasuredValue, Measurement
             FROM sourceData
-            WHERE ExperimentStudyName = ({study})
+            WHERE ExperimentID = ({study})
             AND (Analysis = ({analysis}) OR  Analysis = ({compoundAnalysis}))
             AND Age >= ({minAge})
             AND Age <= ({maxAge})

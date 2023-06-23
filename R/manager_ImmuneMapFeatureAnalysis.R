@@ -175,7 +175,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
         karyotypeInputCounts <- self$localDB$getQuery(
             "SELECT LabID, CellType, Analyte, Karyotype
             FROM sourceData
-            WHERE ExperimentStudyName  = ({study})
+            WHERE ExperimentID  = ({study})
             AND Analysis = ({analysis})
             AND CellType IN ({cellType*})
             AND Sex IS NOT NULL",
@@ -241,7 +241,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
       self$BaseData <- self$localDB$getQuery(
           "SELECT ExperimentStudyName, LabID, Karyotype, Sex, Age, BMI, Analysis, CellType, Analyte, MeasuredValue, Measurement
             FROM sourceData
-            WHERE ExperimentStudyName = ({study})
+            WHERE ExperimentID = ({study})
             AND (Analysis = ({analysis}) OR  Analysis = ({compoundAnalysis}))
             AND Age >= ({minAge})
             AND Age <= ({maxAge})
