@@ -65,7 +65,8 @@ TrisomExplorerAppManager <- R6::R6Class(
 
       ApplicationNamespaceConfig <- remoteDB$getQuery(
         "SELECT * FROM [te].[vw_ApplicationNamespaceConfig]
-          WHERE cast([ApplicationId] as nvarchar(256)) = CAST(? As nvarchar(256))"
+          WHERE cast([ApplicationId] as nvarchar(256)) = CAST(? As nvarchar(256))
+          ORDER BY DisplayOrder"
         ,tibble::tibble('ApplicationId' = ApplicationId)
       )
 
