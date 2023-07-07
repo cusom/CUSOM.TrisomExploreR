@@ -38,9 +38,9 @@ metabolome_overview_ui <- function(id, ...) {
                 shiny::tags$b("Metabolomics"),
                 .noWS = c("outside")
               ),
-              shiny::tags$html(" is the study of all small molecules, or 'metabolites', produced by a cell, tissue, or organism while performing typical biological processes,
+              htmltools::HTML(" is the study of all small molecules, or \'metabolites\', produced by a cell, tissue, or organism while performing typical biological processes,
                     such as converting food into energy, or getting rid of waste products from cells. Together, these metabolites create a chemical
-                    fingerprint (i.e. the 'metabolome') that provides valuable information about how that cell, tissue, or organism is functioning.
+                    fingerprint (i.e. the \'metabolome\') that provides valuable information about how that cell, tissue, or organism is functioning.
                     Therefore, by measuring all metabolites, we can explore how cells are actively functioning in response to both internal gene expression changes
                     and external environmental factors. We used metabolomics to compare metabolites between people with and without Down syndrome."
               )
@@ -66,7 +66,7 @@ metabolome_overview_ui <- function(id, ...) {
               shiny::tags$p(
                 shiny::tags$b("METHODS"),
                 shiny::tags$p("Metabolomics data were generated via ultra-high-pressure liquid chromatography coupled to high-resolution mass spectrometry (UHPLC-HRMS) technology.
-                          All comparisons are reported using a Student&rsquo;s T-test and have not been corrected for multiple comparisons.
+                          All comparisons are reported using a Student\'s T-test and have not been corrected for multiple comparisons.
                           For full methods and analysis, please see associated publications."
                 )
               )
@@ -85,7 +85,7 @@ metabolome_overview_ui <- function(id, ...) {
                   shiny::tags$b("Red blood cell metabolism in Down syndrome: hints on metabolic derangements in aging."),
                   .noWS = c("outside")
                 ),
-                tags$html("Culp-Hill R, Zheng C, Reisz JA, Smith K, Rachubinski A, Nemkov T, Butcher E, Granrath R, Hansen KC, Espinosa JM, D'Alessandro A. Blood Advances. 2017 Dec 21;1(27):2776-2780. PMID: 29296929.")
+                htmltools::HTML("Culp-Hill R, Zheng C, Reisz JA, Smith K, Rachubinski A, Nemkov T, Butcher E, Granrath R, Hansen KC, Espinosa JM, D\'Alessandro A. Blood Advances. 2017 Dec 21;1(27):2776-2780. PMID: 29296929.")
               ),
               shiny::tags$br(),
               shiny::tags$p(
@@ -95,8 +95,8 @@ metabolome_overview_ui <- function(id, ...) {
                   shiny::tags$b("Trisomy 21 activates the kynurenine pathway via increased dosage of interferon receptors."),
                   .noWS = c("outside")
                 ),
-                shiny::tags$html("Powers RK, Culp-Hill R, Ludwig MP, Smith KP, Waugh KA, Minter R, Tuttle KD, Lewis HC, Rachubinski AL, Granrath RE, Carmona-Iragui M, Wilkerson RB, Kahn DE, Joshi M, Lle&oacute; A, Blesa R,
-                              Fortea J, D'Alessandro A, Costello JC, Sullivan KD, Espinosa JM. Nature Communications. 2019 Oct 18;10(1):4766. PMID: 31628327.")
+                htmltools::HTML("Powers RK, Culp-Hill R, Ludwig MP, Smith KP, Waugh KA, Minter R, Tuttle KD, Lewis HC, Rachubinski AL, Granrath RE, Carmona-Iragui M, Wilkerson RB, Kahn DE, Joshi M, Lle&oacute; A, Blesa R,
+                              Fortea J, D\'Alessandro A, Costello JC, Sullivan KD, Espinosa JM. Nature Communications. 2019 Oct 18;10(1):4766. PMID: 31628327.")
               )
             )
           )

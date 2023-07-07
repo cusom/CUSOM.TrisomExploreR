@@ -31,7 +31,7 @@ immunemap_overview_ui <- function(id, ...) {
           ),
           shiny::tags$div(
             class = "overviewBodyText", 
-            shiny::tags$html("An immune map is a detailed characterization of the types and amounts of immune cells present in an organism. 
+            htmltools::HTML("An immune map is a detailed characterization of the types and amounts of immune cells present in an organism. 
                   Altogether, these immune cells drive the immune response against infectious agents such as bacteria and viruses. 
                   Some immune cells also participate in the defense against tumors, and some can contribute to the appearance and severity 
                   of autoimmune disorders. Therefore, an immune map provides valuable information about how the immune system is functioning. 
@@ -59,7 +59,7 @@ immunemap_overview_ui <- function(id, ...) {
               ),
               shiny::tags$p(
                 shiny::tags$b("Effect of Comorbidity"),
-                shiny::tags$html("Explore the differences in immune cell types between samples obtained from people with trisomy 21 
+                htmltools::HTML("Explore the differences in immune cell types between samples obtained from people with trisomy 21 
                   (T21, Down syndrome) <b><i>with</i></b> versus <b><i>without</i></b> selected comorbidities as defined 
                   by mass-cytometry. The data are searchable by cell type and can be filtered by age at time of blood collection, 
                   and sex. Significant differences between those <b><i>with</i></b> versus <b><i>without</i></b> selected 
@@ -91,7 +91,7 @@ immunemap_overview_ui <- function(id, ...) {
                   shiny::tags$b("Mass-cytometry reveals global immune remodeling with multi-lineage hypersensitivity to Type I Interferon in Down syndrome."),
                   .noWS = c("outside")
                 ),
-                shiny::tags$html("Waugh, KA, Araya P, Pandey A, Jordan KR, Smith KP, Granrath RE, Khanal S, Butcher ET, Enriquez Estrada B, 
+                htmltools::HTML("Waugh, KA, Araya P, Pandey A, Jordan KR, Smith KP, Granrath RE, Khanal S, Butcher ET, Enriquez Estrada B, 
                   Rachubinski AL, McWilliams JA, Minter R, Dimasi T, Colvin KL, 
                   Baturin D, Pham AT, Galbraith MD, Bartsch KW, Yeager ME, Porter CC, Sullivan KD, Hsieh EW, Espinosa JM. 
                   Cell Reports. 2019 Nov 12; 29(7):1893-1908.")
@@ -104,9 +104,8 @@ immunemap_overview_ui <- function(id, ...) {
                   shiny::tags$b("Trisomy 21 dysregulates T cell lineages toward an autoimmunity-prone state associated with interferon hyperactivity."),
                   .noWS = c("outside")
                 ),
-                shiny::tags$html("Araya P, Waugh KA, Sullivan KD, Nunez NG, Roselli E, Smith KP, Granrath RE, Rachubinski AL, Butcher ET, 
-                  Minter R, Tuttle KD, 
-                  Bruno TC, Maccioni M, and Espinosa JM. PNAS. 2019 Nov 7; PMID: 31699819.")
+                htmltools::HTML("Araya P, Waugh KA, Sullivan KD, Nunez NG, Roselli E, Smith KP, Granrath RE, Rachubinski AL, Butcher ET, 
+                  Minter R, Tuttle KD, Bruno TC, Maccioni M, and Espinosa JM. PNAS. 2019 Nov 7; PMID: 31699819.")
               )
             )
           )

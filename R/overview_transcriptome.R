@@ -38,7 +38,7 @@ transcriptome_overview_ui <- function(id, ...) {
                 shiny::tags$b("Transcriptomics"),
                 .noWS = c("outside")
               ),
-              shiny::tags$html(" is the study of ribonucleic acid (RNA), a molecule that is produced in a cell when a gene is turned on. 
+              htmltools::HTML(" is the study of ribonucleic acid (RNA), a molecule that is produced in a cell when a gene is turned on. 
                   While the DNA that encodes all genes is the same in every cell, different types of cells (e.g. a heart cell versus a liver cell) may turn certain genes 
                   on and off at different times. Other factors may also affect what genes are turned on and off, such as age, gender, and diseases or other health conditions. 
                   Therefore, by measuring the levels of all RNAs (i.e. the \"transcriptome\"), we can understand what genes are expressed in a variety of situations. 
@@ -77,7 +77,7 @@ transcriptome_overview_ui <- function(id, ...) {
                   shiny::tags$b("Trisomy 21 consistently activates the interferon response."),
                   .noWS = c("outside")
                 ),
-                shiny::tags$html("Sullivan KD, Lewis HC, Hill AA, Pandey A, Jackson LP, Cabral JM, Smith KP, Liggett LA, Gomez EB, Galbraith MD, DeGregori J, Espinosa JM. Elife. 2016 Jul 29;5. PMID: 27472900.")
+                htmltools::HTML("Sullivan KD, Lewis HC, Hill AA, Pandey A, Jackson LP, Cabral JM, Smith KP, Liggett LA, Gomez EB, Galbraith MD, DeGregori J, Espinosa JM. Elife. 2016 Jul 29;5. PMID: 27472900.")
               ),
               shiny::tags$br()
             )
