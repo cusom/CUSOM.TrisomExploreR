@@ -9,21 +9,15 @@ cohort_explorer_kpi_ui <- function(id) {
     shiny::fluidRow(
       shiny::column(
         width = 12, class = "col-lg-12",
-        shinydashboard::valueBoxOutput(ns("value1"), width = 3) |>
+        shinydashboard::valueBoxOutput(ns("value5"), width = 3) |>
         bsplus::bs_embed_tooltip(
-          title = "Total number consented",
-          placement = "top"
+          title = "Total in database",
+          placement = "top",
+          html = TRUE
         ),
         shinydashboard::valueBoxOutput(ns("value2"), width = 3) |>
         bsplus::bs_embed_tooltip(
           title = "Individuals with Trisomy 21 (T21)",
-          placement = "top",
-          html = TRUE
-        ),
-        shinydashboard::valueBoxOutput(ns("value3"), width = 3) |>
-        bsplus::bs_embed_tooltip(
-          title = "Individuals with other intellectual and/or developmental 
-          disability (IDD) and individuals with sex chromosome anomalies (SCA)",
           placement = "top",
           html = TRUE
         ),
@@ -32,14 +26,8 @@ cohort_explorer_kpi_ui <- function(id) {
           title = "Controls",
           placement = "top",
           html = TRUE
-        )
-      )
-    ),
-    shiny::fluidRow(
-      shiny::column(
-        width = 12, offset = 2, class = "col-lg-10",
-        shinydashboard::valueBoxOutput(ns("value5"), width = 4),
-        shinydashboard::valueBoxOutput(ns("value6"), width = 4) |>
+        ),
+        shinydashboard::valueBoxOutput(ns("value6"), width = 3) |>
         bsplus::bs_embed_tooltip(
           title = "Total participants matching currently selected filters",
           placement = "top",
@@ -65,6 +53,11 @@ cohort_explorer_kpi_server <- function(id, r6) {
 
     ns <- session$ns
 
+    participantData <- shiny::eventReactive(
+      c(gargoyle::watch("get_cohort_data")), {
+      r6$ParticipantData
+    })
+
     output$value1 <- shinydashboard::renderValueBox({
       shinydashboard::valueBox(
         value = formatC(
@@ -81,11 +74,20 @@ cohort_explorer_kpi_server <- function(id, r6) {
     })
 
     output$value2 <- shinydashboard::renderValueBox({
-      shinydashboard::valueBox(
-        value = r6$Enrollments |>
+
+      dataframe <- participantData()
+
+      if (is.null(dataframe)) {
+        n <- 0
+      } else {
+
+        n <- dataframe |>
           dplyr::filter(Karyotype == "Trisomy 21") |>
-          dplyr::select(ParticipantCount) |>
-          dplyr::pull(),
+          dplyr::summarise(n = dplyr::n_distinct(record_id))
+      }
+
+      shinydashboard::valueBox(
+        value = n,
         subtitle = "Trisomy 21 (T21)",
         icon = shiny::icon("user-plus", lib = "font-awesome"),
         color = "light-blue",
@@ -93,22 +95,21 @@ cohort_explorer_kpi_server <- function(id, r6) {
       )
     })
 
-    output$value3 <- shinydashboard::renderValueBox({
-      shinydashboard::valueBox(
-        value = -1, #749,
-        subtitle = "Other IDDs",
-        icon = shiny::icon("user-circle", lib = "font-awesome"),
-        color = "teal",
-        width = 3
-      )
-    })
-
     output$value4 <- shinydashboard::renderValueBox({
-      shinydashboard::valueBox(
-        value = r6$Enrollments |>
+
+      dataframe <- participantData()
+
+      if (is.null(dataframe)) {
+        n <- 0
+      } else {
+
+        n <- dataframe |>
           dplyr::filter(Karyotype == "Control") |>
-          dplyr::select(ParticipantCount) |>
-          dplyr::pull(),
+          dplyr::summarise(n = dplyr::n_distinct(record_id))
+      }
+
+      shinydashboard::valueBox(
+        value = n,
         subtitle = "Controls (D21)",
         icon = shiny::icon("user-minus", lib = "font-awesome"),
         color = "teal",
@@ -119,7 +120,12 @@ cohort_explorer_kpi_server <- function(id, r6) {
     output$value5 <- shinydashboard::renderValueBox({
 
       shinydashboard::valueBox(
-        value = r6$AllN,
+        value = formatC(
+          r6$AllN,
+          format = "f",
+          big.mark = ",",
+          digits = 0
+        ),
         subtitle = "Total in database",
         icon = shiny::icon("database", lib = "font-awesome"),
         color = "green",
@@ -127,12 +133,6 @@ cohort_explorer_kpi_server <- function(id, r6) {
       )
 
     })
-
-    participantData <- shiny::eventReactive(
-      c(gargoyle::watch("get_cohort_data")), {
-      r6$ParticipantData
-    })
-
 
     output$value6 <- shinydashboard::renderValueBox({
 
@@ -143,11 +143,17 @@ cohort_explorer_kpi_server <- function(id, r6) {
       } else {
 
         n <- dataframe |>
-          dplyr::summarise(n = dplyr::n_distinct(record_id))
+          dplyr::summarise(n = dplyr::n_distinct(record_id)) |>
+          dplyr::pull()
       }
 
       shinydashboard::valueBox(
-        value = n,
+        value = formatC(
+          n,
+          format = "f",
+          big.mark = ",",
+          digits = 0
+        ),
         subtitle = "Total currently selected",
         icon = shiny::icon("hashtag", lib = "font-awesome"),
         color = "olive",
