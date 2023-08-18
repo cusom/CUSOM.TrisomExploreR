@@ -26,17 +26,16 @@ condition_frequency_class_table_ui <- function(id) {
     ),
     shinycssloaders::withSpinner(
       DT::dataTableOutput(
-        ns("TopConditionsTable"),
+        ns("Table"),
         height = "420px"
       )
     ),
     shinycssloaders::withSpinner(
       DT::dataTableOutput(
-        ns("TopConditionsSummary"),
+        ns("Summary"),
         height = "auto"
       )
     )
-
   )
 }
 
@@ -55,7 +54,7 @@ condition_frequency_class_table_server <- function(id, r6) {
 
    ns <- session$ns
 
-   output$TopConditionsTable <- DT::renderDataTable({
+   output$Table <- DT::renderDataTable({
 
     shiny::validate(
       shiny::need(!is.null(r6$conditionClassCounts), "")
@@ -72,7 +71,6 @@ condition_frequency_class_table_server <- function(id, r6) {
           list(targets = c(1), visible = TRUE, width = "25%"),
           list(targets = c(2), visible = TRUE, width = "25%")
         ),
-        scrollX = TRUE,
         scrollY = "400px",
         pageLength = 150,
         select = list(
@@ -85,73 +83,8 @@ condition_frequency_class_table_server <- function(id, r6) {
       callback = DT::JS(
         paste0(
          "table.on('click', 'tbody tr', function() {
-
-            setTimeout(function() {
-
-              var selectedindexes = table.rows({selected:true}).indexes();
-              var selectedindices = Array(selectedindexes.length);
-              var unselectedindexes = table.rows({selected:false}).indexes();
-              var unselectedindices = Array(unselectedindexes.length);
-
-              for(var i = 0; i < selectedindices.length; ++i){
-                selectedindices[i] = selectedindexes[i]+1;
-              }
-
-              for(var i = 0; i < unselectedindices.length; ++i){
-                unselectedindices[i] = unselectedindexes[i];
-              }
-
-              if(selectedindexes.length <= 3) {
-
-                table.$('td:first-child').each(function() {
-
-                  $(this).removeClass('notselectable');
-                  $(this).removeClass('selectable');
-
-                });
-
-                Shiny.setInputValue('",ns("TopConditionsTable_rows_selected"),"', selectedindices);
-
-                if(selectedindexes.length == 0) {
-                  Shiny.setInputValue('",ns("SelectedConditionClasses"),"',null,{priority:'event'});
-                }
-
-              }
-
-              if(selectedindexes.length == 3) {
-
-                table.$('td:first-child').each(function() {
-
-                  if($.inArray($(this)[0]._DT_CellIndex.row,unselectedindices)!= -1) {
-
-                    $(this).removeClass('notselectable');
-                    $(this).removeClass('selectable');
-                    $(this).addClass('notselectable');
-
-                  }
-
-                });
-              }
-
-              if(selectedindexes.length > 3 ) {
-
-                table.$('td:first-child').each(function() {
-
-                  if($.inArray($(this)[0]._DT_CellIndex.row,unselectedindices)!= -1) {
-
-                    $(this).removeClass('selectable');
-                    $(this).addClass('notselectable');
-
-                  }
-
-                });
-
-              }
-
-            }, 0);
-
-          });
-          "
+            limitDataTableSelections(table, 3,'", ns("Table_rows_selected"), "','",ns("SelectedConditionClasses"), "');
+          });"
         )
       )
     ) |>
@@ -182,17 +115,16 @@ condition_frequency_class_table_server <- function(id, r6) {
       )
     ) |>
       DT::formatRound(
-        columns = c("Control %","Trisomy 21 %")
+        columns = c("Control %", "Trisomy 21 %")
       )
 
    }, server = FALSE)
 
    # Observe Table Row clicks -> update Condition Class Inputs
-   shiny::observeEvent(input$TopConditionsTable_rows_selected, {
+   shiny::observeEvent(input$Table_rows_selected, {
 
-     s <- input$TopConditionsTable_rows_selected
+     s <- input$Table_rows_selected
 
-     #SelectedConditionClasses <- r6$conditionClassCounts[s,1] |> pull()
      r6$conditionClasses <- r6$conditionClassCounts[s, 1] |> dplyr::pull()
 
      #update list of condition
@@ -204,13 +136,14 @@ condition_frequency_class_table_server <- function(id, r6) {
    })
 
    conditionClassSummary <- shiny::eventReactive(
-    c(input$GetConditionClassSummary, input$TopConditionsTable_rows_selected), {
+    c(input$GetConditionClassSummary, input$Table_rows_selected), {
+
       r6$updateSummaryConditionClassCounts()
       r6$conditionClassSummary
    })
 
    # Condition Class Total Line ####
-   output$TopConditionsSummary <- DT::renderDataTable({
+   output$Summary <- DT::renderDataTable({
 
     DT::datatable(
       data = conditionClassSummary(),

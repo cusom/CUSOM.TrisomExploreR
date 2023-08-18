@@ -9,13 +9,13 @@ condition_frequency_condition_table_ui <- function(id) {
     shiny::tags$h3("Choose (up to 5) Specific Conditions"),
     shinycssloaders::withSpinner(
       DT::dataTableOutput(
-        ns("ChildConditionsTable"),
+        ns("Table"),
         height = "420px"
       )
     ),
     shinycssloaders::withSpinner(
       DT::dataTableOutput(
-        ns("ChildConditionsSummary"),
+        ns("Summary"),
         height = "auto"
       )
     )
@@ -27,8 +27,7 @@ condition_frequency_condition_table_ui <- function(id) {
 #' @param r6 - R6 class defining server-side logic
 #' @import dplyr
 #' @import DT
-#' @importFrom gargoyle watch
-#' @importFrom gargoyle trigger
+#' @importFrom gargoyle watch trigger
 #' @importFrom stats quantile
 #' @importFrom grDevices colorRampPalette
 #' @export
@@ -50,7 +49,7 @@ condition_frequency_condition_table_server <- function(id, r6) {
       r6$conditionSummary
     }, ignoreInit = TRUE)
 
-    output$ChildConditionsTable <- DT::renderDataTable({
+    output$Table <- DT::renderDataTable({
 
       shiny::validate(
         shiny::need(!is.null(childConditions()), "")
@@ -67,87 +66,22 @@ condition_frequency_condition_table_server <- function(id, r6) {
             list(targets = c(1), visible = TRUE, width = "25%"),
             list(targets = c(2), visible = TRUE, width = "25%")
           ),
-          scrollX = TRUE,
           scrollY = "400px",
           pageLength = 150,
-          select = list(style = "multi", selector = "td:not(.notselectable)")
-        ),
-        callback = DT::JS(
-          paste0(
-            "table.on('click', 'tbody tr', function(){
-
-              setTimeout(function() {
-
-                var selectedindexes = table.rows({selected:true}).indexes();
-                var selectedindices = Array(selectedindexes.length);
-                var unselectedindexes = table.rows({selected:false}).indexes();
-                var unselectedindices = Array(unselectedindexes.length);
-
-                for(var i = 0; i < selectedindices.length; ++i){
-                  selectedindices[i] = selectedindexes[i]+1;
-                }
-
-                for(var i = 0; i < unselectedindices.length; ++i){
-                  unselectedindices[i] = unselectedindexes[i];
-                }
-
-                if(selectedindexes.length <= 5) {
-
-                  table.$('td:first-child').each(function() {
-
-                    $(this).removeClass('notselectable');
-                    $(this).removeClass('selectable');
-
-                  });
-
-                  Shiny.setInputValue('",ns("ChildConditionsTable_rows_selected"),"',selectedindices);
-
-                  if(selectedindexes.length == 0) {
-
-                    Shiny.setInputValue('SelectedConditions',null,{priority:'event'});
-
-                  }
-
-                }
-
-                if(selectedindexes.length == 5) {
-
-                  table.$('td:first-child').each(function() {
-
-                    if($.inArray($(this)[0]._DT_CellIndex.row,unselectedindices)!= -1) {
-
-                      $(this).removeClass('notselectable');
-                      $(this).removeClass('selectable');
-                      $(this).addClass('notselectable');
-
-                    }
-
-                  });
-
-                }
-
-                if(selectedindexes.length >5) {
-
-                  table.$('td:first-child').each(function() {
-
-                    if($.inArray($(this)[0]._DT_CellIndex.row,unselectedindices)!= -1) {
-
-                      $(this).removeClass('selectable');
-                      $(this).addClass('notselectable');
-
-                    }
-
-                  });
-
-                }
-
-              }, 0);
-
-            });"
+          select = list(
+            style = "multi",
+            selector = "td:not(.notselectable)"
           )
         ),
         extensions = "Select",
-        selection = "none"
+        selection = "none",
+        callback = DT::JS(
+          paste0(
+            "table.on('click', 'tbody tr', function() {
+              limitDataTableSelections(table, 5,'", ns("Table_rows_selected"), "','",ns("SelectedConditions"), "');
+            });"
+          )
+        )
       ) |>
       DT::formatStyle(
         columns = colnames(childConditions()),
@@ -176,13 +110,13 @@ condition_frequency_condition_table_server <- function(id, r6) {
         )
       ) |>
       DT::formatRound(
-        columns = c("Control %","Trisomy 21 %")
+        columns = c("Control %", "Trisomy 21 %")
       )
 
     }, server = FALSE)
 
 
-    output$ChildConditionsSummary <- DT::renderDataTable({
+    output$Summary <- DT::renderDataTable({
 
       shiny::validate(
         shiny::need(!is.null(childConditionSummary()), "")
@@ -219,9 +153,9 @@ condition_frequency_condition_table_server <- function(id, r6) {
 
     })
 
-    shiny::observeEvent(input$ChildConditionsTable_rows_selected, {
+    shiny::observeEvent(input$Table_rows_selected, {
 
-      s <- input$ChildConditionsTable_rows_selected
+      s <- input$Table_rows_selected
 
       r6$conditions <- r6$conditionCounts[s, 1] |> dplyr::pull()
 

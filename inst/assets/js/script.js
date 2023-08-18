@@ -343,3 +343,73 @@ isolateTraceVisibility = function(plotName, traceName) {
     }   
   }
 }
+
+limitDataTableSelections = function(table, max_selections, table_row_selected_input, target_input) {
+  
+  setTimeout(function() {
+
+    var selectedindexes = table.rows({selected:true}).indexes();
+    var selectedindices = Array(selectedindexes.length);
+    var unselectedindexes = table.rows({selected:false}).indexes();
+    var unselectedindices = Array(unselectedindexes.length);
+
+    for(var i = 0; i < selectedindices.length; ++i){
+      selectedindices[i] = selectedindexes[i]+1;
+    }
+
+    for(var i = 0; i < unselectedindices.length; ++i){
+      unselectedindices[i] = unselectedindexes[i];
+    }
+
+    if(selectedindexes.length <= max_selections) {
+
+      table.$('td:first-child').each(function() {
+
+        $(this).removeClass('notselectable');
+        $(this).removeClass('selectable');
+
+      });
+
+      Shiny.setInputValue(table_row_selected_input, selectedindices);
+
+      if(selectedindexes.length == 0) {
+
+        Shiny.setInputValue(target_input,null, {priority:'event'});
+
+      }
+
+    }
+
+    if(selectedindexes.length == max_selections) {
+
+      table.$('td:first-child').each(function() {
+
+        if($.inArray($(this)[0]._DT_CellIndex.row,unselectedindices)!= -1) {
+
+          $(this).removeClass('notselectable');
+          $(this).removeClass('selectable');
+          $(this).addClass('notselectable');
+
+        }
+
+      });
+
+    }
+
+    if(selectedindexes.length > max_selections ) {
+
+      table.$('td:first-child').each(function() {
+
+        if($.inArray($(this)[0]._DT_CellIndex.row,unselectedindices)!= -1) {
+
+          $(this).removeClass('selectable');
+          $(this).addClass('notselectable');
+
+        }
+
+      });
+
+    }
+
+  }, 0);
+}
