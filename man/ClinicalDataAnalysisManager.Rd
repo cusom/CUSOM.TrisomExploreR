@@ -25,9 +25,17 @@ R6 Class to manage all data analysis within various modules in the Clinical Data
 
 \item{\code{Enrollments}}{- tibble of counts of participants by Karyotype}
 
-\item{\code{SamplesAvailable}}{- deprecated}
+\item{\code{SampleDetail}}{- tibble of biospecimen detail}
 
-\item{\code{ParticipantOMICSAvailable}}{- deprecated}
+\item{\code{biospecimen_tree}}{- biospecimens in hierarchy / tree stucture}
+
+\item{\code{Biospecimens}}{- selected biospecimen values from UI}
+
+\item{\code{PlatformExperiments}}{- tibble of platform-experiment combinations}
+
+\item{\code{ParticipantPlatformExperiment}}{- tibble of participants, platfoms, and experiments}
+
+\item{\code{AnalysisAvailable}}{- nested list of experiments / studies by platform group}
 
 \item{\code{Karyotypes}}{- character vector - selected karotypes}
 
@@ -71,6 +79,8 @@ R6 Class to manage all data analysis within various modules in the Clinical Data
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-ClinicalDataAnalysisManager-new}{\code{ClinicalDataAnalysisManager$new()}}
+\item \href{#method-ClinicalDataAnalysisManager-getBiospecimenSampleHierarchy}{\code{ClinicalDataAnalysisManager$getBiospecimenSampleHierarchy()}}
+\item \href{#method-ClinicalDataAnalysisManager-getSelectedBiospecimenList}{\code{ClinicalDataAnalysisManager$getSelectedBiospecimenList()}}
 \item \href{#method-ClinicalDataAnalysisManager-getParticipantData}{\code{ClinicalDataAnalysisManager$getParticipantData()}}
 \item \href{#method-ClinicalDataAnalysisManager-getSexesOverviewPlot}{\code{ClinicalDataAnalysisManager$getSexesOverviewPlot()}}
 \item \href{#method-ClinicalDataAnalysisManager-getAgeDistributionOverviewPlot}{\code{ClinicalDataAnalysisManager$getAgeDistributionOverviewPlot()}}
@@ -102,7 +112,8 @@ Create a new instance of a ClinicalDataAnalysisManager object
   id,
   namespace_config,
   remoteDB,
-  localDB
+  localDB,
+  data
 )}\if{html}{\out{</div>}}
 }
 
@@ -124,6 +135,26 @@ Create a new instance of a ClinicalDataAnalysisManager object
 \subsection{Returns}{
 A new `ClinicalDataAnalysisManager` object.
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ClinicalDataAnalysisManager-getBiospecimenSampleHierarchy"></a>}}
+\if{latex}{\out{\hypertarget{method-ClinicalDataAnalysisManager-getBiospecimenSampleHierarchy}{}}}
+\subsection{Method \code{getBiospecimenSampleHierarchy()}}{
+get biospecimen hierarchy for input
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ClinicalDataAnalysisManager$getBiospecimenSampleHierarchy()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ClinicalDataAnalysisManager-getSelectedBiospecimenList"></a>}}
+\if{latex}{\out{\hypertarget{method-ClinicalDataAnalysisManager-getSelectedBiospecimenList}{}}}
+\subsection{Method \code{getSelectedBiospecimenList()}}{
+get aggregated HTML string of chosen biospecimens with line breaks per condition
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ClinicalDataAnalysisManager$getSelectedBiospecimenList()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ClinicalDataAnalysisManager-getParticipantData"></a>}}

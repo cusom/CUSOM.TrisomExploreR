@@ -60,6 +60,7 @@ Retains chosen values from inputs, performs data retrieval, analysis, and plotti
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-CellTypeAnalysisManager-new}{\code{CellTypeAnalysisManager$new()}}
+\item \href{#method-CellTypeAnalysisManager-getCovariateChoices}{\code{CellTypeAnalysisManager$getCovariateChoices()}}
 \item \href{#method-CellTypeAnalysisManager-getAnalyteData}{\code{CellTypeAnalysisManager$getAnalyteData()}}
 \item \href{#method-CellTypeAnalysisManager-getPlot}{\code{CellTypeAnalysisManager$getPlot()}}
 \item \href{#method-CellTypeAnalysisManager-clone}{\code{CellTypeAnalysisManager$clone()}}
@@ -98,6 +99,17 @@ Create a new CellTypeAnalysisManager object
 \subsection{Returns}{
 A new `CellTypeAnalysisManager` object.
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-CellTypeAnalysisManager-getCovariateChoices"></a>}}
+\if{latex}{\out{\hypertarget{method-CellTypeAnalysisManager-getCovariateChoices}{}}}
+\subsection{Method \code{getCovariateChoices()}}{
+helper function to get covariate choices based on namespace
+if namespace is Age, remove age, if Sex, remove sex
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CellTypeAnalysisManager$getCovariateChoices()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CellTypeAnalysisManager-getAnalyteData"></a>}}
