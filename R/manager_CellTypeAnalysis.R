@@ -82,6 +82,15 @@ CellTypeAnalysisManager <- R6::R6Class(
     },
 
     #' @description
+    #' helper function to get covariate choices based on namespace
+    #' if namespace is Age, remove age, if Sex, remove sex
+    getCovariateChoices = function() {
+      return(
+        setdiff(c("Age", "Sex"), self$analysisVariable)
+      )
+    },
+
+    #' @description
     #' Get data for chosen analyte and platform
     #' @return tibble
     getAnalyteData = function() {

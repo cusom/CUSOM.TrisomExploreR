@@ -70,16 +70,6 @@ cell_type_inputs_ui <- function(id, input_config) {
               selectOnTab = TRUE,
               persist = FALSE,
               `live-search` = TRUE,
-              #dropdownDirection = "down",
-              # onDropdownOpen = I("
-              #       function($dropdown){
-              #         $dropdown.css({
-              #           bottom: '100%',
-              #           top: ''
-              #         }).width(this.$control.outerWidth());
-              #       }
-              #     "
-              # ),
               onType = I(paste0("
                 function (str) {
                   if(this.currentResults.total == 0) {
@@ -131,16 +121,13 @@ cell_type_inputs_ui <- function(id, input_config) {
           choiceNames = input_config$statTestschoiceNames,
           choiceValues = input_config$statTests
         ),
-        shiny::tags$div(
-          id = ns("CovariateInput"),
-          shinyWidgets::awesomeCheckboxGroup(
-            inputId = ns("Covariates"),
-            label = "Adjust for covariates",
-            choices = c("Sex", "Age"),
-            selected = c("Sex", "Age"),
-            inline = TRUE
-          )
+        shinycustomloader::withLoader(
+          shiny::uiOutput(ns("Covariates")),
+          type = "html",
+          loader = "loader6",
+          proxy.height = "20px"
         ),
+        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shinyWidgets::prettyRadioButtons(
           inputId = ns("AdjustmentMethod"),
           label = "Multiple hypothesis correction",
@@ -194,6 +181,30 @@ cell_type_inputs_server <- function(id, r6) {
       session = session,
       parent_input = input
     )
+
+    output$Covariates <- shiny::renderUI({
+
+      if (input$StatTest == "Linear Model") {
+
+        choices <- r6$getCovariateChoices()
+
+        shiny::tagList(
+          shiny::tags$br(),
+          shinyWidgets::awesomeCheckboxGroup(
+            inputId = ns("Covariates"),
+            label = "Adjust for covariates",
+            choices = choices,
+            selected = choices,
+            inline = TRUE
+          )
+        )
+      }
+      else {
+        shiny::tagList(
+
+        )
+      }
+    })
 
     shiny::observeEvent(c(input$Analyte), {
 
