@@ -2,10 +2,8 @@
 #' @param id - string - id for this module namespace
 #' @param input_config - list - list of default values for various input widgets
 #' @importFrom shinydashboardPlus box
-#' @importFrom shinyWidgets prettyRadioButtons
-#' @importFrom shinyWidgets pickerInput
-#' @importFrom shinyWidgets awesomeCheckboxGroup
-#' @importFrom shinyWidgets numericRangeInput
+#' @importFrom shinyWidgets prettyRadioButtons pickerInput awesomeCheckboxGroup numericRangeInput
+#' @importFrom shinyTree shinyTree
 #' @export
 cohort_explorer_inputs_ui <- function(id, input_config) {
   ns <- shiny::NS(id)
@@ -63,22 +61,19 @@ cohort_explorer_inputs_ui <- function(id, input_config) {
           ),
           shiny::column(
             width = 12, class = "col-lg-2",
-            shinyWidgets::pickerInput(
-              inputId = ns("Samples"),
-              label = "Samples Available",
-              choices = sort(input_config$SamplesAvailable),
-              selected = input_config$SamplesAvailable,
-              multiple = TRUE
-            )
+            TrisomExploreR::biospecimens_cohort_explorer_inputs_ui(ns("biospecimens")),
           ),
           shiny::column(
             width = 12, class = "col-lg-2",
             shinyWidgets::pickerInput(
-              inputId = ns("OmicsSamples"),
-              label = "Omics Analyses",
-              choices = input_config$OmicsSamplesAvailable,
-              selected = input_config$OmicsSamplesAvailable,
-              multiple = TRUE
+              inputId = ns("AnalysisAvailable"),
+              label = "Analyses Available",
+              choices = input_config$AnalysisAvailable,
+              selected = unname(unlist(input_config$AnalysisAvailable)),
+              multiple = TRUE,
+              options = list(
+                `actions-box` = TRUE
+              )
             )
           )
         )
@@ -92,25 +87,33 @@ cohort_explorer_inputs_ui <- function(id, input_config) {
 #' @param r6 - R6 class defining server-side logic to be utilized by all sub-modules
 #' @param input_config - list - list of default values for various input widgets to be used server-side
 #' @importFrom gargoyle trigger
+#' @importFrom shinyTree renderTree
 #' @export
 cohort_explorer_inputs_server <- function(id, r6, input_config) {
 
   shiny::moduleServer(id, function(input, output, session) {
 
-     ns <- session
+    ns <- session
 
-     TrisomExploreR::bind_events(
-       ids = c("Karyotypes", "Sex", "Age", "Samples", "OmicsSamples"),
+    TrisomExploreR::bind_events(
+       ids = c("Karyotypes", "Sex", "Age", "AnalysisAvailable"),
        r6 = r6,
        session = session,
        parent_input = input
      )
 
-     shiny::observeEvent(
-      c(input$Karyotypes, input$Sex, input$Age, input$Samples, input$OmicsSamples), {
+    shiny::observeEvent(
+      c(input$Karyotypes, input$Sex, input$Age, input$AnalysisAvailable), {
        r6$getParticipantData()
        gargoyle::trigger("get_cohort_data")
      })
+
+    TrisomExploreR::biospecimens_cohort_explorer_inputs_server(
+      id = "biospecimens",
+      r6 = r6,
+      input_config = input_config,
+      parent = session
+    )
 
   })
 }

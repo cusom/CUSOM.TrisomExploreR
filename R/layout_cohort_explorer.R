@@ -14,141 +14,144 @@ cohort_explorer_ui <- function(id, ...) {
     shiny::fluidPage(
       cohort_explorer_inputs_ui(ns("inputs"),  ...),
       cohort_explorer_kpi_ui(ns("kpi")),
-      shiny::fluidRow(
-        shiny::column(
-          width = 12, class = "col-lg-6",
-          shiny::tags$div(
-            shinycssloaders::withSpinner(
-              plotly::plotlyOutput(
-                ns("SexesOverview"),
-                height = "400px"
+      shiny::tags$div(
+        style = "max-height:75vh; overflow-y: scroll;",
+        shiny::fluidRow(
+          shiny::column(
+            width = 12, class = "col-lg-6",
+            shiny::tags$div(
+              shinycssloaders::withSpinner(
+                plotly::plotlyOutput(
+                  ns("SexesOverview"),
+                  height = "400px"
+                )
               )
+            ) |>
+            bsplus::bs_embed_tooltip(
+              title = "Breakdown of controls and T21 by sex",
+              placement = "top",
+              html = TRUE
             )
-          ) |>
-          bsplus::bs_embed_tooltip(
-            title = "Breakdown of controls and T21 by sex",
-            placement = "top",
-            html = TRUE
+          ),
+          shiny::column(
+            width = 12, class = "col-lg-6",
+            shiny::tags$div(
+              shinycssloaders::withSpinner(
+                plotly::plotlyOutput(
+                  ns("AgeDistributionOverview"),
+                  height = "400px"
+                )
+              )
+            ) |>
+            bsplus::bs_embed_tooltip(
+              title = "Participants ages are represented at the time of enrollment",
+              placement = "top",
+              html = TRUE
+            )
           )
         ),
-        shiny::column(
-          width = 12, class = "col-lg-6",
-          shiny::tags$div(
-            shinycssloaders::withSpinner(
-              plotly::plotlyOutput(
-                ns("AgeDistributionOverview"),
-                height = "400px"
+        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        shiny::fluidRow(
+          shiny::column(
+            width = 12, class = "col-lg-3",
+            shiny::tags$div(
+              shinycssloaders::withSpinner(
+                plotly::plotlyOutput(
+                  ns("Probands"),
+                  height = "400px"
+                )
               )
+            ) |>
+            bsplus::bs_embed_tooltip(
+              title = "The family structure in relation to the participant with T21.<br />The participant may be shown in more than one category.<br />Only T21 are represented, and related controls are not shown.",
+              placement = "top",
+              html = TRUE
             )
-          ) |>
-          bsplus::bs_embed_tooltip(
-            title = "Participants ages are represented at the time of enrollment",
-            placement = "top",
-            html = TRUE
-          )
-        )
-      ),
-      shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-      shiny::fluidRow(
-        shiny::column(
-          width = 12, class = "col-lg-3",
-          shiny::tags$div(
-            shinycssloaders::withSpinner(
-              plotly::plotlyOutput(
-                ns("Probands"),
-                height = "400px"
+          ),
+          shiny::column(
+            width = 12, class = "col-lg-5",
+            shiny::tags$div(
+              shinycssloaders::withSpinner(
+                plotly::plotlyOutput(
+                  ns("SamplesAvailable"),
+                  height = "400px"
+                )
               )
+            ) |>
+            bsplus::bs_embed_tooltip(
+              title = "Total number of participants by sample type",
+              placement = "top",
+              html = TRUE
             )
-          ) |>
-          bsplus::bs_embed_tooltip(
-            title = "The family structure in relation to the participant with T21.<br />The participant may be shown in more than one category.<br />Only T21 are represented, and related controls are not shown.",
-            placement = "top",
-            html = TRUE
+          ),
+          shiny::column(
+            width = 12, class = "col-lg-4",
+            shiny::tags$div(
+              shinycssloaders::withSpinner(
+                plotly::plotlyOutput(
+                  ns("OmicsSamplesAvailable"),
+                  height = "400px"
+                )
+              )
+            ) |>
+            bsplus::bs_embed_tooltip(
+              title = "Analyses Available within the Human Trisome Project",
+              placement = "top",
+              html = TRUE
+            )
           )
         ),
-        shiny::column(
-          width = 12, class = "col-lg-5",
-          shiny::tags$div(
-            shinycssloaders::withSpinner(
-              plotly::plotlyOutput(
-                ns("SamplesAvailable"),
-                height = "400px"
+        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        shiny::fluidRow(
+          shiny::column(
+            width = 12, class = "col-lg-6",
+            shiny::tags$div(
+              shinycssloaders::withSpinner(
+                plotly::plotlyOutput(
+                  ns("RaceEthnicityChart"),
+                  height = "600px"
+                )
+              )
+            ) |>
+            bsplus::bs_embed_tooltip(
+              title = "Current demographic information for participants in the database",
+              placement = "top",
+              html = TRUE
+            )
+          ),
+          shiny::column(
+            width = 12, class = "col-lg-6",
+            shinydashboardPlus::box(
+              title = shiny::HTML(
+                'State of Residence
+                <span data-toggle="tooltip"
+                data-placement="auto right"
+                title=""
+                class="fas fa-info-circle gtooltip info-tooltip"
+                data-original-title="
+                State where participants lived at time of enrollment.
+                Enrollment centers on Colorado, with higher enrollment numbers from states hosting National Down Syndrome Congress
+                Conferences when HTP enrollment occurred.">
+                </span>'
+              ),
+              id = "map",
+              height = "600px",
+              width = NULL,
+              closable = FALSE,
+              solidHeader = FALSE,
+              collapsible = FALSE,
+              headerBorder = FALSE,
+              shinycssloaders::withSpinner(
+                leaflet::leafletOutput(
+                  ns("ParticipantStates"),
+                  height = "500px"
+                )
               )
             )
-          ) |>
-          bsplus::bs_embed_tooltip(
-            title = "Total number of samples available by sample type",
-            placement = "top",
-            html = TRUE
           )
         ),
-        shiny::column(
-          width = 12, class = "col-lg-4",
-          shiny::tags$div(
-            shinycssloaders::withSpinner(
-              plotly::plotlyOutput(
-                ns("OmicsSamplesAvailable"),
-                height = "400px"
-              )
-            )
-          ) |>
-          bsplus::bs_embed_tooltip(
-            title = "Number of samples with -omics analyses from the Human Trisome Project",
-            placement = "top",
-            html = TRUE
-          )
-        )
-      ),
-      shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-      shiny::fluidRow(
-        shiny::column(
-          width = 12, class = "col-lg-5",
-          shiny::tags$div(
-            shinycssloaders::withSpinner(
-              plotly::plotlyOutput(
-                ns("RaceEthnicityChart"),
-                height = "480px"
-              )
-            )
-          ) |>
-          bsplus::bs_embed_tooltip(
-            title = "Current demographic information for participants in the database",
-            placement = "top",
-            html = TRUE
-          )
-        ),
-        shiny::column(
-          width = 12, class = "col-lg-7",
-          shinydashboardPlus::box(
-            title = shiny::HTML(
-              'State of Residence
-              <span data-toggle="tooltip"
-              data-placement="auto right"
-              title=""
-              class="fas fa-info-circle gtooltip info-tooltip"
-              data-original-title="
-              State where participants lived at time of enrollment.
-              Enrollment centers on Colorado, with higher enrollment numbers from states hosting National Down Syndrome Congress
-              Conferences when HTP enrollment occurred.">
-              </span>'
-            ),
-            id = "map",
-            height = "auto",
-            width = NULL,
-            closable = FALSE,
-            solidHeader = FALSE,
-            collapsible = FALSE,
-            headerBorder = FALSE,
-            shinycssloaders::withSpinner(
-              leaflet::leafletOutput(
-                ns("ParticipantStates"),
-                height = "400px"
-              )
-            )
-          )
-        )
-      ),
-      shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;")
+        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;")
+      )
     )
   )
 
@@ -177,6 +180,7 @@ cohort_explorer_server <- function(id, r6, ...) {
 
     dataWithFilters <- shiny::eventReactive(
       c(gargoyle::watch("get_cohort_data")), {
+      r6$getParticipantData()
       r6$ParticipantData
     })
 
@@ -189,7 +193,7 @@ cohort_explorer_server <- function(id, r6, ...) {
     })
 
     output$Probands <- plotly::renderPlotly({
-      dataWithFilters() |>r6$getProbandsPlot()
+      dataWithFilters() |> r6$getProbandsPlot()
     })
 
     output$SamplesAvailable <- plotly::renderPlotly({

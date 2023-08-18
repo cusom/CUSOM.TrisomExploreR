@@ -9,8 +9,12 @@
 #' @field AllParticipants - deprecated
 #' @field AllN - numeric - count of all Participants
 #' @field Enrollments - tibble of counts of participants by Karyotype
-#' @field SamplesAvailable - deprecated
-#' @field ParticipantOMICSAvailable - deprecated
+#' @field SampleDetail - tibble of biospecimen detail
+#' @field biospecimen_tree - biospecimens in hierarchy / tree stucture
+#' @field Biospecimens - selected biospecimen values from UI
+#' @field PlatformExperiments - tibble of platform-experiment combinations
+#' @field ParticipantPlatformExperiment - tibble of participants, platfoms, and experiments
+#' @field AnalysisAvailable - nested list of experiments / studies by platform group
 #' @field Karyotypes - character vector - selected karotypes
 #' @field Sex - character vector - selected sexes
 #' @field Age - numeric vector - selected ages
@@ -49,8 +53,12 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     AllParticipants = NULL,
     AllN = NULL,
     Enrollments = NULL,
-    SamplesAvailable = NULL,
-    ParticipantOMICSAvailable = NULL,
+    SampleDetail = NULL,
+    biospecimen_tree = NULL,
+    Biospecimens = NULL,
+    PlatformExperiments = NULL,
+    ParticipantPlatformExperiment = NULL,
+    AnalysisAvailable = NULL,
     Karyotypes = NULL,
     Sex = NULL,
     Age = NULL,
@@ -70,7 +78,6 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     ConditionClassSexCounts = NULL,
     ConditionSexCounts = NULL,
 
-
     selectedAnnotationLevel = NULL,
     SelectedConditions = NULL,
     upsetPlotData = NULL,
@@ -82,8 +89,9 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' @param namespace_config tibble - configuration values for this namespace instance of the object
     #' @param remoteDB R6 class to manage remote database queries
     #' @param localDB R6 class to manange local database queries
+    #' @param data additional data passed from app manager to be used for inputs and data filtering 
     #' @return A new `ClinicalDataAnalysisManager` object.
-    initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
+    initialize = function(applicationName, id, namespace_config, remoteDB, localDB, data){
 
       self$applicationName <- applicationName
       self$remoteDB <- remoteDB
@@ -93,8 +101,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
          "SELECT Karyotype, count(1) [ParticipantCount]
           FROM AllParticipants
           GROUP BY Karyotype"
-        ) |>
-        dplyr::mutate(ParticipantCount = ifelse(Karyotype == "Trisomy 21", ParticipantCount + 8, ParticipantCount + 6))
+        )
 
       self$AllN <- self$localDB$getQuery(
         "SELECT count(distinct record_id) [n]
@@ -131,6 +138,62 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
       self$updateSummaryConditionClassCounts()
 
+      self$SampleDetail <- data$SampleDetail
+
+      self$PlatformExperiments <- data$PlatformExperiments
+
+      self$ParticipantPlatformExperiment <- self$localDB$getQuery(
+        "SELECT * FROM ParticipantPlatformExperiment",
+        NULL
+      )
+
+    },
+
+    #' @description
+    #' get biospecimen hierarchy for input
+    getBiospecimenSampleHierarchy = function() {
+
+      self$biospecimen_tree <-  self$SampleDetail |>
+        dplyr::filter(
+          !is.na(samplePath)
+        ) |>
+        dplyr::distinct(samplePath) |>
+        dplyr::mutate(
+          pathString = ifelse(is.na(samplePath), sample_type, samplePath),
+          pathString = glue::glue("AllSamples/{pathString}")
+        ) |>
+        dplyr::select(pathString) |>
+        dplyr::distinct() |>
+        data.tree::as.Node()
+
+      self$biospecimen_tree$name <- NULL
+
+      return(self$biospecimen_tree)
+
+    },
+
+    #' @description
+    #' get aggregated HTML string of chosen biospecimens with line breaks per condition
+    getSelectedBiospecimenList = function() {
+
+      return(
+        shinyTree::get_selected(self$Biospecimens, format = "slices") |>
+          unlist() |>
+          names() |>
+          tibble::as_tibble() |>
+          purrr::set_names("pathString") |>
+          dplyr::mutate(pathString = gsub("\\.","/", pathString)) |>
+          dplyr::inner_join(
+            # get path and path string mashed up for leafs only...
+            self$biospecimen_tree$Get('pathString', filterFun = data.tree::isLeaf) |>
+              tibble::enframe(name = "path", value = "pathString")
+            , by = "pathString"
+          ) |>
+          dplyr::distinct(path) |>
+          dplyr::arrange() |>
+          dplyr::summarise(text = stringr::str_c(path, collapse = "<br />")) |>
+          dplyr::pull()
+      )
     },
 
     #' @description
@@ -148,28 +211,8 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           Karyotype %in% self$Karyotypes,
           AgeAtInitialConsent >= as.numeric(min(self$Age)),
           AgeAtInitialConsent <= as.numeric(max(self$Age))
-        ) |>
-        dplyr::inner_join(
-          participants |>
-            dplyr::left_join(
-              self$localDB$getQuery(
-                "SELECT * FROM ParticipantOMICSAvailable"
-                ) |>
-                tidyr::separate_rows(OMICSSampleAvailable, sep = ",", "OMICSSampleAvailable", convert = TRUE)
-              , by = "record_id") |>
-            dplyr::mutate(OMICSSampleAvailable = ifelse(is.na(OMICSSampleAvailable), "None", OMICSSampleAvailable)) |>
-            dplyr::filter(OMICSSampleAvailable %in% c(self$OmicsSamples, "None")) |>
-            dplyr::distinct(record_id),
-          by = "record_id"
-        ) |>
-        dplyr::inner_join(
-          participants |>
-            tidyr::separate_rows(SamplesAvailable, sep = ",", "SamplesAvailable", convert = TRUE) |>
-            dplyr::filter(SamplesAvailable %in% c(self$Samples, "None")) |>
-            dplyr::distinct(record_id),
-          by = "record_id"
         )
-
+      
     },
 
     #' @description
@@ -305,7 +348,8 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           colors = c("#BBBDC0", "#1D4D7C"),
           type = "bar",
           text = ~ glue::glue("{Karyotype} - {AgeAtInitialConsentAgeBand} years old: {n}"),
-          hoverinfo = "text"
+          hoverinfo = "text",
+          textposition = "none"
         ) |>
         plotly::layout(
           title = list(
@@ -400,7 +444,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           title = list(
             text = "Family Unit",
             x = 0,
-            pad = list(l=10)
+            pad = list(l = 10)
           ),
           xaxis = list(
             title = "# of Participants",
@@ -450,48 +494,72 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' @return plotly object
     getSamplesAvailablePlot = function(.data) {
 
-      dataframe <- .data |>
-        dplyr::select(record_id, SamplesAvailable) |>
-        tidyr::separate_rows(sep = ",", "SamplesAvailable", convert = TRUE) |>
-        dplyr::filter(SamplesAvailable %in% self$Samples) |>
-        dplyr::group_by(SamplesAvailable) |>
-        dplyr::summarize(n = dplyr::n_distinct(record_id), .groups = "drop") |>
+      available_samples <- self$SampleDetail |>
+        dplyr::inner_join(.data, by = "record_id") |>
         dplyr::mutate(
-          Sample = gsub("\\s*\\([^\\)]+\\)", "", SamplesAvailable),
-          SampleType = gsub(".*\\((.*)\\).*", "\\1", SamplesAvailable),
-          sampleType = ifelse(SamplesAvailable == SampleType, "Other", SampleType),
-          SampleType = forcats::fct_relevel(SampleType, c("Other","Lysates","Cryopreserved")),
-          SortOrder = dplyr::case_when(
-            Sample == "Plasma" ~ 1,
-            Sample == "Red Blood Cells" ~ 2,
-            Sample == "White Blood Cells " ~ 3,
-            Sample == "B cells " ~ 5,
-            Sample == "Monocytes " ~ 6,
-            Sample == "CD4 T cells " ~ 7,
-            Sample == "CD8 T cells " ~ 8,
-            Sample == "Tregs " ~ 9,
-            Sample == "NK Cell " ~ 10,
-            Sample == "PaxDNA" ~ 11,
-            Sample == "PaxRNA" ~ 12,
-            Sample == "Tongue swab" ~ 13,
-            Sample == "Urine" ~ 14,
-            TRUE ~ 15
+          aliquot_available = dplyr::case_when(
+            out ~ 0,
+            volume == 0 ~ 0,
+            TRUE ~ 1
           )
-        )
+        ) |>
+        dplyr::group_by(sample_id) |>
+        dplyr::mutate(sample_available = max(aliquot_available)) |>
+        dplyr::ungroup() |>
+        select(record_id, sample_id, vial_barcode_tag, samplePath, aliquot_available, sample_available)
 
-      p <- dataframe |>
+      if (length(shinyTree::get_selected(self$Biospecimens)) > 0 ) {
+
+        available_samples <-  shinyTree::get_selected(self$Biospecimens, format = "slices") |>
+          unlist() |>
+          names() |>
+          tibble::as_tibble() |>
+          purrr::set_names("pathString") |>
+          dplyr::mutate(pathString = gsub("\\.","/", pathString)) |>
+          dplyr::inner_join(
+            # get path and path string mashed up for leafs only...
+            self$biospecimen_tree$Get('pathString', filterFun = data.tree::isLeaf) |>
+              tibble::enframe(name = "path", value = "pathString")
+            , by = "pathString"
+          ) |>
+          dplyr::select("samplePath" = pathString) |>
+          inner_join(available_samples, by = "samplePath")
+
+      }
+
+      p <- available_samples |>
+        dplyr::filter(!is.na(samplePath)) |>
+        dplyr::mutate(
+          leaf_sample_type = stringr::str_split_i(samplePath, "\\/", -1)
+        ) |>
+        dplyr::group_by(leaf_sample_type) |>
+        dplyr::summarise(
+          n_records = n_distinct(record_id),
+          n_samples = sum(sample_available),
+          n_vials = sum(aliquot_available), 
+          .groups = "drop"
+        ) |>
+        dplyr::mutate(
+          text = glue::glue(
+            "{leaf_sample_type}
+              # of Participants: {formattable::comma(n_records, digits = 0)}
+              # of Samples Available: {formattable::comma(n_samples, digits = 0)}
+              # of Aliquots Available: {formattable::comma(n_vials, digits = 0)}
+              "
+          )
+        ) |>
         plotly::plot_ly(
-          x = ~ Sample,
-          y = ~ n,
-          color = ~ SampleType,
+          x = ~ leaf_sample_type,
+          y = ~ n_records,
+          color = ~ leaf_sample_type,
           colors = c("#BBBDC0", "#1D4D7C"),
           type = "bar",
-          text = ~ glue::glue("{Sample} - {SampleType}: {n}"),
+          text = ~ text,
           hoverinfo = "text",
           textposition = "none"
         ) |>
         plotly::layout(
-          barmode = "stack",
+          showlegend = FALSE,
           title = list(
             text = "Samples Available",
             x = 0,
@@ -504,14 +572,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
               size = 16
             ),
             tickangle = -45,
-            type = "category",
-            categoryorder = "array",
-            categoryarray = (
-              dataframe |>
-               dplyr::arrange(SortOrder) |>
-               dplyr::select(Sample) |>
-               dplyr::pull()
-            )
+            "categoryorder" = "total descending"         
           ),
           yaxis = list(
             title = "# of Participants",
@@ -543,6 +604,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
       return(p)
 
+
     },
 
     #' @description
@@ -551,43 +613,42 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' @return plotly object
     getOmicsSamplesAvailablePlot = function(.data) {
 
-      p <- .data |>
-        dplyr::left_join(
-          self$localDB$getQuery(
-            "SELECT * FROM ParticipantOMICSAvailable"
-          ),
-          by = "record_id"
+      p <- self$PlatformExperiments |>
+        dplyr::filter(ExperimentID %in% self$AnalysisAvailable) |>
+        dplyr::inner_join(
+          self$ParticipantPlatformExperiment |>
+            dplyr::distinct(record_id, ExperimentID),
+          by = c("ExperimentID")
         ) |>
-        dplyr::select(record_id, OMICSSampleAvailable) |>
-        dplyr::mutate(OMICSSampleAvailable = ifelse(is.na(OMICSSampleAvailable), "none", OMICSSampleAvailable)) |>
-        tidyr::separate_rows(sep = ",", "OMICSSampleAvailable", convert = TRUE) |>
-        dplyr::filter(OMICSSampleAvailable %in% self$OmicsSamples) |>
-        dplyr::group_by(OMICSSampleAvailable) |>
-        dplyr::summarize(n = dplyr::n_distinct(record_id), .groups = "drop") |>
+        dplyr::inner_join(.data, by = "record_id") |>
+        dplyr::group_by(PlatformGroup, PlatformDisplayName, ExperimentStudyName, ExperimentID) |>
+        dplyr::summarise(
+          n_records = dplyr::n_distinct(record_id)
+        ) |>
         dplyr::mutate(
-          SortOrder = dplyr::case_when(
-            OMICSSampleAvailable == "Transcriptome" ~ 1,
-            OMICSSampleAvailable == "Proteome" ~ 2,
-            OMICSSampleAvailable == "Metabolome" ~ 3,
-            OMICSSampleAvailable == "Immune Map" ~ 4,
-            TRUE ~ 5
+          text = glue::glue(
+            "
+            {ExperimentStudyName} - {PlatformDisplayName}
+            Total Participants: {formattable::comma(n_records, digits = 0)}
+            "
           )
         ) |>
         plotly::plot_ly(
-          x = ~ OMICSSampleAvailable,
-          y = ~ n,
-          color = ~n,
-          colors = c("#BBBDC0", "#1D4D7C"),
+          x = ~ PlatformGroup,
+          y = ~ n_records,
+          color = ~ ExperimentID,
           type = "bar",
           showlegend = FALSE,
           showscale = FALSE,
-          text = ~ glue::glue("{OMICSSampleAvailable}: {n}"),
+          text = ~ text,
           hoverinfo = "text",
           textposition = "none"
         ) |>
         plotly::layout(
+          barmode = "stack",
+          showlegend = FALSE,
           title = list(
-            text = "Omics Analyses Available",
+            text = "Analyses Available",
             x = 0,
             pad = list(l = 10)
           ),
@@ -619,8 +680,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
               family = "Arial",
               size = 16
             )
-          ),
-          showlegend = FALSE
+          )
         ) |>
         plotly::hide_colorbar() |>
         plotly::config(
@@ -648,74 +708,68 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     getRaceEthnicityPlot = function(.data) {
 
       RaceEthnicity <- .data |>
-        dplyr::mutate(Race = ifelse(Race == "" | is.na(Race), "Unknown", Race)) |>
-        dplyr::mutate(Ethnicity = ifelse(Ethnicity == "" | is.na(Ethnicity), "Unknown", Ethnicity)) |>
+        dplyr::mutate(
+          Race = ifelse(Race == "" | is.na(Race), "Unknown", Race),
+          Race = ifelse(Race == ">1 race", "Multiracial", Race),
+          Ethnicity = ifelse(Ethnicity == "" | is.na(Ethnicity), "Unknown", Ethnicity)
+        ) |>
         dplyr::select(Race, Ethnicity, record_id) |>
         dplyr::mutate(dplyr::across(tidyselect::everything(), stringr::str_trim))
 
-      p <- RaceEthnicity |>
-        dplyr::group_by(Race, Ethnicity) |>
-        dplyr::summarize(race_eth_n = dplyr::n_distinct(record_id), .groups = "drop") |>
-        dplyr::mutate(
-          race_eth_total = sum(race_eth_n),
-          race_eth_pct = race_eth_n / race_eth_total
+      p <- plot_ly() |>
+        add_pie(
+          data = count(RaceEthnicity, Race),
+          labels = ~Race,
+          values = ~n,
+          name = "Race",
+          legendgroup = "Race",
+          textposition = "inside",
+          textinfo = "label+percent",
+          insidetextfont = list(color = "#FFFFFF"),
+          hovertemplate = "%{percent} of participants are %{label}<extra></extra>",
+          hole = 0.45,
+          domain = list(
+            x = c(0, 0.45),
+            y = c(0.0, 0.98)
+          )
         ) |>
-        dplyr::inner_join(
-          RaceEthnicity |>
-            dplyr::group_by(Race) |>
-            dplyr::summarize(race_n = dplyr::n_distinct(record_id), .groups = "drop") |>
-            dplyr::mutate(
-              race_total = sum(race_n),
-              race_pct = race_n / race_total
-            ),
-          by = "Race"
+        add_pie(
+          data = count(RaceEthnicity, Ethnicity),
+          labels = ~Ethnicity,
+          values = ~n,
+          name = "Ethnicity",
+          legendgroup = "Ethnicity",
+          textposition = "inside",
+          textinfo = "label+percent",
+          insidetextfont = list(color = "#FFFFFF"),
+          hovertemplate = "%{percent} of participants are %{label}<extra></extra>",
+          hole = 0.45,
+          domain = list(
+            x = c(0.55, 1),
+            y = c(0.0, 0.98)
+          )
         ) |>
-        dplyr::mutate(
-          race_eth_subgroup_pct = race_eth_n / race_n
-        ) |>
-        dplyr::select(Race, Ethnicity,race_eth_n, race_pct, race_eth_subgroup_pct) |>
-        plotly::plot_ly(
-          type = "bar",
-          y = ~ Race,
-          x = ~ race_eth_n,
-          color = ~ Ethnicity,
-          colors = c("#1D4D7C", "#3E99CD", "#BBBDC0"),
-          legendgroup = ~ Ethnicity,
-          text = ~ glue::glue("{formattable::percent(race_pct)} of Participants identify as <b>{Race}</b><br />
-                    {formattable::percent(race_eth_subgroup_pct)} of {Race} Participants <br /> identify as <b>{Ethnicity}</b>"
-          ),
-          hoverinfo = "text",
-          textposition = "none"
-        ) |>
-        plotly::layout(
-          legend = list(
-            x = 0.4,
-            y = 0.1
-          ),
+        layout(
           title = list(
-            text = "Race and Ethnicity",
+            text = "Race & Ethnicity",
             x = 0,
-            pad = list(l = 10)
-          ),
-          xaxis = list(
-            title = "",
-            showgrid = FALSE,
-            zeroline = FALSE,
-            showline = FALSE,
-            showticklabels = FALSE,
-            font = list(
-              family = "Arial",
-              size = 18
+            pad = list(
+              l = 10
             )
           ),
-          yaxis = list(
-            title = "",
-            showgrid = FALSE,
-            showticklabels = TRUE,
+          showlegend = TRUE,
+          legend = list(
+            title = "Race / Ethnicity",
+            orientation = "h",
+            xanchor = "center",
+            x = 0.5,
             font = list(
-              family = "Arial",
-              size = 18
+              size = 12
             )
+          ),
+          uniformtext = list(
+            minsize = 8,
+            mode = "hide"
           ),
           margin = list(
             l = 10,
@@ -723,7 +777,36 @@ ClinicalDataAnalysisManager <- R6::R6Class(
             b = 50,
             t = 50
           ),
-          barmode = "stack"
+          xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+          annotations = list(
+            list(
+              x = 0.22,
+              y = -0.05,
+              text = "Race",
+              xref = "paper",
+              yref = "paper",
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE,
+              font = list(
+                size = 16
+              )
+            ),
+            list(
+              x = 0.78,
+              y = -0.05,
+              text = "Ethnicity",
+              xref = "paper",
+              yref = "paper",
+              xanchor = "center",
+              yanchor = "bottom",
+              showarrow = FALSE,
+              font = list(
+                size = 16
+              )
+            )
+          )
         ) |>
         plotly::config(
           displayModeBar = TRUE,
@@ -795,7 +878,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           weight = 0.2,
           smoothFactor = 0.2,
           highlight = leaflet::highlightOptions(
-            weight = 4,
+            weight = 2,
             color = "#666",
             fillOpacity = 0.6,
             bringToFront = TRUE

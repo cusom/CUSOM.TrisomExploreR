@@ -37,9 +37,8 @@ ClinicalDataAppManager <- R6::R6Class(
       adjustmentMethodsTibble = NULL,
       adjustmentMethodsNames = NULL,
       Enrollments = NULL,
-      SamplesAvailable = NULL,
-      ParticipantOMICSAvailable = NULL,
-      OmicsSamplesAvailable = NULL,
+      SampleDetail = NULL,
+      AnalysisAvailable = NULL,
       probandRelationships = NULL,
       karyotypes = NULL,
       sexes = NULL,
@@ -80,12 +79,12 @@ ClinicalDataAppManager <- R6::R6Class(
           FROM [app].[vw_ShinyApplicationApplicationLinks]
           WHERE cast([ApplicationId] as nvarchar(256)) = CAST(? As nvarchar(256))
           ORDER BY LinkDisplayOrder"
-        ,tibble::tibble('ApplicationId' = ApplicationId)
+        , tibble::tibble('ApplicationId' = ApplicationId)
       )
 
       self$app_config$tutorials <- remoteDB$getQuery(
         "[shiny].[GetApplicationTutorials] ?"
-        ,tibble::tibble('ApplicationId' = ApplicationId)
+        , tibble::tibble('ApplicationId' = ApplicationId)
       )
 
       self$module_config <- NULL
@@ -125,47 +124,36 @@ ClinicalDataAppManager <- R6::R6Class(
 
       self$input_config$PlatformExperiments <- remoteDB$getQuery(
         " SELECT * FROM [shiny].[vw_ApplicationExperiments]"
-        ,NULL
+        , NULL
       )
 
       self$input_config$Enrollments <- localDB$getQuery(
         "SELECT Karyotype, count(1) as [ParticipantCount]
         FROM AllParticipants
         GROUP BY Karyotype"
-        ) |>
-        dplyr::mutate(
-          ParticipantCount = ifelse(Karyotype == "Trisomy 21", ParticipantCount + 8, ParticipantCount + 6)
         )
 
-      self$input_config$SamplesAvailable <- localDB$getQuery(
-        "SELECT distinct SamplesAvailable
-        FROM AllParticipants"
+      self$input_config$SampleDetail <- remoteDB$getQuery(
+        "SELECT *
+         FROM [shiny].[vw_FreezerProSampleDetail]",
+        NULL
         ) |>
-        tidyr::separate_rows(sep = ",", "SamplesAvailable", convert=TRUE) |>
-        dplyr::filter(SamplesAvailable != "None") |>
-        dplyr::distinct(SamplesAvailable) |>
-        dplyr::pull()
+       dplyr::rename("record_id" = GUI, "LabID" = `Lab ID`)
 
-      self$input_config$OmicsSamplesAvailable <- localDB$getQuery(
-        "SELECT * FROM ParticipantOMICSAvailable"
-        ) |>
-        tidyr::separate_rows("OMICSSampleAvailable", sep = ",") |>
-        dplyr::select(-c(record_id)) |>
-        dplyr::distinct(OMICSSampleAvailable) |>
-        dplyr::mutate(
-          OMICSSampleAvailable = ifelse(is.na(OMICSSampleAvailable), "none", OMICSSampleAvailable),
-          SortOrder = dplyr::case_when(
-            OMICSSampleAvailable == "Transcriptome" ~ 1,
-            OMICSSampleAvailable == "Proteome" ~ 2,
-            OMICSSampleAvailable == "Metabolome" ~ 4,
-            OMICSSampleAvailable == "Immune Map" ~ 5,
-            TRUE ~ 6
-          )
-        ) |>
-        dplyr::arrange(SortOrder) |>
-        dplyr::select(OMICSSampleAvailable) |>
-        dplyr::pull()
+      choices <- self$input_config$PlatformExperiments |>
+        dplyr::filter(!is.na(TotalSamples), !is.na(ExperimentStudyName)) |>
+        dplyr::select(PlatformGroup, PlatformDisplayName, ExperimentID, ExperimentStudyName) |>
+        dplyr::arrange(PlatformGroup)
 
+      self$input_config$AnalysisAvailable <- split(
+        setNames(
+          choices$ExperimentID, glue::glue("{choices$ExperimentStudyName} - {choices$PlatformDisplayName}")
+        ),
+        choices$PlatformGroup
+      )
+
+      rm(choices)
+      
       self$input_config$probandRelationships <- localDB$getQuery(
         "SELECT distinct ProbandRelationship
           FROM AllParticipants"
@@ -190,10 +178,10 @@ ClinicalDataAppManager <- R6::R6Class(
         tidyr::drop_na() |>
         dplyr::summarise(
           min = round(min(AgeAtTimeOfVisit)),
-          max = round(max(AgeAtTimeOfVisit))+1
+          max = round(max(AgeAtTimeOfVisit)) + 1
         ) |>
         dplyr::reframe(
-          age = seq(min,max,1)
+          age = seq(min, max, 1)
         ) |>
         dplyr::pull()
 
@@ -221,27 +209,16 @@ ClinicalDataAppManager <- R6::R6Class(
         dplyr::select(record_id, ConditionClass, Condition) |>
         dplyr::group_by(ConditionClass, Condition) |>
         dplyr::summarize(n = dplyr::n_distinct(record_id), .groups = "drop")  |>
-        dplyr::filter(n >= 5) |>
-        dplyr::left_join(
-          localDB$getQuery(
-            "SELECT *
-              FROM ParticipantConditions"
-            ) |>
-            dplyr::filter(!is.na(ConditionCensorshipAgeGroup)) |>
-            dplyr::select(Condition,ConditionCensorshipAgeGroup) |>
-            dplyr::distinct()
-          , by = "Condition"
-        ) |>
-        dplyr::mutate(
-          AgeCensor = dplyr::case_when(
-            !is.na(ConditionCensorshipAgeGroup) ~ ConditionCensorshipAgeGroup,
-            TRUE ~ ""
-          )
-        ) |>
-        dplyr::select(-ConditionCensorshipAgeGroup,n) |>
+        dplyr::filter(n >= 5) |>      
         tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE)
 
-      self$input_config$ConditionsChoices <- split(setNames(self$input_config$ConditionChoices_df$Condition,glue::glue("{self$input_config$ConditionChoices_df$Condition} {self$input_config$ConditionChoices_df$AgeCensor}")),self$input_config$ConditionChoices_df$ConditionClass)
+      self$input_config$ConditionsChoices <- split(
+        setNames(
+          self$input_config$ConditionChoices_df$Condition,
+          glue::glue("{self$input_config$ConditionChoices_df$Condition}")
+        ),
+        self$input_config$ConditionChoices_df$ConditionClass
+      )
 
     }
   )
