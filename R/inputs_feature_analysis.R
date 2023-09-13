@@ -51,16 +51,11 @@ feature_analysis_inputs_ui <- function(id, input_config) {
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shiny::tags$div(
           id = ns("Studies"),
-          CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
-            inputId = ns("Study"),
-            label = "",
-            fieldSetData = input_config$studiesTibble,
-            selected = character(0)
-          ) |>
-          bsplus::bs_embed_tooltip(
-            title = "Select a study below",
-            placement = "top",
-            html = TRUE
+          shinycustomloader::withLoader(
+            shiny::uiOutput(ns("Study")),
+            type = "html",
+            loader = "loader6",
+            proxy.height = "20px"
           )
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
@@ -164,7 +159,28 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
       parent_input = input
     )
 
+    output$Study <- shiny::renderUI({
+
+      choices <- r6$getStudies()
+
+      selected <- ifelse(nrow(choices) == 1, choices, character(0))
+
+      CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
+        inputId = ns("Study"),
+        label = "",
+        fieldSetData = choices,
+        selected = selected
+      ) |>
+        bsplus::bs_embed_tooltip(
+          title = "Select a study below",
+          placement = "top",
+          html = TRUE
+        )
+
+    })
+
     shiny::observeEvent(c(input$Study), {
+
       shiny::validate(
         shiny::need(!is.null(input$Study), ""),
         shiny::need(input$Study != "", "")
@@ -183,8 +199,7 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
         shinyjs::disable(
           selector = paste0("#", ns("getData"))
         )
-      }
-      else {
+      } else {
         shinyjs::enable(
           selector = paste0("#", ns("getData"))
         )
@@ -201,18 +216,18 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
         shiny::need(input$Study != "", "")
       )
 
-      karyotypeChoices <- r6$getKaryotypeChoices(input_config$karyotypes)
+      karyotype_choices <- r6$getKaryotypeChoices(input_config$karyotypes)
 
       input <- shinyWidgets::prettyRadioButtons(
         inputId = ns("Karyotype"),
         label = "Karyotype",
-        choiceNames = lapply(karyotypeChoices$choiceNames, shiny::HTML),
-        choiceValues = karyotypeChoices$choiceValues,
+        choiceNames = lapply(karyotype_choices$choiceNames, shiny::HTML),
+        choiceValues = karyotype_choices$choiceValues,
         inline = FALSE,
         width = "90%"
       )
 
-      if (nrow(karyotypeChoices) == 1) {
+      if (nrow(karyotype_choices) == 1) {
         shinyjs::disabled(
           input
         )
@@ -264,8 +279,7 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
             inline = TRUE
           )
         )
-      }
-      else {
+      } else {
         shiny::tagList(
 
         )

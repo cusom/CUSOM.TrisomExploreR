@@ -31,8 +31,10 @@
 #' @field VolcanoSummaryDataYAxisLabel - string - volcano plot y-axis
 #' @field VolcanoSummaryMaxFoldChange - numeric - maxiumum abs. value of fold change
 #' @field VolcanoPlotTitle - string - title to show above volcano plot
-#' @field volcanoTopAnnotationLabel - string - label to be shown above top-level volcano plot (Up in X, Increasing with X, etc. )
-#' @field volcanoPlotExpectedTraceCount - numeric - number of base traces present in the active volcano plot (usually between 1 - 3)
+#' @field volcanoTopAnnotationLabel - string - label to be shown above top-level
+#' volcano plot (Up in X, Increasing with X, etc. )
+#' @field volcanoPlotExpectedTraceCount - numeric - number of base traces present
+#' in the active volcano plot (usually between 1 - 3)
 #' @field VolcanoSummaryDataFoldChangeFilter - deprecated?
 #' @field volcanoMultiSelectText - string - text shown below volcano plot when multiple analytes are chosen
 #' @field Analyte - string vector - analyte(s) chosen for analysis
@@ -73,6 +75,7 @@ FeatureAnalysisManager <- R6::R6Class(
     analysisVariable = "",
     analysisVariableLabel = "",
     analysisType = "",
+    experimentIDs = "",
     analytesLabel = "Analytes",
     groupBaselineLabel = "",
     FoldChangeVar = "log2FoldChange",
@@ -139,6 +142,7 @@ FeatureAnalysisManager <- R6::R6Class(
       self$analysisVariable <- namespace_config$AnalysisVariableName
       self$analysisVariableLabel <- namespace_config$AnalysisVariableLabel
       self$analysisType <- namespace_config$AnalysisType
+      self$experimentIDs <- stringr::str_split_1(namespace_config$ExperimentIDs, "\\|")
       self$groupBaselineLabel <- namespace_config$AnalysisVariableBaselineLabel
       self$volcanoTopAnnotationLabel <- namespace_config$AnalysisVolcanoPlotTopAnnotation
 
@@ -151,15 +155,44 @@ FeatureAnalysisManager <- R6::R6Class(
     getGetDataButtonClass = function() {
       if (is.null(self$Study)) {
         return("refresh-btn shinyjs-disabled")
-      }
-      else {
+      } else {
         if (self$namespace == "Comorbidity" & is.null(self$Conditions)) {
           return("refresh-btn shinyjs-disabled")
-        }
-        else {
+        } else {
           return("refresh-ready-btn shinyjs-enabled")
         }
       }
+    },
+
+    #' @description
+    #' helper function to get formatted study choices based on experiments configured for this instance / namespace
+    getStudies = function() {
+
+      self$remoteDB$getQuery(
+        "[shiny].[GetStudyDetailsByExperimentID] ?",
+        tibble::tibble("ExperimentIDList" = glue::glue_collapse(self$experimentIDs, sep = ";"))
+      ) |>
+        dplyr::mutate(
+          TooltipText = dplyr::case_when(
+            !is.na(ExperimentStudyTitle)  ~ glue::glue("{ExperimentStudyTitle} <br /><br />
+            {ExperimentStudyAdditionalText} <br /><br />Total Samples: {TotalSamples}"),
+            TRUE ~ glue::glue("{ExperimentStudyName} <br /><br />Total Samples: {TotalSamples}")
+          ),
+          ShowTooltip = TRUE,
+          PlatformGroupDisplayName = ifelse(
+            is.na(PlatformGroupDisplayName),
+            "Study",
+            PlatformGroupDisplayName
+          )
+        ) |>
+        dplyr::select(
+          "Values" = "ExperimentID",
+          "Text" = "ExperimentStudyName",
+          "URL" = "ExperimentStudyURL",
+          "TooltipText" = "TooltipText",
+          "ShowTooltip",
+          "FieldSet" = "PlatformGroupDisplayName"
+        )
     },
 
     #' @description
@@ -185,26 +218,22 @@ FeatureAnalysisManager <- R6::R6Class(
             choiceValues = glue::glue_collapse(karyotypes, sep = ";")
           )
         )
-      }
-
-      else if (self$namespace == "Comorbidity") {
+      } else if (self$namespace == "Comorbidity") {
         return(
           tibble::tibble(
             choiceNames =  karyotypes[1],
             choiceValues = karyotypes[1]
           )
         )
-      }
+      } else {
 
-      else {
-
-        karyotypeInputCounts <- self$localDB$getQuery(
+        karyotype_input_counts <- self$localDB$getQuery(
           "SELECT LabID,Analyte,Karyotype
           FROM sourceData
           WHERE ExperimentID  = ({study})",
           tibble::tibble(study = self$Study)
           ) |>
-          dplyr::group_by(Analyte,Karyotype) |>
+          dplyr::group_by(Analyte, Karyotype) |>
           dplyr::summarise(
             n = dplyr::n_distinct(LabID), .groups = "drop"
           ) |>
@@ -226,7 +255,7 @@ FeatureAnalysisManager <- R6::R6Class(
 
         if (self$analysisType == "Continuous") {
           return(
-            karyotypeInputCounts |>
+            karyotype_input_counts |>
               dplyr::bind_rows(
                 tibble::tibble(
                   Karyotype = glue::glue_collapse(karyotypes, sep = ";"),
@@ -239,7 +268,8 @@ FeatureAnalysisManager <- R6::R6Class(
                           data-placement="auto right"
                           title=""
                           class="fas fa-info-circle gtooltip info-tooltip"
-                          data-original-title="Test for differences in {self$analysisVariable} trajectories between Trisomy 21 & Controls">
+                          data-original-title="Test for differences in {self$analysisVariable}
+                          trajectories between Trisomy 21 & Controls">
                         </span>
                       </div>'
                   ),
@@ -248,10 +278,9 @@ FeatureAnalysisManager <- R6::R6Class(
               ) |>
               dplyr::arrange(sort)
           )
-        }
-        else {
+        } else {
           return(
-            karyotypeInputCounts
+            karyotype_input_counts
           )
         }
       }
@@ -315,9 +344,9 @@ FeatureAnalysisManager <- R6::R6Class(
 
     #' @description
     #' helper function to disable an input if it matches the name of the namespace
-    #' @param inputName name of input widget
-    getDisabledInputClass = function(inputName) {
-      if (self$analysisVariable == inputName) {
+    #' @param input_name name of input widget
+    getDisabledInputClass = function(input_name) {
+      if (self$analysisVariable == input_name) {
         return(
           "shinyjs-disabled"
         )
@@ -326,9 +355,9 @@ FeatureAnalysisManager <- R6::R6Class(
 
     #' @description
     #' helper function to hide an input if it matches the name of the namespace
-    #' @param inputName name of input widget
-    getHiddenInputClass = function(inputName) {
-      if (self$analysisVariable == inputName) {
+    #' @param input_name name of input widget
+    getHiddenInputClass = function(input_name) {
+      if (self$analysisVariable == input_name) {
         return(
           "shinyjs-hide"
         )
@@ -337,11 +366,11 @@ FeatureAnalysisManager <- R6::R6Class(
 
     #' @description
     #' helper function to add a diabled or hidden class to an input if it matches the name of the namespace
-    #' @param inputName name of input widget
+    #' @param input_name name of input widget
     #' @param class string - one of `disabled` or `hide`
-    addInputSpecialClass = function(inputName, class = c("disabled", "hide")) {
+    addInputSpecialClass = function(input_name, class = c("disabled", "hide")) {
       class <- match.arg(class)
-      if (self$analysisVariable == inputName) {
+      if (self$analysisVariable == input_name) {
         return(
           glue::glue("shinyjs-{class}")
         )
@@ -421,17 +450,20 @@ FeatureAnalysisManager <- R6::R6Class(
             covariates = self$Covariates
           ) |>
           dplyr::mutate(
-            formattedPValue = unlist(purrr::pmap(.l = list(p.value,p.value.adjustment.method), CUSOMShinyHelpers::formatPValue)),
+            formattedPValue = unlist(
+              purrr::pmap(
+                .l = list(p.value, p.value.adjustment.method),
+                CUSOMShinyHelpers::formatPValue
+              )
+            ),
             text = glue::glue("Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}")
           ) |>
           dplyr::ungroup()
 
-      }
-
-      else {
+      } else {
 
         dataframe <- self$BaseData |>
-          dplyr::select(LabID, Analyte, log2MeasuredValue, self$analysisVariable, self$Covariates, Karyotype ) |>
+          dplyr::select(LabID, Analyte, log2MeasuredValue, self$analysisVariable, self$Covariates, Karyotype) |>
           dplyr::mutate(Karyotype = forcats::fct_relevel(Karyotype, "Control")) |>
           CUSOMShinyHelpers::getLinearModelWithInteraction(
             id = LabID,
@@ -443,27 +475,38 @@ FeatureAnalysisManager <- R6::R6Class(
             adjustmentMethod = self$AdjustmentMethod
           ) |>
           dplyr::mutate(
-            formattedPValue = unlist(purrr::pmap(.l = list(p.value,p.value.adjustment.method), CUSOMShinyHelpers::formatPValue)),
+            formattedPValue = unlist(
+              purrr::pmap(
+                .l = list(p.value, p.value.adjustment.method),
+                CUSOMShinyHelpers::formatPValue
+              )
+            ),
             text = glue::glue("Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}")
           ) |>
           dplyr::ungroup()
       }
 
       if (nrow(dataframe) > 0) {
-
         self$VolcanoSummaryData <- dataframe |>
           dplyr::mutate(
-            log2FoldChange= log2(FoldChange),
+            log2FoldChange = log2(FoldChange),
             `-log10pvalue` = -log10(p.value),
             `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
-            formattedPValue = unlist(purrr::pmap(.l = list(p.value,p.value.adjustment.method), CUSOMShinyHelpers::formatPValue)),
+            formattedPValue = unlist(
+              purrr::pmap(
+                .l = list(p.value, p.value.adjustment.method),
+                CUSOMShinyHelpers::formatPValue
+              )
+            ),
             text = glue::glue("Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}")
           )
 
         self$VolcanoPlotTitle <- glue::glue("Effect of {self$analysisVariableLabel} on all {self$analytesLabel}")
         self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$log2FoldChange))
         self$VolcanoSummaryDataXAxisLabel <- "log<sub>2</sub>(Fold Change)"
-        self$VolcanoSummaryDataYAxisLabel <- glue::glue("-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})")
+        self$VolcanoSummaryDataYAxisLabel <- glue::glue(
+          "-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})"
+        )
 
       }
     },
@@ -473,15 +516,19 @@ FeatureAnalysisManager <- R6::R6Class(
     #' @param .data tibble of volcano summary data to format
     getFormattedVolcanoSummaryData =  function(.data) {
 
-      adjustedInd <- self$AdjustmentMethod != "none"
-      pValueLabel <- ifelse(adjustedInd, "q-value", "p-value")
-      log10pValueLabel <- ifelse(adjustedInd, "-log<sub>10</sub>(q-value)", "-log<sub>10</sub>(p-value)")
+      adjusted <- self$AdjustmentMethod != "none"
+      p_val_label <- ifelse(adjusted, "q-value", "p-value")
+      log_10_p_val_label <- ifelse(adjusted, "-log<sub>10</sub>(q-value)", "-log<sub>10</sub>(p-value)")
 
-      oldNames = c("log2FoldChange", "p.value.adjustment.method", "p.value.original", "FoldChange", "p.value", "-log10pvalue", "lmFormula")
-      newNames = c("log<sub>2</sub>(Fold Change)", "adjustment method", "p-value (original)", "Fold Change", pValueLabel, log10pValueLabel,"model")
+      old_names <- c("log2FoldChange", "p.value.adjustment.method", "p.value.original",
+        "FoldChange", "p.value", "-log10pvalue", "lmFormula"
+      )
+      new_names <- c("log<sub>2</sub>(Fold Change)", "adjustment method", "p-value (original)",
+        "Fold Change", p_val_label, log_10_p_val_label, "model"
+      )
 
       .data |>
-        dplyr::rename_with(~ newNames, all_of(oldNames)) |>
+        dplyr::rename_with(~ new_names, all_of(old_names)) |>
         dplyr::select(-c(pvalueCutoff, formattedPValue, text, ivs))
 
     },
@@ -565,7 +612,9 @@ FeatureAnalysisManager <- R6::R6Class(
           displaylogo = FALSE,
           toImageButtonOptions = list(
             format = "svg",
-            filename = glue::glue("{self$applicationName} - {self$Study} Volcano Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"),
+            filename = glue::glue(
+              "{self$applicationName} - {self$Study} Volcano Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
+            ),
             width = NULL,
             height = NULL
           ),
@@ -621,7 +670,9 @@ FeatureAnalysisManager <- R6::R6Class(
             maxP = max(p.value)
           ) |>
           dplyr::mutate(
-            text = glue::glue("<center>{count} points selected. Min Fold Change: {minFC}, Max Fold Change: {maxFC}</center>")
+            text = glue::glue(
+              "<center>{count} points selected. Min Fold Change: {minFC}, Max Fold Change: {maxFC}</center>"
+            )
           ) |>
           dplyr::select(text) |>
           dplyr::pull()
@@ -633,9 +684,14 @@ FeatureAnalysisManager <- R6::R6Class(
     getAnalyteData = function() {
 
       self$AnalytePlotMethod <- getAnalytePlotMethod(self$analysisType, length(self$Analyte))
-      self$AnalytePlotTitle <- getAnalytePlotTitle(self$analysisVariableLabel, self$AnalytePlotMethod, self$Analyte, self$Karyotype)
+      self$AnalytePlotTitle <- getAnalytePlotTitle(
+        self$analysisVariableLabel,
+        self$AnalytePlotMethod,
+        self$Analyte,
+        self$Karyotype
+      )
       # reset label -- gets formatted with HTML tags and (n=__)
-      self$groupBaselineLabel <- stringr::str_split(gsub("<.*?>", "", self$groupBaselineLabel),' ', simplify = TRUE)[1]
+      self$groupBaselineLabel <- stringr::str_split(gsub("<.*?>", "", self$groupBaselineLabel), " ", simplify = TRUE)[1]
 
       if (length(self$Analyte) == 1) {
 
@@ -655,14 +711,14 @@ FeatureAnalysisManager <- R6::R6Class(
             )
           )
 
-        if(self$AnalytePlotMethod == "boxplot") {
+        if (self$AnalytePlotMethod == "boxplot") {
 
            self$AnalyteData <- self$AnalyteData |>
             dplyr::rowwise() |>
             CUSOMShinyHelpers::addGroupCount(group = !!rlang::sym(self$analysisVariable), addLineBreak = FALSE) |>
             dplyr::select(-n) |>
             dplyr::ungroup() |>
-            dplyr::mutate(text = glue::glue("LabID: {LabID} <br />{log2Measurement}: {log2MeasuredValue}") )
+            dplyr::mutate(text = glue::glue("LabID: {LabID} <br />{log2Measurement}: {log2MeasuredValue}"))
 
           self$groupBaselineLabel <- self$AnalyteData |>
             dplyr::select(!!rlang::sym(self$analysisVariable)) |>
@@ -674,9 +730,7 @@ FeatureAnalysisManager <- R6::R6Class(
 
         }
 
-      }
-
-      else {
+      } else {
 
         self$AnalytePlotMethod <- "heatmap"
 
@@ -781,7 +835,9 @@ FeatureAnalysisManager <- R6::R6Class(
             displaylogo = FALSE,
             toImageButtonOptions = list(
               format = "svg",
-              filename = glue::glue("{self$applicationName} - {self$Analyte} Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"),
+              filename = glue::glue(
+                "{self$applicationName} - {self$Analyte} Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
+              ),
               width = NULL,
               height = NULL
             ),
@@ -874,7 +930,9 @@ FeatureAnalysisManager <- R6::R6Class(
             displaylogo = FALSE,
             toImageButtonOptions = list(
               format = "svg",
-              filename = glue::glue("{self$applicationName} - {self$Analyte} Analyte Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"),
+              filename = glue::glue(
+                "{self$applicationName} - {self$Analyte} Analyte Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
+              ),
               width = NULL,
               height = NULL
             ),
@@ -1014,22 +1072,24 @@ FeatureAnalysisManager <- R6::R6Class(
             dplyr::arrange(Analyte)
         )
 
-      }
+      } else {
 
-      else {
+        adjusted <- self$AdjustmentMethod != "none"
+        p_val_label <- ifelse(adjusted, "q-value", "p-value")
+        log_10_p_val_label <- ifelse(adjusted, "-log<sub>10</sub>(q-value)", "-log<sub>10</sub>(p-value)")
 
-        adjustedInd <- self$AdjustmentMethod != "none"
-        pValueLabel <- ifelse(adjustedInd, "q-value", "p-value")
-        log10pValueLabel <- ifelse(adjustedInd, "-log<sub>10</sub>(q-value)", "-log<sub>10</sub>(p-value)")
-
-        oldNames = c("FoldChange", "p.value.original", "p.value.adjustment.method", "log2FoldChange", "p.value", "-log10pvalue", "lmFormula")
-        newNames = c("Fold Change", "p-value (original)", "adjustment method", "log<sub>2</sub>(Fold Change)", pValueLabel, log10pValueLabel, "Model")
+        old_names <- c("FoldChange", "p.value.original", "p.value.adjustment.method",
+          "log2FoldChange", "p.value", "-log10pvalue", "lmFormula"
+        )
+        new_names <- c("Fold Change", "p-value (original)", "adjustment method",
+          "log<sub>2</sub>(Fold Change)", p_val_label, log_10_p_val_label, "Model"
+        )
 
         return(
           self$AnalyteData |>
             dplyr::select(Analyte) |>
             dplyr::inner_join(self$VolcanoSummaryData, by = "Analyte") |>
-            dplyr::rename_with(~ newNames, all_of(oldNames)) |>
+            dplyr::rename_with(~ new_names, all_of(old_names)) |>
             dplyr::select(-c(formattedPValue, text, ivs))
         )
 
@@ -1062,8 +1122,18 @@ FeatureAnalysisManager <- R6::R6Class(
           Leading.edge.genes = purrr::map_chr(leadingEdge, toString),
           Leading.edge.genes = gsub(" ", "", Leading.edge.genes)
         ) |>
-        dplyr::select("Gene.set" = pathway, "Size" = size, ES, NES, "p.value" = pval, "q.value" = padj, Leading.edge.genes) |>
-        dplyr::mutate(Gene.set = stringr::str_to_title(trimws(gsub("_", " ", gsub("HALLMARK", "", Gene.set)))))
+        dplyr::select(
+          "Gene.set" = pathway,
+          "Size" = size,
+          ES,
+          NES,
+          "p.value" = pval,
+          "q.value" = padj,
+          Leading.edge.genes
+        ) |>
+        dplyr::mutate(
+          Gene.set = stringr::str_to_title(trimws(gsub("_", " ", gsub("HALLMARK", "", Gene.set))))
+        )
 
       self$GSEAData <- list(
         "ranks" = ranks,
@@ -1096,7 +1166,7 @@ FeatureAnalysisManager <- R6::R6Class(
         plotly::plot_ly(
           type = "bar",
           x = ~ `-log10qvalue`,
-          y = ~ reorder(Gene.set,NES),
+          y = ~ reorder(Gene.set, NES),
           hoverinfo = "text",
           hovertext = ~ text,
           customdata = ~ Leading.edge.genes,
@@ -1161,7 +1231,7 @@ FeatureAnalysisManager <- R6::R6Class(
           displaylogo = FALSE,
           toImageButtonOptions = list(
             format = "svg",
-            filename = glue::glue("{self$applicationName} - GSEA Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}") ,
+            filename = glue::glue("{self$applicationName} - GSEA Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"),
             width = NULL,
             height = NULL
           ),
@@ -1178,15 +1248,15 @@ FeatureAnalysisManager <- R6::R6Class(
 
     #' @description
     #' Set selected GSEA pathway data
-    #' @param pathName - string - selected pathway name
-    getGSEAPathwayData = function(pathName) {
+    #' @param path_name - string - selected pathway name
+    getGSEAPathwayData = function(path_name) {
 
-      gseaParam <- 0
+      gsea_param <- 0
 
       stats <- self$GSEAData$ranks
 
-      pathwayNammed <- self$GSEAData$gsea |>
-        dplyr::filter(Gene.set == pathName) |>
+      pathway_nammed <- self$GSEAData$gsea |>
+        dplyr::filter(Gene.set == path_name) |>
         dplyr::select(Leading.edge.genes) |>
         dplyr::mutate(id = dplyr::row_number()) |>
         tidyr::separate_rows(Leading.edge.genes, sep = ",") |>
@@ -1195,31 +1265,31 @@ FeatureAnalysisManager <- R6::R6Class(
 
       rnk <- rank(-stats)
       ord <- order(rnk)
-      statsAdj <- stats[ord]
-      statsAdj <- sign(statsAdj) * (abs(statsAdj)^gseaParam)
-      statsAdj <- statsAdj / max(abs(statsAdj))
+      stats_adj <- stats[ord]
+      stats_adj <- sign(stats_adj) * (abs(stats_adj)^gsea_param)
+      stats_adj <- statsAdj / max(abs(stats_adj))
 
-      pathway <- unname(as.vector(na.omit(match(pathwayNammed, names(statsAdj)))))
+      pathway <- unname(as.vector(na.omit(match(pathway_nammed, names(stats_adj)))))
       pathway <- sort(pathway)
 
-      gseaRes <- fgsea::calcGseaStat(
-        statsAdj,
+      gsea_res <- fgsea::calcGseaStat(
+        stats_adj,
         selectedStats = pathway,
         returnAllExtremes = TRUE
       )
 
-      bottoms <- gseaRes$bottoms
-      tops <- gseaRes$tops
-      n <- length(statsAdj)
+      bottoms <- gsea_res$bottoms
+      tops <- gsea_res$tops
+      n <- length(stats_adj)
       xs <- as.vector(rbind(pathway - 1, pathway))
       ys <- as.vector(rbind(bottoms, tops))
 
-      GSEAScores <- tibble::tibble(
+      gsea_scores <- tibble::tibble(
         x = c(0, xs, n + 1),
         y = c(0, ys, 0)
       ) |>
       dplyr::inner_join(
-        tibble::tibble(x = pathway, Gene = pathwayNammed),
+        tibble::tibble(x = pathway, Gene = pathway_nammed),
         by = "x"
       ) |>
       dplyr::rename("Rank" = x, "ES" = y) |>
@@ -1229,7 +1299,7 @@ FeatureAnalysisManager <- R6::R6Class(
         dplyr::filter(Analyte %in% self$Analyte) |>
         dplyr::select(Analyte, log2FoldChange, `-log10pvalue`) |>
         tidyr::separate(col = "Analyte", into = "Gene", remove = FALSE) |>
-        dplyr::left_join(GSEAScores, by = "Gene") |>
+        dplyr::left_join(gsea_scores, by = "Gene") |>
         dplyr::group_by(Gene) |>
         dplyr::arrange(-log2FoldChange) |>
         dplyr::mutate(r = dplyr::row_number()) |>
@@ -1239,7 +1309,9 @@ FeatureAnalysisManager <- R6::R6Class(
         dplyr::mutate(
           log2FoldChange = format(log2FoldChange, scientific = TRUE),
           `-log10pvalue` = format(`-log10pvalue`, scientific = TRUE),
-          Gene = glue::glue("<a href=\"https://www.genecards.org/Search/Keyword?queryString={Gene}\" target=\"_blank\">{Gene}</a>")
+          Gene = glue::glue(
+            "<a href=\"https://www.genecards.org/Search/Keyword?queryString={Gene}\" target=\"_blank\">{Gene}</a>"
+          )
         ) |>
         dplyr::relocate(Gene) |>
         dplyr::rename("log<sub>2</sub>(Fold Change)" = log2FoldChange, "-log<sub>10</sub>(q-value)" = `-log10pvalue`) |>
@@ -1280,7 +1352,9 @@ FeatureAnalysisManager <- R6::R6Class(
         displaylogo = FALSE,
         toImageButtonOptions = list(
           format = "svg",
-          filename = glue::glue("{self$applicationName} - {self$Study} GSEA Enrichment Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}") ,
+          filename = glue::glue(
+            "{self$applicationName} - {self$Study} GSEA Enrichment Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
+          ),
           width = NULL,
           height = NULL
         ),
@@ -1303,57 +1377,51 @@ FeatureAnalysisManager <- R6::R6Class(
 )
 
 #' small helper function to determine plot method for instance/namespace
-#' @param analysisType - string - analysis type for this instance/namespace
-#' @param analyteCount int - number of selected analytes
+#' @param analysis_type - string - analysis type for this instance/namespace
+#' @param analyte_count int - number of selected analytes
 #' @return string
-getAnalytePlotMethod <- function(analysisType, analyteCount) {
-  if(analyteCount > 1) {
+getAnalytePlotMethod <- function(analysis_type, analyte_count) {
+  if (analyte_count > 1) {
     return("heatmap")
-  }
-  else if(analysisType == "Categorical") {
+  } else if (analysis_type == "Categorical") {
     return("boxplot")
-  }
-  else if(analysisType == "Continuous") {
+  } else if (analysis_type == "Continuous") {
     return("scatterplot")
-  }
-  else {
+  } else {
     return("unknown")
   }
 }
 
 #' small helper function to generate plot title based on criteria
-#' @param analysisVariable - string - name of analysis variable
-#' @param plotMethod - string - one of boxplot, scatterplot, or heatmap
+#' @param analysis_variable - string - name of analysis variable
+#' @param plot_method - string - one of boxplot, scatterplot, or heatmap
 #' @param analyte - string vector - vector of chosen analytes
-#' @param groupVariable - string - grouping variable used in analysis (Karyotype)
+#' @param group_variable - string - grouping variable used in analysis (Karyotype)
 #' @return string
-getAnalytePlotTitle <- function(analysisVariable, plotMethod, analyte, groupVariable) {
+getAnalytePlotTitle <- function(analysis_variable, plot_method, analyte, group_variable) {
 
-  groupVarCount <- length(stringr::str_split(groupVariable, pattern = ";", simplify = TRUE))
+  group_var_count <- length(stringr::str_split(group_variable, pattern = ";", simplify = TRUE))
 
-  if (plotMethod == "boxplot") {
-    return(glue::glue("Effect of {analysisVariable} on {analyte}"))
-  }
-  else if (plotMethod == "scatterplot" && groupVarCount == 1) {
-    return(glue::glue("Effect of {analysisVariable} in {groupVariable} on {analyte}"))
-  }
-  else if (plotMethod == "scatterplot" && groupVarCount > 1) {
-    glue::glue("Comparison of {analysisVariable} trajectories between karyotype for {analyte}")
+  if (plot_method == "boxplot") {
+    return(glue::glue("Effect of {analysis_variable} on {analyte}"))
+  } else if (plot_method == "scatterplot" && group_var_count == 1) {
+    return(glue::glue("Effect of {analysis_variable} in {group_variable} on {analyte}"))
+  } else if (plot_method == "scatterplot" && group_var_count > 1) {
+    glue::glue("Comparison of {analysis_variable} trajectories between karyotype for {analyte}")
   }
 }
 
 #' small helper function to generate x-axis label for analyte plot
 #' @param namespace - string - namespace
-#' @param analysisVariable - string - name of analysis variable
-getAnalytePlotXAxisLabel <- function(namespace, analysisVariable) {
+#' @param analysis_variable - string - name of analysis variable
+getAnalytePlotXAxisLabel <- function(namespace, analysis_variable) {
   if (namespace == "Comorbidity") {
     return(
-      glue::glue("Has Any {analysisVariable}")
+      glue::glue("Has Any {analysis_variable}")
     )
-  }
-  else {
+  } else {
     return(
-      analysisVariable
+      analysis_variable
     )
   }
 }
