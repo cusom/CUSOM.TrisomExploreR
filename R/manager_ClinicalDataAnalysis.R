@@ -89,9 +89,9 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' @param namespace_config tibble - configuration values for this namespace instance of the object
     #' @param remoteDB R6 class to manage remote database queries
     #' @param localDB R6 class to manange local database queries
-    #' @param data additional data passed from app manager to be used for inputs and data filtering 
+    #' @param data additional data passed from app manager to be used for inputs and data filtering
     #' @return A new `ClinicalDataAnalysisManager` object.
-    initialize = function(applicationName, id, namespace_config, remoteDB, localDB, data){
+    initialize = function(applicationName, id, namespace_config, remoteDB, localDB, data) {
 
       self$applicationName <- applicationName
       self$remoteDB <- remoteDB
@@ -119,11 +119,11 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           dplyr::group_by(Karyotype, ConditionClass) |>
           dplyr::summarize(n = dplyr::n_distinct(record_id), .groups = "drop"),
         self$ConditionClassData |>
-          dplyr::group_by(Karyotype,ConditionClass) |>
+          dplyr::group_by(Karyotype, ConditionClass) |>
           dplyr::summarize(n = dplyr::n_distinct(record_id), .groups = "drop"),
           by = c("ConditionClass", "Karyotype")
         ) |>
-        dplyr::mutate( Frequency = `n.x` / `n.y`) |>
+        dplyr::mutate(Frequency = `n.x` / `n.y`) |>
         dplyr::select(Karyotype, ConditionClass, Frequency) |>
         dplyr::mutate(
           Frequency = round(Frequency, 4) * 100,
@@ -182,10 +182,10 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           names() |>
           tibble::as_tibble() |>
           purrr::set_names("pathString") |>
-          dplyr::mutate(pathString = gsub("\\.","/", pathString)) |>
+          dplyr::mutate(pathString = gsub("\\.", "/", pathString)) |>
           dplyr::inner_join(
             # get path and path string mashed up for leafs only...
-            self$biospecimen_tree$Get('pathString', filterFun = data.tree::isLeaf) |>
+            self$biospecimen_tree$Get("pathString", filterFun = data.tree::isLeaf) |>
               tibble::enframe(name = "path", value = "pathString")
             , by = "pathString"
           ) |>
@@ -212,7 +212,6 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           AgeAtInitialConsent >= as.numeric(min(self$Age)),
           AgeAtInitialConsent <= as.numeric(max(self$Age))
         )
-      
     },
 
     #' @description
@@ -318,7 +317,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           displaylogo = FALSE,
           toImageButtonOptions = list(
             format = "svg",
-            filename = glue::glue("{self$applicationName} - Sex Distribution {format(Sys.time(),\"%Y%m%d_%H%M%S\")}") ,
+            filename = glue::glue("{self$applicationName} - Sex Distribution {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"),
             width = NULL,
             height = NULL
           ),
@@ -392,7 +391,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           displaylogo = FALSE,
           toImageButtonOptions = list(
             format = "svg",
-            filename = glue::glue("{self$applicationName} - Age at Enrollment {format(Sys.time(),\"%Y%m%d_%H%M%S\")}") ,
+            filename = glue::glue("{self$applicationName} - Age at Enrollment {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"),
             width = NULL,
             height = NULL
           ),
@@ -455,7 +454,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           ),
           yaxis = list(
             title = "",
-            font = list (
+            font = list(
               family = "Arial",
               size = 16
             ),
@@ -477,7 +476,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           displaylogo = FALSE,
           toImageButtonOptions = list(
             format = "svg",
-            filename = glue::glue("{self$applicationName} - Family Units {format(Sys.time(),\"%Y%m%d_%H%M%S\")}") ,
+            filename = glue::glue("{self$applicationName} - Family Units {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"),
             width = NULL,
             height = NULL
           ),
@@ -508,17 +507,17 @@ ClinicalDataAnalysisManager <- R6::R6Class(
         dplyr::ungroup() |>
         select(record_id, sample_id, vial_barcode_tag, samplePath, aliquot_available, sample_available)
 
-      if (length(shinyTree::get_selected(self$Biospecimens)) > 0 ) {
+      if (length(shinyTree::get_selected(self$Biospecimens)) > 0) {
 
         available_samples <-  shinyTree::get_selected(self$Biospecimens, format = "slices") |>
           unlist() |>
           names() |>
           tibble::as_tibble() |>
           purrr::set_names("pathString") |>
-          dplyr::mutate(pathString = gsub("\\.","/", pathString)) |>
+          dplyr::mutate(pathString = gsub("\\.", "/", pathString)) |>
           dplyr::inner_join(
             # get path and path string mashed up for leafs only...
-            self$biospecimen_tree$Get('pathString', filterFun = data.tree::isLeaf) |>
+            self$biospecimen_tree$Get("pathString", filterFun = data.tree::isLeaf) |>
               tibble::enframe(name = "path", value = "pathString")
             , by = "pathString"
           ) |>
@@ -536,7 +535,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
         dplyr::summarise(
           n_records = n_distinct(record_id),
           n_samples = sum(sample_available),
-          n_vials = sum(aliquot_available), 
+          n_vials = sum(aliquot_available),
           .groups = "drop"
         ) |>
         dplyr::mutate(
@@ -572,7 +571,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
               size = 16
             ),
             tickangle = -45,
-            "categoryorder" = "total descending"         
+            "categoryorder" = "total descending"
           ),
           yaxis = list(
             title = "# of Participants",
@@ -593,7 +592,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           displaylogo = FALSE,
           toImageButtonOptions = list(
             format = "svg",
-            filename = glue::glue("{self$applicationName} - Samples Available {format(Sys.time(),\"%Y%m%d_%H%M%S\")}") ,
+            filename = glue::glue("{self$applicationName} - Samples Available {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"),
             width = NULL,
             height = NULL
           ),
@@ -675,7 +674,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
             )
           ),
           yaxis = list(
-            title = "# of Participants",
+            title = "# of Datasets",
             font = list(
               family = "Arial",
               size = 16
@@ -688,7 +687,9 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           displaylogo = FALSE,
           toImageButtonOptions = list(
             format = "svg",
-            filename = glue::glue("{self$applicationName} - Omics Analyses Available {format(Sys.time(),\"%Y%m%d_%H%M%S\")}") ,
+            filename = glue::glue(
+              "{self$applicationName} - Omics Analyses Available {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
+            ),
             width = NULL,
             height = NULL
           ),
@@ -707,7 +708,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' @return plotly object
     getRaceEthnicityPlot = function(.data) {
 
-      RaceEthnicity <- .data |>
+      race_ethnicity <- .data |>
         dplyr::mutate(
           Race = ifelse(Race == "" | is.na(Race), "Unknown", Race),
           Race = ifelse(Race == ">1 race", "Multiracial", Race),
@@ -718,7 +719,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
       p <- plot_ly() |>
         add_pie(
-          data = count(RaceEthnicity, Race),
+          data = count(race_ethnicity, Race),
           labels = ~Race,
           values = ~n,
           name = "Race",
@@ -734,7 +735,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           )
         ) |>
         add_pie(
-          data = count(RaceEthnicity, Ethnicity),
+          data = count(race_ethnicity, Ethnicity),
           labels = ~Ethnicity,
           values = ~n,
           name = "Ethnicity",
@@ -813,7 +814,9 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           displaylogo = FALSE,
           toImageButtonOptions = list(
             format = "svg",
-            filename = glue::glue("{self$applicationName} - Race and Ethnicity {format(Sys.time(),\"%Y%m%d_%H%M%S\")}") ,
+            filename = glue::glue(
+              "{self$applicationName} - Race and Ethnicity {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
+            ),
             width = NULL,
             height = NULL
           ),
@@ -832,7 +835,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' @return plotly object
     getParticipantStatesPlot = function(.data) {
 
-      StatesGeo <- tigris::geo_join(
+      states_geo <- tigris::geo_join(
         states_shp,
         .data |>
           dplyr::select(State, record_id) |>
@@ -842,15 +845,15 @@ ClinicalDataAnalysisManager <- R6::R6Class(
       ) |>
         dplyr::filter(!is.na(total))
 
-      pal <- leaflet::colorNumeric("Blues", domain = StatesGeo$total)
+      pal <- leaflet::colorNumeric("Blues", domain = states_geo$total)
 
       popup_sb <- ifelse(
-        StatesGeo$total > 5,
-        glue::glue("{StatesGeo$NAME} Participants: {as.character(StatesGeo$total)}"),
-        glue::glue("{StatesGeo$NAME} Participants: Less than 5")
+        states_geo$total > 5,
+        glue::glue("{states_geo$NAME} Participants: {as.character(states_geo$total)}"),
+        glue::glue("{states_geo$NAME} Participants: Less than 5")
       )
 
-      tag.map.title <- tags$style(HTML("
+      tag_map_title <- tags$style(HTML("
           .leaflet-control.map-title {
             transform: translate(-50%,20%);
             position: fixed !important;
@@ -865,15 +868,15 @@ ClinicalDataAnalysisManager <- R6::R6Class(
         "))
 
       title <- tags$div(
-        tag.map.title, HTML("State of Residence")
+        tag_map_title, HTML("State of Residence")
       )
 
       leaflet::leaflet() |>
         leaflet::addProviderTiles("CartoDB.Positron") |>
         leaflet::setView(-98.483330, 38.712046, zoom = 4) |>
         leaflet::addPolygons(
-          data = StatesGeo,
-          fillColor = ~ pal(StatesGeo$total),
+          data = states_geo,
+          fillColor = ~ pal(states_geo$total),
           fillOpacity = 0.9,
           weight = 0.2,
           smoothFactor = 0.2,
@@ -892,7 +895,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
         ) |>
         leaflet::addLegend(
           pal = pal,
-          values = StatesGeo$total,
+          values = states_geo$total,
           position = "bottomright",
           title = "Participants"
         ) |>
@@ -962,9 +965,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           tidyr::pivot_wider(names_from = Karyotype, values_from = frequency) |>
           dplyr::select(ConditionClass, `Control %`, `Trisomy 21 %`)
 
-      }
-
-      else {
+      } else {
 
         p <- self$ConditionClassData |>
           dplyr::filter(HasCondition == "True") |>
@@ -1095,9 +1096,8 @@ ClinicalDataAnalysisManager <- R6::R6Class(
             dplyr::group_by(Karyotype) |>
             dplyr::summarize(n = dplyr::n_distinct(record_id), .groups = "drop")
 
-        }
-        # only top level items chosen
-        else {
+        } else {
+          # only top level items chosen
 
           p <- self$ConditionClassData |>
             dplyr::filter(HasCondition == "True") |>
@@ -1133,11 +1133,9 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           dplyr::select(Condition, Karyotype, frequency) |>
           tidyr::pivot_wider(names_from = Karyotype, values_from = frequency)
 
-      }
+      } else {
 
       ###nothing was chosen at top level
-      else {
-
         p <- NULL
 
       }
@@ -1145,7 +1143,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
       if (!is.null(p)) {
 
         ### Some conditions have 0 participants, fill in that value for the pivot below
-        if(nrow(p[p$Karyotype == "Control", ]) == 0) {
+        if (nrow(p[p$Karyotype == "Control", ]) == 0) {
           p <- dplyr::bind_rows(p, tibble::tibble(Karyotype = "Control", n = 0))
         }
 
@@ -1171,8 +1169,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           dplyr::select(Condition, Karyotype, frequency) |>
           tidyr::pivot_wider(names_from = Karyotype, values_from = frequency)
 
-      }
-      else {
+      } else {
         self$conditionSummary <- NULL
       }
     },
@@ -1181,7 +1178,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' set conditions class sex counts tibble
     #' @return none
     updateConditionClassSexCounts = function() {
-      if(!is.null(self$conditionClasses)) {
+      if (!is.null(self$conditionClasses)) {
 
         self$ConditionClassSexCounts <- self$ConditionClassData |>
           dplyr::filter(HasCondition == "True") |>
@@ -1197,8 +1194,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           dplyr::rename("Condition" = ConditionClass) |>
           tidyr::pivot_longer(!c(Condition, Karyotype), names_to = c("Sex"), values_to = "Percent") |>
           dplyr::arrange(Condition)
-      }
-      else {
+      } else {
         self$ConditionClassSexCounts <- NULL
       }
     },
@@ -1207,7 +1203,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' set conditions sex counts tibble
     #' @return none
     updateConditionSexCounts = function() {
-      if(!is.null(self$conditionClasses) & !is.null(self$conditions)) {
+      if (!is.null(self$conditionClasses) & !is.null(self$conditions)) {
 
         cartesian <- tidyr::crossing(
           "Sex" = c("Male", "Female"),
@@ -1236,8 +1232,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
           tidyr::pivot_longer(!c(Condition, Karyotype), names_to = "Sex", values_to = "Percent") |>
           dplyr::arrange(Condition)
 
-      }
-      else {
+      } else {
         self$ConditionSexCounts <- NULL
       }
 
@@ -1365,7 +1360,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
             range = c(0, 1)
           ),
           yaxis = list(
-            showgrid = F,
+            showgrid = FALSE,
             font = list(
               family = "Arial"
             ),
@@ -1429,7 +1424,9 @@ ClinicalDataAnalysisManager <- R6::R6Class(
             displaylogo = FALSE,
             toImageButtonOptions = list(
               format = "svg",
-              filename = glue::glue("{self$applicationName} - Condition Classes by Sex and Karyotype {format(Sys.time(),\"%Y%m%d_%H%M%S\")}") ,
+              filename = glue::glue(
+                "{self$applicationName} - Condition Classes by Sex and Karyotype {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
+              ),
               width = NULL,
               height = NULL
             ),
@@ -1458,7 +1455,9 @@ ClinicalDataAnalysisManager <- R6::R6Class(
             displaylogo = FALSE,
             toImageButtonOptions = list(
               format = "svg",
-              filename = glue::glue("{self$applicationName} - Specific Conditions by Sex and Karyotype {format(Sys.time(),\"%Y%m%d_%H%M%S\")}") ,
+              filename = glue::glue(
+                "{self$applicationName} - Specific Conditions by Sex and Karyotype {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
+              ),
               width = NULL,
               height = NULL
             ),
@@ -1477,7 +1476,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' @return none
     update_upset_plot_data = function() {
 
-      conditionData <- self$localDB$getQuery(
+      condition_data <- self$localDB$getQuery(
         "SELECT * FROM DiagnosedConditions"
         ) |>
         tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
@@ -1497,24 +1496,21 @@ ClinicalDataAnalysisManager <- R6::R6Class(
         )
 
       if (self$selectedAnnotationLevel == "Classes of Conditions") {
-        conditionData <- conditionData |>
+        condition_data <- condition_data |>
           dplyr::filter(ConditionClass %in% self$SelectedConditions) |>
           dplyr::select(-Condition) |>
           dplyr::rename(Condition = "ConditionClass")
-      }
-      else {
-        conditionData <- conditionData |>
+      } else {
+        condition_data <- condition_data |>
           dplyr::filter(Condition %in% self$SelectedConditions)
       }
 
-      self$upsetPlotData <- conditionData |>
+      self$upsetPlotData <- condition_data |>
         dplyr::select(record_id, Condition) |>
         dplyr::distinct() |>
         dplyr::mutate(ConditionMember = 1) |>
         tidyr::pivot_wider(names_from = Condition, values_from = ConditionMember, values_fill = 0) |>
         as.data.frame()
-
-
 
     },
 

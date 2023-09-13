@@ -59,62 +59,81 @@ ClinicalDataAppManager <- R6::R6Class(
     #' @param remoteDB R6 class to manage remote database queries
     #' @param localDB R6 class to manange local database queries
     #' @return A new `ClinicalDataAppManager` object.
-    initialize = function(ApplicationId, remoteDB, localDB){
+    initialize = function(ApplicationId, remoteDB, localDB) {
 
       self$app_config$ApplicationId <- ApplicationId
 
-      ApplicationNamespaceConfig <- remoteDB$getQuery(
+      application_namespace_config <- remoteDB$getQuery(
         "SELECT * FROM [app].[ShinyAppConfig]
-           WHERE cast([ApplicationId] as nvarchar(256)) = CAST(? As nvarchar(256))"
-        ,tibble::tibble('ApplicationId' = ApplicationId)
+           WHERE cast([ApplicationId] as nvarchar(256)) = CAST(? As nvarchar(256))",
+        tibble::tibble("ApplicationId" = ApplicationId)
       )
 
       self$app_config$Namespaces <- NULL
-      self$app_config$applicationTitle <- ApplicationNamespaceConfig$applicationName[1]
-      self$app_config$applicationLabel <-  ApplicationNamespaceConfig$applicationLabel[1]
-      self$app_config$applicationURL <- ifelse(ApplicationNamespaceConfig$Environment[1] == "Production",'https://www.trisome.org/explorer','https://www.trisome.org/explorer-internal')
+      self$app_config$applicationTitle <- application_namespace_config$applicationName[1]
+      self$app_config$applicationLabel <-  application_namespace_config$applicationLabel[1]
+      self$app_config$applicationURL <- ifelse(
+        application_namespace_config$Environment[1] == "Production",
+        "https://www.trisome.org/explorer",
+        "https://www.trisome.org/explorer-internal"
+      )
 
       self$app_config$applicationLinks <- remoteDB$getQuery(
-        "SELECT [LinkedApplicationLabel] [label], [LinkedApplicationImageURL][imageURL],[LinkedApplicationURL] [link], [IsCurrentApplication]
+        "SELECT [LinkedApplicationLabel] [label], [LinkedApplicationImageURL][imageURL],
+          [LinkedApplicationURL] [link], [IsCurrentApplication]
           FROM [app].[vw_ShinyApplicationApplicationLinks]
           WHERE cast([ApplicationId] as nvarchar(256)) = CAST(? As nvarchar(256))
-          ORDER BY LinkDisplayOrder"
-        , tibble::tibble('ApplicationId' = ApplicationId)
+          ORDER BY LinkDisplayOrder",
+        tibble::tibble("ApplicationId" = ApplicationId)
       )
 
       self$app_config$tutorials <- remoteDB$getQuery(
-        "[shiny].[GetApplicationTutorials] ?"
-        , tibble::tibble('ApplicationId' = ApplicationId)
+        "[shiny].[GetApplicationTutorials] ?",
+        tibble::tibble("ApplicationId" = ApplicationId)
       )
 
       self$module_config <- NULL
 
       self$analysis_config <- NULL
 
-      #self$plotlyCustomIcons = readRDS('config/plotlyCustomIcons.rds')
-
-      self$input_config$statTests <- c("Linear Model","Wilcoxon test")
+      self$input_config$statTests <- c("Linear Model", "Wilcoxon test")
 
       self$input_config$statTestTibble <- tibble::tibble(
-        "Text" = c("Linear Model","Wilcoxon test"),
-        "URL" = c("https://en.wikipedia.org/wiki/Linear_regression","https://en.wikipedia.org/wiki/Wilcoxon_signed-rank_test"),
-        "TooltipText" = c("Linear regression is a linear approach for modelling the relationship between a numerical response and one or more explanatory variables.<br /> <br />Click this icon to learn more..."
-                          ,"The Wilcoxon Two-Sample signed-rank test (aka Mann-Whitney U test) is a non-parametric statistical hypothesis test. <br /> <br />Click this icon to learn more...")
+        "Text" = c("Linear Model", "Wilcoxon test"),
+        "URL" = c("https://en.wikipedia.org/wiki/Linear_regression",
+          "https://en.wikipedia.org/wiki/Wilcoxon_signed-rank_test"
+        ),
+        "TooltipText" = c("Linear regression is a linear approach for modelling the 
+        relationship between a numerical response and one or more explanatory variables.
+        <br /> <br />Click this icon to learn more...",
+        "The Wilcoxon Two-Sample signed-rank test (aka Mann-Whitney U test) is a 
+        non-parametric statistical hypothesis test. <br /> <br />Click this icon to learn more..."
+        )
       )
 
-      self$input_config$statTestschoiceNames <- purrr::pmap(self$input_config$statTestTibble,CUSOMShinyHelpers::createTooltip)
+      self$input_config$statTestschoiceNames <- purrr::pmap(
+        self$input_config$statTestTibble,
+        CUSOMShinyHelpers::createTooltip
+      )
 
       self$input_config$adjustmentMethodsTibble <- tibble::tibble(
-          "Text" = c("Benjamini-Hochberg (FDR)","none"),
-          "URL" = c("https://en.wikipedia.org/wiki/False_discovery_rate#Benjamini%E2%80%93Hochberg_procedure",""),
-          "TooltipText" = c("Multiple testing correction refers to making statistical tests more stringent in order to counteract the problem of multiple testing.<br /> <br />The false discovery rate (FDR) is a method of conceptualizing the rate of type I errors in null hypothesis testing when conducting multiple comparisons. <br /> <br />Click here to learn more..."
-                            ,""),
-          "ShowTooltip" = c(TRUE,FALSE)
+          "Text" = c("Benjamini-Hochberg (FDR)", "none"),
+          "URL" = c("https://en.wikipedia.org/wiki/False_discovery_rate#Benjamini%E2%80%93Hochberg_procedure",
+            ""),
+          "TooltipText" = c("Multiple testing correction refers to making statistical tests 
+          more stringent in order to counteract the problem of multiple testing.<br /> <br />
+          The false discovery rate (FDR) is a method of conceptualizing the rate of type I 
+          errors in null hypothesis testing when conducting multiple comparisons. <br /> <br />
+          Click here to learn more..." , ""),
+          "ShowTooltip" = c(TRUE, FALSE)
         )
 
-      self$input_config$adjustmentMethods = c("Benjamini-Hochberg (FDR)","none")
+      self$input_config$adjustmentMethods <- c("Benjamini-Hochberg (FDR)", "none")
 
-      self$input_config$adjustmentMethodsNames <- purrr::pmap(self$input_config$adjustmentMethodsTibble,CUSOMShinyHelpers::createTooltip)
+      self$input_config$adjustmentMethodsNames <- purrr::pmap(
+        self$input_config$adjustmentMethodsTibble,
+        CUSOMShinyHelpers::createTooltip
+      )
 
       self$input_config$platforms <- remoteDB$getQuery(
         "[shiny].[GetApplicationPlatforms] ?",
@@ -140,20 +159,22 @@ ClinicalDataAppManager <- R6::R6Class(
         ) |>
        dplyr::rename("record_id" = GUI, "LabID" = `Lab ID`)
 
-      choices <- self$input_config$PlatformExperiments |>
-        dplyr::filter(!is.na(TotalSamples), !is.na(ExperimentStudyName)) |>
-        dplyr::select(PlatformGroup, PlatformDisplayName, ExperimentID, ExperimentStudyName) |>
-        dplyr::arrange(PlatformGroup)
+      self$input_config$AnalysisAvailable <- self$input_config$PlatformExperiments |>
+        dplyr::filter(!is.na(PlatformGroup), !is.na(TotalSamples), !is.na(ExperimentStudyName)) |>
+        dplyr::mutate(label = glue::glue("{ExperimentStudyName} - {PlatformDisplayName}")) |>
+        dplyr::arrange(PlatformGroup) |>
+        dplyr::group_by(PlatformGroup) |>
+        dplyr::group_map(
+          ~ purrr::set_names(.x$ExperimentID, .x$label)
+        ) |>
+        purrr::set_names(
+          self$input_config$PlatformExperiments |>
+            dplyr::filter(!is.na(PlatformGroup), !is.na(TotalSamples), !is.na(ExperimentStudyName)) |>
+            dplyr::distinct(PlatformGroup) |>
+            dplyr::arrange(PlatformGroup) |>
+            dplyr::pull()
+        )
 
-      self$input_config$AnalysisAvailable <- split(
-        setNames(
-          choices$ExperimentID, glue::glue("{choices$ExperimentStudyName} - {choices$PlatformDisplayName}")
-        ),
-        choices$PlatformGroup
-      )
-
-      rm(choices)
-      
       self$input_config$probandRelationships <- localDB$getQuery(
         "SELECT distinct ProbandRelationship
           FROM AllParticipants"
@@ -209,7 +230,7 @@ ClinicalDataAppManager <- R6::R6Class(
         dplyr::select(record_id, ConditionClass, Condition) |>
         dplyr::group_by(ConditionClass, Condition) |>
         dplyr::summarize(n = dplyr::n_distinct(record_id), .groups = "drop")  |>
-        dplyr::filter(n >= 5) |>      
+        dplyr::filter(n >= 5) |>
         tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE)
 
       self$input_config$ConditionsChoices <- split(
