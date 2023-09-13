@@ -51,16 +51,11 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shiny::tags$div(
           id = ns("Studies"),
-          CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
-            inputId = ns("Study"),
-            label = "",
-            fieldSetData = input_config$studiesTibble,
-            selected = character(0)
-          ) |>
-          bsplus::bs_embed_tooltip(
-            title = "Select a study below",
-            placement = "top",
-            html = TRUE
+          shinycustomloader::withLoader(
+            shiny::uiOutput(ns("Study")),
+            type = "html",
+            loader = "loader6",
+            proxy.height = "20px"
           )
         ),
         shiny::tags$br(),
@@ -87,7 +82,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
           proxy.height = "20px"
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        conditions_feature_analysis_inputs_ui(ns("conditions")),
+        TrisomExploreR::conditions_feature_analysis_inputs_ui(ns("conditions")),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("Sex")),
           type = "html",
@@ -182,6 +177,26 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
       session = session,
       parent_input = input
     )
+
+    output$Study <- shiny::renderUI({
+
+      choices <- r6$getStudies()
+
+      selected <- ifelse(nrow(choices) == 1, choices, character(0))
+
+      CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
+        inputId = ns("Study"),
+        label = "",
+        fieldSetData = choices,
+        selected = selected
+      ) |>
+        bsplus::bs_embed_tooltip(
+          title = "Select a study below",
+          placement = "top",
+          html = TRUE
+        )
+
+    })
 
     CellTypeArgs <- shiny::reactive({
       shiny::validate(
