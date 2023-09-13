@@ -129,6 +129,8 @@ Create a new instance of a ClinicalDataAnalysisManager object
 \item{\code{remoteDB}}{R6 class to manage remote database queries}
 
 \item{\code{localDB}}{R6 class to manange local database queries}
+
+\item{\code{data}}{additional data passed from app manager to be used for inputs and data filtering}
 }
 \if{html}{\out{</div>}}
 }

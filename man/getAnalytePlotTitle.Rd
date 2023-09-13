@@ -4,16 +4,16 @@
 \alias{getAnalytePlotTitle}
 \title{small helper function to generate plot title based on criteria}
 \usage{
-getAnalytePlotTitle(analysisVariable, plotMethod, analyte, groupVariable)
+getAnalytePlotTitle(analysis_variable, plot_method, analyte, group_variable)
 }
 \arguments{
-\item{analysisVariable}{- string - name of analysis variable}
+\item{analysis_variable}{- string - name of analysis variable}
 
-\item{plotMethod}{- string - one of boxplot, scatterplot, or heatmap}
+\item{plot_method}{- string - one of boxplot, scatterplot, or heatmap}
 
 \item{analyte}{- string vector - vector of chosen analytes}
 
-\item{groupVariable}{- string - grouping variable used in analysis (Karyotype)}
+\item{group_variable}{- string - grouping variable used in analysis (Karyotype)}
 }
 \value{
 string

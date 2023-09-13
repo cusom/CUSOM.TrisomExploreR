@@ -23,6 +23,8 @@ R6 Class to  manage Feature Analysis - Karyotype, Sex, Age, BMI, etc.
 
 \item{\code{analysisType}}{- string - type of analysis - continuous or categorical}
 
+\item{\code{experimentIDs}}{- string vector - vector of experiments for this instance}
+
 \item{\code{analytesLabel}}{- string - label to be used for all analytes (Metabolites, Proteins, etc. )}
 
 \item{\code{groupBaselineLabel}}{- string}
@@ -69,9 +71,11 @@ R6 Class to  manage Feature Analysis - Karyotype, Sex, Age, BMI, etc.
 
 \item{\code{VolcanoPlotTitle}}{- string - title to show above volcano plot}
 
-\item{\code{volcanoTopAnnotationLabel}}{- string - label to be shown above top-level volcano plot (Up in X, Increasing with X, etc. )}
+\item{\code{volcanoTopAnnotationLabel}}{- string - label to be shown above top-level
+volcano plot (Up in X, Increasing with X, etc. )}
 
-\item{\code{volcanoPlotExpectedTraceCount}}{- numeric - number of base traces present in the active volcano plot (usually between 1 - 3)}
+\item{\code{volcanoPlotExpectedTraceCount}}{- numeric - number of base traces present
+in the active volcano plot (usually between 1 - 3)}
 
 \item{\code{VolcanoSummaryDataFoldChangeFilter}}{- deprecated?}
 
@@ -110,6 +114,7 @@ R6 Class to  manage Feature Analysis - Karyotype, Sex, Age, BMI, etc.
 \itemize{
 \item \href{#method-FeatureAnalysisManager-new}{\code{FeatureAnalysisManager$new()}}
 \item \href{#method-FeatureAnalysisManager-getGetDataButtonClass}{\code{FeatureAnalysisManager$getGetDataButtonClass()}}
+\item \href{#method-FeatureAnalysisManager-getStudies}{\code{FeatureAnalysisManager$getStudies()}}
 \item \href{#method-FeatureAnalysisManager-getKaryotypeChoices}{\code{FeatureAnalysisManager$getKaryotypeChoices()}}
 \item \href{#method-FeatureAnalysisManager-getConditionTree}{\code{FeatureAnalysisManager$getConditionTree()}}
 \item \href{#method-FeatureAnalysisManager-getSelectedConditionList}{\code{FeatureAnalysisManager$getSelectedConditionList()}}
@@ -177,6 +182,16 @@ enabled / green if namespace is comorb / conditions are chosen, diabled otherwis
 
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-FeatureAnalysisManager-getStudies"></a>}}
+\if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getStudies}{}}}
+\subsection{Method \code{getStudies()}}{
+helper function to get formatted study choices based on experiments configured for this instance / namespace
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getStudies()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getKaryotypeChoices"></a>}}
 \if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getKaryotypeChoices}{}}}
 \subsection{Method \code{getKaryotypeChoices()}}{
@@ -237,13 +252,13 @@ if namespace is Age, remove age, if Sex, remove sex
 \subsection{Method \code{getDisabledInputClass()}}{
 helper function to disable an input if it matches the name of the namespace
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getDisabledInputClass(inputName)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getDisabledInputClass(input_name)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{inputName}}{name of input widget}
+\item{\code{input_name}}{name of input widget}
 }
 \if{html}{\out{</div>}}
 }
@@ -254,13 +269,13 @@ helper function to disable an input if it matches the name of the namespace
 \subsection{Method \code{getHiddenInputClass()}}{
 helper function to hide an input if it matches the name of the namespace
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getHiddenInputClass(inputName)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getHiddenInputClass(input_name)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{inputName}}{name of input widget}
+\item{\code{input_name}}{name of input widget}
 }
 \if{html}{\out{</div>}}
 }
@@ -272,7 +287,7 @@ helper function to hide an input if it matches the name of the namespace
 helper function to add a diabled or hidden class to an input if it matches the name of the namespace
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$addInputSpecialClass(
-  inputName,
+  input_name,
   class = c("disabled", "hide")
 )}\if{html}{\out{</div>}}
 }
@@ -280,7 +295,7 @@ helper function to add a diabled or hidden class to an input if it matches the n
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{inputName}}{name of input widget}
+\item{\code{input_name}}{name of input widget}
 
 \item{\code{class}}{string - one of `disabled` or `hide`}
 }
@@ -447,13 +462,13 @@ Get GSEA plot - top 25
 \subsection{Method \code{getGSEAPathwayData()}}{
 Set selected GSEA pathway data
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getGSEAPathwayData(pathName)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getGSEAPathwayData(path_name)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{pathName}}{- string - selected pathway name}
+\item{\code{path_name}}{- string - selected pathway name}
 }
 \if{html}{\out{</div>}}
 }

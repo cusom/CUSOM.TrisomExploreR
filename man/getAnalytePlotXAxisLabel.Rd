@@ -4,12 +4,12 @@
 \alias{getAnalytePlotXAxisLabel}
 \title{small helper function to generate x-axis label for analyte plot}
 \usage{
-getAnalytePlotXAxisLabel(namespace, analysisVariable)
+getAnalytePlotXAxisLabel(namespace, analysis_variable)
 }
 \arguments{
 \item{namespace}{- string - namespace}
 
-\item{analysisVariable}{- string - name of analysis variable}
+\item{analysis_variable}{- string - name of analysis variable}
 }
 \description{
 small helper function to generate x-axis label for analyte plot

@@ -5,11 +5,15 @@
 \alias{getAnalytePlotMethod}
 \title{small helper function to determin plot method for instance/namespace}
 \usage{
-getAnalytePlotMethod(analysisType, analyteCount)
+getAnalytePlotMethod(analysis_type, analyte_count)
 
-getAnalytePlotMethod(analysisType, analyteCount)
+getAnalytePlotMethod(analysis_type, analyte_count)
 }
 \arguments{
+\item{analysis_type}{- string - analysis type for this instance/namespace}
+
+\item{analyte_count}{int - number of selected analytes}
+
 \item{analysisType}{- string - analysis type for this instance/namespace}
 
 \item{analyteCount}{int - number of selected analytes}

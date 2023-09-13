@@ -8,6 +8,7 @@
 #' @field analysisVariable - string - feature to be analyzed
 #' @field analysisVariableLabel - string - friendly label for analysis variable
 #' @field analysisType - string - type of analysis - continuous or categorical
+#' @field experimentIDs - string vector - vector of experiments for this instance
 #' @field analytesLabel - string - label to be used for all analytes (Metabolites, Proteins, etc. )
 #' @field groupBaselineLabel - string
 #' @field FoldChangeVar - string - name of variable indicating fold change or difference (log2FoldChange)
