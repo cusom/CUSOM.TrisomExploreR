@@ -1,4 +1,4 @@
-#' Create input widgets for TrisomExploreR precalculated feature analysis - DESeq2 
+#' Create input widgets for TrisomExploreR precalculated feature analysis - DESeq2
 #' @param id - string - id for this module namespace
 #' @param input_config - list - list of default values for various input widgets
 #' @importFrom shinydashboard tabBox
@@ -52,8 +52,25 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
               inputId = ns("Study"),
               label = "",
               fieldSetData = input_config$studiesTibble,
-              selected = input_config$studiesTibble[1,]
+              selected = input_config$studiesTibble[1, ]
             )
+          )
+        ),
+        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        shiny::selectizeInput(
+          inputId = ns("CellType"),
+          label = "Cell Type",
+          choices = input_config$CellTypes,
+          selected = NULL,
+          multiple = FALSE,
+          options = list(
+            placeholder = "Choose Cell Type",
+            onInitialize = I('function() { this.setValue(""); }'),
+            closeAfterSelect = TRUE,
+            selectOnTab = TRUE,
+            persist = FALSE,
+            `live-search` = TRUE,
+            dropupAuto = FALSE
           )
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
@@ -147,18 +164,18 @@ precalc_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
     output$Karyotype <- shiny::renderUI({
 
-      karyotypeChoices <- r6$getKaryotypeChoices(input_config$karyotypes)
+      karyotype_choices <- r6$getKaryotypeChoices(input_config$karyotypes)
 
       input <- shinyWidgets::prettyRadioButtons(
         inputId = ns("Karyotype"),
         label = "Karyotype",
-        choiceNames = lapply(karyotypeChoices$choiceNames, shiny::HTML),
-        choiceValues = karyotypeChoices$choiceValues,
+        choiceNames = lapply(karyotype_choices$choiceNames, shiny::HTML),
+        choiceValues = karyotype_choices$choiceValues,
         inline = FALSE,
         width = "90%"
       )
 
-      if (nrow(karyotypeChoices) == 1) {
+      if (nrow(karyotype_choices) == 1) {
         shinyjs::disabled(
           input
         )
@@ -187,8 +204,7 @@ precalc_feature_analysis_inputs_server <- function(id, r6, input_config) {
             inline = TRUE
           )
         )
-      }
-      else {
+      } else {
         shiny::tagList()
       }
 

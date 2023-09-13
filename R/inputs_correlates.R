@@ -214,13 +214,13 @@ correlates_inputs_server <- function(id, r6) {
         text = glue::glue("Getting {input$QueryPlatform} Query Analytes...")
       )
 
-      analyteChoices <- r6$getQueryAnalytes()
+      analyte_choices <- r6$getQueryAnalytes()
 
       shiny::updateSelectizeInput(
         session = session,
         inputId = "QueryAnalyte",
         label = "2) Select Query Analyte",
-        choices = analyteChoices,
+        choices = analyte_choices,
         options = list(
           placeholder = "Choose Query Analyte",
           onInitialize = I('function() { this.setValue(""); }'),
@@ -238,13 +238,13 @@ correlates_inputs_server <- function(id, r6) {
         text = glue::glue("Getting {input$QueryPlatform} Comparison Platforms...")
       )
 
-      comparisonPlatforms <- r6$getComparisonPlatforms()
+      comparison_platforms <- r6$getComparisonPlatforms()
 
       shiny::updateSelectizeInput(
         session = session,
         inputId = "ComparisonPlatform",
         label = "3) Choose Comparison Platform",
-        choices = comparisonPlatforms,
+        choices = comparison_platforms,
         options = list(
           placeholder = "Choose Comparison Platform",
           onInitialize = I('function() { this.setValue(""); }'),
@@ -276,8 +276,7 @@ correlates_inputs_server <- function(id, r6) {
           selected = ""
         )
 
-      }
-      else {
+      } else {
 
         shinyjs::enable(id = "ComparisonPlatform")
 
@@ -310,19 +309,18 @@ correlates_inputs_server <- function(id, r6) {
 
     }, ignoreInit = TRUE)
 
-    shiny::observe({
+    shiny::observeEvent(c(input$QueryPlatform, input$QueryAnalyte, input$ComparisonPlatform), {
 
       if (length(input$QueryPlatform) != 1 |  input$QueryAnalyte == "" | input$ComparisonPlatform == "") {
         shinyjs::disable("getData")
         shinyjs::removeClass(id = "getData", class = "refresh-ready-btn")
         shinyjs::addClass(id = "getData", class = "refresh-btn")
-      }
-      else {
+      } else {
         shinyjs::enable("getData")
         shinyjs::removeClass(id = "getData", class = "refresh-btn")
         shinyjs::addClass(id = "getData", class = "refresh-ready-btn")
       }
-    })
+    }, ignoreInit = TRUE)
 
     shiny::observeEvent(c(input$getData), {
 
