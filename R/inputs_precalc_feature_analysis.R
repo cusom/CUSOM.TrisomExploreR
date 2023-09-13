@@ -45,21 +45,13 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
         id = ns("scrollableOptions"),
         style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        shinyjs::hidden(
-          shiny::tags$div(
-            id = ns("Studies"),
-            shiny::radioButtons(
-              inputId = ns("Study"),
-              label = "",
-              choices = "NA",
-              selected = "NA"
-            )
-            # CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
-            #   inputId = ns("Study"),
-            #   label = "",
-            #   fieldSetData = "NA",#input_config$studiesTibble,
-            #   selected = "NA"#input_config$studiesTibble[1, ]
-            # )
+        shiny::tags$div(
+          id = ns("Studies"),
+          shinycustomloader::withLoader(
+            shiny::uiOutput(ns("Study")),
+            type = "html",
+            loader = "loader6",
+            proxy.height = "20px"
           )
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
@@ -167,6 +159,26 @@ precalc_feature_analysis_inputs_server <- function(id, r6, input_config) {
       session = session,
       parent_input = input
     )
+
+    output$Study <- shiny::renderUI({
+
+      choices <- r6$getStudies()
+
+      selected <- ifelse(nrow(choices) == 1, choices, character(0))
+
+      CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
+        inputId = ns("Study"),
+        label = "",
+        fieldSetData = choices,
+        selected = selected
+      ) |>
+        bsplus::bs_embed_tooltip(
+          title = "Select a study below",
+          placement = "top",
+          html = TRUE
+        )
+
+    })
 
     output$Karyotype <- shiny::renderUI({
 
