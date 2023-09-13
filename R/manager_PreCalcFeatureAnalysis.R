@@ -38,8 +38,8 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
       }
 
       if (self$analysisVariable == "Age") {
-
-        karyotypeInputs <- self$localDB$getQuery(
+        return(
+          self$localDB$getQuery(
           "SELECT * FROM analyteKaryotypeCounts"
           ) |>
           dplyr::ungroup() |>
@@ -72,9 +72,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
             )
           ) |>
           dplyr::arrange(sort)
-
-        return(karyotypeInputs)
-
+        )
       }
 
     },
@@ -104,7 +102,12 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
           log2FoldChange = log2(FoldChange),
           `-log10pvalue` = -log10(p.value),
           `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
-          formattedPValue = unlist(purrr::pmap(.l = list(p.value,p.value.adjustment.method), CUSOMShinyHelpers::formatPValue)),
+          formattedPValue = unlist(
+            purrr::pmap(
+              .l = list(p.value, p.value.adjustment.method),
+              CUSOMShinyHelpers::formatPValue
+            )
+          ),
           text = glue::glue("Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"),
           "lmFormula" = "<a href='https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html' target='_blank'>DESeq2 model</a>",
           ivs = ""
@@ -113,7 +116,9 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
         self$VolcanoPlotTitle <- glue::glue("Effect of {self$analysisVariableLabel} on all {self$analytesLabel}")
         self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$log2FoldChange))
         self$VolcanoSummaryDataXAxisLabel <- "log<sub>2</sub>(Fold Change)"
-        self$VolcanoSummaryDataYAxisLabel <- glue::glue("-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})")
+        self$VolcanoSummaryDataYAxisLabel <- glue::glue(
+          "-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})"
+        )
 
     },
 
@@ -122,8 +127,16 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
     getAnalyteData = function() {
 
       self$AnalytePlotMethod <- getAnalytePlotMethod(self$analysisType, length(self$Analyte))
-      self$AnalytePlotTitle <- getAnalytePlotTitle(self$analysisVariable, self$AnalytePlotMethod, self$Analyte, self$Karyotype)
-      self$groupBaselineLabel <- stringr::str_split(gsub("<.*?>", "", self$groupBaselineLabel),' ', simplify = TRUE)[1]
+      self$AnalytePlotTitle <- getAnalytePlotTitle(
+        self$analysisVariable,
+        self$AnalytePlotMethod,
+        self$Analyte, self$Karyotype
+      )
+      self$groupBaselineLabel <- stringr::str_split(
+        gsub("<.*?>", "", self$groupBaselineLabel),
+        " ",
+        simplify = TRUE
+      )[1]
 
       if (length(self$Analyte) == 1) {
 
@@ -160,7 +173,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
             ) |>
             dplyr::select(-n) |>
             dplyr::ungroup() |>
-            dplyr::mutate(text = glue::glue("LabID: {LabID} <br />{log2Measurement}: {log2MeasuredValue}") )
+            dplyr::mutate(text = glue::glue("LabID: {LabID} <br />{log2Measurement}: {log2MeasuredValue}"))
 
           self$groupBaselineLabel <- self$AnalyteData |>
             dplyr::select(!!rlang::sym(self$analysisVariable)) |>
@@ -170,9 +183,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
 
         }
 
-      }
-
-      else {
+      } else {
 
         self$AnalytePlotMethod <- "heatmap"
 
@@ -211,8 +222,17 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
           Leading.edge.genes = purrr::map_chr(leadingEdge, toString),
           Leading.edge.genes = gsub(" ", "", Leading.edge.genes)
         ) |>
-        dplyr::select("Gene.set" = pathway, "Size" = size, ES, NES, "p.value" = pval, "q.value" = padj, Leading.edge.genes) |>
-        dplyr::mutate(Gene.set = stringr::str_to_title(trimws(gsub("_", " ", gsub("HALLMARK", "", Gene.set)))))
+        dplyr::select(
+          "Gene.set" = pathway,
+          "Size" = size,
+          ES,
+          NES, "p.value" = pval,
+          "q.value" = padj,
+          Leading.edge.genes
+        ) |>
+        dplyr::mutate(
+          Gene.set = stringr::str_to_title(trimws(gsub("_", " ", gsub("HALLMARK", "", Gene.set))))
+        )
 
       self$GSEAData <- list(
         "ranks" = ranks,
