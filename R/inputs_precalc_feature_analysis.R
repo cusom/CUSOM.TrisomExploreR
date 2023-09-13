@@ -48,12 +48,18 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
         shinyjs::hidden(
           shiny::tags$div(
             id = ns("Studies"),
-            CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
+            shiny::radioButtons(
               inputId = ns("Study"),
               label = "",
-              fieldSetData = input_config$studiesTibble,
-              selected = input_config$studiesTibble[1, ]
+              choices = "NA",
+              selected = "NA"
             )
+            # CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
+            #   inputId = ns("Study"),
+            #   label = "",
+            #   fieldSetData = "NA",#input_config$studiesTibble,
+            #   selected = "NA"#input_config$studiesTibble[1, ]
+            # )
           )
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
