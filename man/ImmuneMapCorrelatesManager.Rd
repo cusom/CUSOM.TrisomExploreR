@@ -34,6 +34,7 @@ Subclass of CorrelatesManager
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="CorrelatesManager" data-id="getGSEAPlot"><a href='../../TrisomExploreR/html/CorrelatesManager.html#method-CorrelatesManager-getGSEAPlot'><code>TrisomExploreR::CorrelatesManager$getGSEAPlot()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="CorrelatesManager" data-id="getQueryPlatforms"><a href='../../TrisomExploreR/html/CorrelatesManager.html#method-CorrelatesManager-getQueryPlatforms'><code>TrisomExploreR::CorrelatesManager$getQueryPlatforms()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="CorrelatesManager" data-id="getVolcanoSummaryData"><a href='../../TrisomExploreR/html/CorrelatesManager.html#method-CorrelatesManager-getVolcanoSummaryData'><code>TrisomExploreR::CorrelatesManager$getVolcanoSummaryData()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="CorrelatesManager" data-id="get_analyte_plot_method"><a href='../../TrisomExploreR/html/CorrelatesManager.html#method-CorrelatesManager-get_analyte_plot_method'><code>TrisomExploreR::CorrelatesManager$get_analyte_plot_method()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="CorrelatesManager" data-id="updateAnalyteAttributes"><a href='../../TrisomExploreR/html/CorrelatesManager.html#method-CorrelatesManager-updateAnalyteAttributes'><code>TrisomExploreR::CorrelatesManager$updateAnalyteAttributes()</code></a></span></li>
 </ul>
 </details>

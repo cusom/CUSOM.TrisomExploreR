@@ -47,7 +47,7 @@
 #' @importFrom heatmaply heatmaply
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom circlize colorRamp2
-#'
+#' @importFrom arrow open_dataset
 #' @export
 ConditionCorrelatesManager <- R6::R6Class(
   "ConditionCorrelatesManager",
@@ -114,7 +114,7 @@ ConditionCorrelatesManager <- R6::R6Class(
       hide <- "hide"
       disabled <- "disabled"
       if (!is.null(self$ComparisonPlatform)) {
-        if (grepl('SOMA',self$ComparisonPlatform) | grepl('RNA', self$ComparisonPlatform)) {
+        if (grepl("SOMA", self$ComparisonPlatform) | grepl("RNA", self$ComparisonPlatform)) {
           hide <- "show"
         }
         if (!is.null(self$VolcanoSummaryData)) {
@@ -136,8 +136,8 @@ ConditionCorrelatesManager <- R6::R6Class(
     getQueryAnalytes = function() {
       return(
         self$remoteDB$getQuery(
-          "EXEC [shiny].[GetAnalytesByPlatformExperiment] ?, ?"
-          ,tibble::tibble(
+          "EXEC [shiny].[GetAnalytesByPlatformExperiment] ?, ?",
+          tibble::tibble(
             "Platform" = self$Platform,
             "ExperimentID" = self$Experiment
           )
@@ -152,9 +152,15 @@ ConditionCorrelatesManager <- R6::R6Class(
     #' @return none
     getVolcanoSummaryData = function() {
 
-      self$ParticipantComorbidities <- self$getParticipantComorbiditiesByExperimentAnalyte(self$Experiment,self$QueryAnalyte)
+      self$ParticipantComorbidities <- self$getParticipantComorbiditiesByExperimentAnalyte(
+        self$Experiment,
+        self$QueryAnalyte
+      )
 
-      self$ComorbiditySummary <- self$getComorbidtySummary(self$ParticipantComorbidities, self$MinComorbitityMembership)
+      self$ComorbiditySummary <- self$getComorbidtySummary(
+        self$ParticipantComorbidities,
+        self$MinComorbitityMembership
+      )
 
       self$Comorbidities <- self$ParticipantComorbidities |>
         dplyr::inner_join(self$ComorbiditySummary, by = "Condition") |>
@@ -178,8 +184,16 @@ ConditionCorrelatesManager <- R6::R6Class(
           covariates = self$Covariates
         ) |>
         dplyr::mutate(
-          formattedPValue = unlist(purrr::pmap(.l = list(p.value,p.value.adjustment.method), CUSOMShinyHelpers::formatPValue)),
-          text = glue::glue('Condition: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}<br /><i>Click to see corresponding Sina Plot</i>')
+          formattedPValue = unlist(
+            purrr::pmap(
+              .l = list(p.value, p.value.adjustment.method),
+              CUSOMShinyHelpers::formatPValue
+            )
+          ),
+          text = glue::glue(
+            "Condition: {Analyte}<br />fold change: {round(FoldChange,2)}<br />
+            {formattedPValue}<br /><i>Click to see corresponding Sina Plot</i>"
+          )
         ) |>
         dplyr::ungroup()
 
@@ -195,7 +209,9 @@ ConditionCorrelatesManager <- R6::R6Class(
       self$VolcanoPlotTitle <- glue::glue("Effect of {self$analysisVariableLabel} on all {self$analytesLabel}")
       self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$log2FoldChange))
       self$VolcanoSummaryDataXAxisLabel <- "log<sub>2</sub>(Fold Change)"
-      self$VolcanoSummaryDataYAxisLabel <- glue::glue("-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})")
+      self$VolcanoSummaryDataYAxisLabel <- glue::glue(
+        "-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})"
+      )
 
     },
 
@@ -205,31 +221,38 @@ ConditionCorrelatesManager <- R6::R6Class(
     #' @return tibble
     getFormattedVolcanoSummaryData = function(.data) {
 
-      adjustedInd <- self$AdjustmentMethod != "none"
-      pValueLabel <- ifelse(adjustedInd,"q-value","p-value")
-      log10pValueLabel <- ifelse(adjustedInd,"-log<sub>10</sub>(q-value)","-log<sub>10</sub>(p-value)")
+      adjusted_ind <- self$AdjustmentMethod != "none"
+      p_value_label <- ifelse(adjusted_ind, "q-value", "p-value")
+      log_10_p_value_label <- ifelse(adjusted_ind, "-log<sub>10</sub>(q-value)", "-log<sub>10</sub>(p-value)")
 
-      oldNames = c("Analyte", "No","Yes", "log2FoldChange", "p.value.adjustment.method", "p.value.original", "FoldChange", "p.value", "-log10pvalue", "lmFormula")
-      newNames = c("Condition", "Without History of Condition","With History of Condition", "log<sub>2</sub>(Fold Change)", "adjustment method", "p-value (original)", "Fold Change", pValueLabel, log10pValueLabel,"model")
+      old_names <- c(
+        "Analyte", "No", "Yes", "log2FoldChange", "p.value.adjustment.method",
+      "p.value.original", "FoldChange", "p.value", "-log10pvalue", "lmFormula"
+      )
+      new_names <- c(
+        "Condition", "Without History of Condition", "With History of Condition",
+        "log<sub>2</sub>(Fold Change)", "adjustment method", "p-value (original)",
+        "Fold Change", p_value_label, log_10_p_value_label, "model"
+      )
 
       .data |>
-        dplyr::rename_with(~ newNames, all_of(oldNames)) |>
-        dplyr::select(-c(pvalueCutoff,formattedPValue,text,ivs))
+        dplyr::rename_with(~ new_names, all_of(old_names)) |>
+        dplyr::select(-c(pvalueCutoff, formattedPValue, text, ivs))
 
     },
 
     #' @description
     #' Get Participant Comorbidities for a given experiment and analyte
-    #' @param Experiment - string
-    #' @param QueryAnalyte - string
+    #' @param experiment - string
+    #' @param query_analyte - string
     #' @return tibble
-    getParticipantComorbiditiesByExperimentAnalyte = function(Experiment,QueryAnalyte) {
+    getParticipantComorbiditiesByExperimentAnalyte = function(experiment, query_analyte) {
 
       dataframe <- self$remoteDB$getQuery(
-        "EXEC [shiny].[GetDataByExperimentAnalyte] ?, ?"
-        ,tibble::tibble(
-          "ExperimentID" = Experiment,
-          "Analyte" = QueryAnalyte
+        "EXEC [shiny].[GetDataByExperimentAnalyte] ?, ?",
+        tibble::tibble(
+          "ExperimentID" = experiment,
+          "Analyte" = query_analyte
         )
       ) |>
         dplyr::mutate(
@@ -238,31 +261,32 @@ ConditionCorrelatesManager <- R6::R6Class(
         ) |>
         dplyr::rename(record_id = Record_ID) |>
         dplyr::inner_join(
-          self$localDB$getQuery(
-            "SELECT * FROM ParticipantConditions"
+          arrow::open_dataset("Data/participant_conditions") |>
+            dplyr::collect()|>
+            dplyr::mutate(HasConditionFlag = ifelse(
+              HasCondition == "True", 1,
+              ifelse(HasCondition == "False", 0, NA)
+              )
             ) |>
-            dplyr::mutate(HasConditionFlag = ifelse(HasCondition == 'True', 1, ifelse(HasCondition == 'False', 0, NA))) |>
             dplyr::select(record_id, Condition, HasCondition, HasConditionFlag) |>
             dplyr::group_by(record_id, Condition) |>
-            dplyr::summarise(HasConditionFlag = sum(HasConditionFlag),.groups = 'drop') |>
+            dplyr::summarise(HasConditionFlag = sum(HasConditionFlag), .groups = "drop") |>
             dplyr::mutate(HasConditionFlag = ifelse(HasConditionFlag > 0, "Yes", "No")) |>
             tidyr::drop_na()
           , by = "record_id"
         ) |>
         dplyr::inner_join(
-          self$localDB$getQuery(
-            "SELECT * FROM ParticipantEncounter"
-            ) |>
+          arrow::open_dataset("Data/participant_encounter") |>
+            dplyr::collect()|>
             dplyr::inner_join(
-              self$localDB$getQuery(
-                "SELECT * FROM AllParticipants"
-              ),
+              arrow::open_dataset("Data/participants") |>
+                dplyr::collect(),
               by = "record_id"
             ) |>
             ###### LIMIT TO ONLY T21 #############
             dplyr::filter(Karyotype == "Trisomy 21") |>
             dplyr::select(record_id, LabID, Sex, "Age" = AgeAtTimeOfVisit),
-          by = c("record_id","LabID")
+          by = c("record_id", "LabID")
         )
 
       return(dataframe)
@@ -272,26 +296,29 @@ ConditionCorrelatesManager <- R6::R6Class(
     #' @description
     #' Get Comoborbidity Summary data - appends each comorbidity label with {positive} {negative} counts
     #' @param .data - tibble - tibble of participant comborbidity data
-    #' @param MinComorbitityMembership - numeric - minimum threshold of diagnosed to include in analysis
+    #' @param min_comorbitity_membership - numeric - minimum threshold of diagnosed to include in analysis
     #' @return tibble
-    getComorbidtySummary = function(.data, MinComorbitityMembership) {
+    getComorbidtySummary = function(.data, min_comorbitity_membership) {
 
       dataframe <- .data |>
         dplyr::group_by(Condition, HasConditionFlag) |>
         dplyr::summarise(n = dplyr::n_distinct(record_id), .groups = "drop") |>
         tidyr::pivot_wider(id_cols = Condition, names_from = HasConditionFlag, values_from = n, values_fill = 0) |>
         dplyr::inner_join(
-          self$localDB$getQuery(
-            "SELECT * FROM ParticipantConditions"
-            ) |>
-            dplyr::select(Condition,ConditionCensorshipAgeGroup) |>
+          arrow::open_dataset("Data/participant_conditions") |>
+            dplyr::collect()|>
+            dplyr::select(Condition, ConditionCensorshipAgeGroup) |>
             dplyr::distinct() |>
-            dplyr::mutate(ConditionCensorshipAgeGroup = ifelse(is.na(ConditionCensorshipAgeGroup),"Age > 0",ConditionCensorshipAgeGroup)),
+            dplyr::mutate(ConditionCensorshipAgeGroup = ifelse(
+              is.na(ConditionCensorshipAgeGroup),
+              "Age > 0",
+              ConditionCensorshipAgeGroup)
+            ),
           by = "Condition"
         ) |>
         dplyr::mutate(
           #total = `No` + `Yes`,
-          min = ifelse(`No` <= `Yes`,`No`,`Yes`),
+          min = ifelse(`No` <= `Yes`, `No`, `Yes`),
           incompleteFlag = dplyr::case_when(`No` == 0 ~ 1, `Yes` == 0 ~ 1, TRUE ~ 0),
           ### REMOVING AGE CENSOR FOR NOW...
           label = glue::glue("{Condition} ({`Yes`}:{`No`})")
@@ -299,7 +326,7 @@ ConditionCorrelatesManager <- R6::R6Class(
         ) |>
         dplyr::filter(
           incompleteFlag == 0,
-          min > MinComorbitityMembership
+          min > min_comorbitity_membership
         ) |>
         dplyr::select(-c(ConditionCensorshipAgeGroup))
 
@@ -351,7 +378,7 @@ ConditionCorrelatesManager <- R6::R6Class(
         plotly::layout(
           showlegend = TRUE,
           legend = list(
-            orientation = 'h',
+            orientation = "h",
             itemclick = "toggleothers",
             itemsizing = "constant",
             valign = "middle",
@@ -423,7 +450,7 @@ ConditionCorrelatesManager <- R6::R6Class(
             fixedrange = FALSE
           ),
           annotations = c(a$annotations, a$arrow),
-          margin = list( t = 75)
+          margin = list(t = 75)
         ) |>
         plotly::config(
           displayModeBar = TRUE,
@@ -565,12 +592,19 @@ ConditionCorrelatesManager <- R6::R6Class(
     #' @return tibble
     getFormattedAnalyteSummaryData = function() {
 
-      adjustedInd <- self$AdjustmentMethod != "none"
-      pValueLabel <- ifelse(adjustedInd,"q-value","p-value")
-      log10pValueLabel <- ifelse(adjustedInd,"-log<sub>10</sub>(q-value)","-log<sub>10</sub>(p-value)")
+      adjusted_ind <- self$AdjustmentMethod != "none"
+      p_value_label <- ifelse(adjusted_ind, "q-value", "p-value")
+      log_10_p_value_label <- ifelse(adjusted_ind, "-log<sub>10</sub>(q-value)", "-log<sub>10</sub>(p-value)")
 
-      oldNames = c("Analyte", "No","Yes", "FoldChange","p.value.original", "p.value.adjustment.method","log2FoldChange", "p.value", "-log10pvalue","lmFormula")
-      newNames = c("Condition", "Without History of Condition","With History of Condition",  "Fold Change", "p-value (original)","adjustment method","log<sub>2</sub>(Fold Change)", pValueLabel, log10pValueLabel,"Model")
+      old_names <- c(
+        "Analyte", "No", "Yes", "FoldChange", "p.value.original", "p.value.adjustment.method",
+        "log2FoldChange", "p.value", "-log10pvalue", "lmFormula"
+      )
+      new_names <- c(
+        "Condition", "Without History of Condition", "With History of Condition",
+        "Fold Change", "p-value (original)", "adjustment method", "log<sub>2</sub>(Fold Change)",
+        pValueLabel, log10pValueLabel, "Model"
+      )
 
       return(
         self$HeatmapData |>
@@ -580,8 +614,8 @@ ConditionCorrelatesManager <- R6::R6Class(
               dplyr::mutate(Analyte = factor(Analyte))
             , by = "Analyte"
           ) |>
-          dplyr::rename_with(~ newNames, all_of(oldNames)) |>
-          dplyr::select(-c(formattedPValue,text,ivs))
+          dplyr::rename_with(~ new_names, all_of(old_names)) |>
+          dplyr::select(-c(formattedPValue, text, ivs))
       )
 
     },
@@ -612,8 +646,8 @@ ConditionCorrelatesManager <- R6::R6Class(
       self$AnalytePlotStatAnnotation <- self$VolcanoSummaryData |>
         dplyr::filter(Analyte == self$Analyte) |>
         dplyr::ungroup() |>
-        dplyr::select(p.value,p.value.adjustment.method) |>
-        dplyr::mutate(formatted.p.value = CUSOMShinyHelpers::formatPValue(p.value,p.value.adjustment.method)) |>
+        dplyr::select(p.value, p.value.adjustment.method) |>
+        dplyr::mutate(formatted.p.value = CUSOMShinyHelpers::formatPValue(p.value, p.value.adjustment.method)) |>
         dplyr::select(formatted.p.value)
 
     },
@@ -625,7 +659,7 @@ ConditionCorrelatesManager <- R6::R6Class(
     #' @return plotly object
     getBoxPlot = function(.data, ns) {
 
-      groupBaselineLabel <- .data |>
+      group_baseline_label <- .data |>
         dplyr::filter(isBaseline) |>
         dplyr::select(HasConditionFlag) |>
         dplyr::distinct() |>
@@ -635,7 +669,7 @@ ConditionCorrelatesManager <- R6::R6Class(
         CUSOMShinyHelpers::getBoxPlotWithHighlightGroup(
           key = LabID,
           group = HasConditionFlag,
-          groupBaselineLabel = groupBaselineLabel,
+          groupBaselineLabel = group_baseline_label,
           value = log2MeasuredValue,
           valueLabel = log2Measurement,
           text = text,
@@ -645,7 +679,7 @@ ConditionCorrelatesManager <- R6::R6Class(
         plotly::layout(
           showlegend = TRUE,
           legend = list(
-            orientation = 'h',
+            orientation = "h",
             itemclick = "toggleothers",
             itemsizing = "constant",
             itemwidth = 30,
@@ -708,7 +742,7 @@ ConditionCorrelatesManager <- R6::R6Class(
               arrowwidth = 0.9
             )
           ),
-          margin = list( t = 75)
+          margin = list(t = 75)
         ) |>
         plotly::config(
           displayModeBar = TRUE,
@@ -743,11 +777,14 @@ ConditionCorrelatesManager <- R6::R6Class(
 
       dataframe <- .data
 
-      measurement <- as.character(dataframe[1,'Measurement'])
+      measurement <- as.character(dataframe[1, "Measurement"])
 
       return(
         dataframe |>
-          dplyr::select("Platform" = Platform, "Study" = ExperimentStudyName, Analyte, LabID, Condition, HasConditionFlag, Sex, MeasuredValue) |>
+          dplyr::select(
+            "Platform" = Platform, "Study" = ExperimentStudyName,
+            Analyte, LabID, Condition, HasConditionFlag, Sex, MeasuredValue
+          ) |>
           dplyr::rename(`:=`(!!measurement, MeasuredValue)) |>
           dplyr::arrange(Analyte)
       )

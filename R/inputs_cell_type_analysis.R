@@ -43,52 +43,20 @@ cell_type_inputs_ui <- function(id, input_config) {
           )
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        shinyWidgets::pickerInput(
-          inputId = ns("CellType"),
-          label = "Cell Type(s)",
-          choices = input_config$CellTypes,
-          selected = input_config$CellTypes,
-          options = list(
-            `actions-box` = TRUE
-          ),
-          multiple = TRUE
+        shinycustomloader::withLoader(
+          shiny::uiOutput(ns("CellType")),
+          type = "html",
+          loader = "loader6",
+          proxy.height = "20px"
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         shiny::tags$div(
           id = "AnalyteInput",
-          shiny::selectizeInput(
-            inputId = ns("Analyte"),
-            label = "Gene",
-            choices = input_config$Genes,
-            options = list(
-              labelField = "name",
-              searchField = "name",
-              valueField = "name",
-              placeholder = "Search for Gene",
-              onInitialize = I('function() { this.setValue(""); }'),
-              closeAfterSelect = TRUE,
-              selectOnTab = TRUE,
-              persist = FALSE,
-              `live-search` = TRUE,
-              onType = I(paste0("
-                function (str) {
-                  if(this.currentResults.total == 0) {
-                    Shiny.setInputValue(
-                      '", ns("analyteSearchResults"), "',
-                      {
-                        query: this.currentResults.query,
-                        total: this.currentResults.total
-                      },
-                      { priority: 'event' }
-                    );
-                  };
-                }"))
-            )
-          ) |>
-          bsplus::bs_embed_tooltip(
-            title = "Genes are searchable by ENTREZ GeneID. <br /> Not all available genes are available in dataset.",
-            placement = "right",
-            html = TRUE
+          shinycustomloader::withLoader(
+            shiny::uiOutput(ns("Analyte")),
+            type = "html",
+            loader = "loader6",
+            proxy.height = "20px"
           )
         ),
         shiny::htmlOutput(ns("AnalyteSearchError")),
@@ -182,6 +150,51 @@ cell_type_inputs_server <- function(id, r6) {
       parent_input = input
     )
 
+    output$CellType <- shiny::renderUI({
+      shinyWidgets::pickerInput(
+        inputId = ns("CellType"),
+        label = "Cell Type(s)",
+        choices = r6$getCellTypes(),
+        selected = r6$getCellTypes(),
+        options = list(
+          `actions-box` = TRUE
+        ),
+        multiple = TRUE
+      )
+    })
+
+    output$Analyte <- shiny::renderUI({
+      shiny::selectizeInput(
+        inputId = ns("Analyte"),
+        label = "Gene",
+        choices = r6$getAnalytes(),
+        options = list(
+          labelField = "name",
+          searchField = "name",
+          valueField = "name",
+          placeholder = "Search for Gene",
+          onInitialize = I('function() { this.setValue(""); }'),
+          closeAfterSelect = TRUE,
+          selectOnTab = TRUE,
+          persist = FALSE,
+          `live-search` = TRUE,
+          onType = I(paste0("
+            function (str) {
+              if(this.currentResults.total == 0) {
+                Shiny.setInputValue(
+                  '", ns("analyteSearchResults"), "',
+                  {
+                    query: this.currentResults.query,
+                    total: this.currentResults.total
+                  },
+                  { priority: 'event' }
+                );
+              };
+            }"))
+        )
+      )
+    })
+
     output$Covariates <- shiny::renderUI({
 
       if (input$StatTest == "Linear Model") {
@@ -198,8 +211,7 @@ cell_type_inputs_server <- function(id, r6) {
             inline = TRUE
           )
         )
-      }
-      else {
+      } else {
         shiny::tagList(
 
         )
@@ -212,8 +224,7 @@ cell_type_inputs_server <- function(id, r6) {
         shinyjs::removeClass(id = "Refresh", class = "refresh-ready-btn")
         shinyjs::addClass(id = "Refresh", class = "refresh-btn")
         shinyjs::disable(id = "Refresh")
-      }
-      else {
+      } else {
         shinyjs::removeClass(id = "Refresh", class = "refresh-btn")
         shinyjs::addClass(id = "Refresh", class = "refresh-ready-btn")
         shinyjs::enable(id = "Refresh")
@@ -240,28 +251,26 @@ cell_type_inputs_server <- function(id, r6) {
       }
     }, ignoreInit = TRUE)
 
-    AnalyteSearchErrorText <- shiny::eventReactive(
+    analyte_search_error_text <- shiny::eventReactive(
       c(input$analyteSearchResults, input$Analyte), {
 
-      searchResultData <- input$analyteSearchResults
-      shiny::req(searchResultData)
+      search_result_data <- input$analyteSearchResults
+      shiny::req(search_result_data)
 
       if (length(input$Analyte) > 0 & input$Analyte != "") {
         shiny::HTML("")
-      }
-      else if (searchResultData$total == 0) {
+      } else if (search_result_data$total == 0) {
         shiny::HTML(paste0('<span style="color:black;font-size:smaller;padding-left:10px;"><b>"',
-        searchResultData$query,
+        search_result_data$query,
         '"</b> not found. Please try another value</span>')
         )
-      }
-      else {
+      } else {
         shiny::HTML("")
       }
-    }, domain = session)
+    }, domain = session, ignoreInit = TRUE)
 
     output$AnalyteSearchError <- shiny::renderUI({
-      AnalyteSearchErrorText()
+      analyte_search_error_text()
     })
 
   })

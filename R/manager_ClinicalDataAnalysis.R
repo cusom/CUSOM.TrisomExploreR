@@ -39,6 +39,7 @@
 #' @import plotly
 #' @import leaflet
 #' @importFrom tigris geo_join
+#' @importFrom arrow open_dataset
 #' @export
 ClinicalDataAnalysisManager <- R6::R6Class(
   "ClinicalDataAnalysisManager",
@@ -95,23 +96,15 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
       self$applicationName <- applicationName
       self$remoteDB <- remoteDB
-      self$localDB <- localDB
 
-      self$Enrollments <- self$localDB$getQuery(
-         "SELECT Karyotype, count(1) [ParticipantCount]
-          FROM AllParticipants
-          GROUP BY Karyotype"
-        )
+      self$Enrollments <- data$Enrollments
 
-      self$AllN <- self$localDB$getQuery(
-        "SELECT count(distinct record_id) [n]
-          FROM AllParticipants"
-      ) |>
-        dplyr::pull()
+      self$AllN <- sum(data$Enrollments$ParticipantCount)
 
-      self$ConditionClassData <- self$localDB$getQuery(
-        "SELECT * FROM ConditionClassData"
-      )
+      self$ConditionClassData <- arrow::open_dataset("Data/participant_conditions") |>
+        dplyr::collect() |>
+        tidyr::separate_rows(ConditionClass, sep = ";", convert = TRUE) |>
+        dplyr::filter(!is.na(Condition))
 
       self$conditionClassCounts <- dplyr::inner_join(
         self$ConditionClassData |>
@@ -142,10 +135,8 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
       self$PlatformExperiments <- data$PlatformExperiments
 
-      self$ParticipantPlatformExperiment <- self$localDB$getQuery(
-        "SELECT * FROM ParticipantPlatformExperiment",
-        NULL
-      )
+      self$ParticipantPlatformExperiment <- arrow::open_dataset("Data/participant_platform_experiment") |>
+        dplyr::collect()
 
     },
 
@@ -201,11 +192,8 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' @return none
     getParticipantData = function() {
 
-      participants <- self$localDB$getQuery(
-        "SELECT * FROM AllParticipants"
-      )
-
-      self$ParticipantData <- participants |>
+      self$ParticipantData <- arrow::open_dataset("Data/participants") |>
+        dplyr::collect() |>
         dplyr::filter(
           Sex %in% self$Sex,
           Karyotype %in% self$Karyotypes,
@@ -1456,7 +1444,8 @@ ClinicalDataAnalysisManager <- R6::R6Class(
             toImageButtonOptions = list(
               format = "svg",
               filename = glue::glue(
-                "{self$applicationName} - Specific Conditions by Sex and Karyotype {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
+                "{self$applicationName} - Specific Conditions by Sex 
+                and Karyotype {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
               ),
               width = NULL,
               height = NULL
@@ -1476,15 +1465,13 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' @return none
     update_upset_plot_data = function() {
 
-      condition_data <- self$localDB$getQuery(
-        "SELECT * FROM DiagnosedConditions"
-        ) |>
+      condition_data <- arrow::open_dataset("Data/participant_conditions") |>
+        dplyr::collect() |>
         tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
         dplyr::filter(HasCondition == "True") |>
         dplyr::inner_join(
-          self$localDB$getQuery(
-            "SELECT * FROM AllParticipants"
-            ) |>
+          arrow::open_dataset("Data/participants") |>
+            dplyr::collect() |>
             dplyr::filter(
               Sex %in% self$Sex,
               AgeAtInitialConsent >= min(self$Age),
@@ -1494,7 +1481,6 @@ ClinicalDataAnalysisManager <- R6::R6Class(
             dplyr::distinct(record_id)
           , by = "record_id"
         )
-
       if (self$selectedAnnotationLevel == "Classes of Conditions") {
         condition_data <- condition_data |>
           dplyr::filter(ConditionClass %in% self$SelectedConditions) |>

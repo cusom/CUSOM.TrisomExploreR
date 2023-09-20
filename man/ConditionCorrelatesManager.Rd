@@ -202,17 +202,17 @@ tibble
 Get Participant Comorbidities for a given experiment and analyte
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ConditionCorrelatesManager$getParticipantComorbiditiesByExperimentAnalyte(
-  Experiment,
-  QueryAnalyte
+  experiment,
+  query_analyte
 )}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{Experiment}}{- string}
+\item{\code{experiment}}{- string}
 
-\item{\code{QueryAnalyte}}{- string}
+\item{\code{query_analyte}}{- string}
 }
 \if{html}{\out{</div>}}
 }
@@ -228,7 +228,7 @@ Get Comoborbidity Summary data - appends each comorbidity label with {positive} 
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ConditionCorrelatesManager$getComorbidtySummary(
   .data,
-  MinComorbitityMembership
+  min_comorbitity_membership
 )}\if{html}{\out{</div>}}
 }
 
@@ -237,7 +237,7 @@ Get Comoborbidity Summary data - appends each comorbidity label with {positive} 
 \describe{
 \item{\code{.data}}{- tibble - tibble of participant comborbidity data}
 
-\item{\code{MinComorbitityMembership}}{- numeric - minimum threshold of diagnosed to include in analysis}
+\item{\code{min_comorbitity_membership}}{- numeric - minimum threshold of diagnosed to include in analysis}
 }
 \if{html}{\out{</div>}}
 }

@@ -13,9 +13,6 @@ volcano_plot_analyte_input_ui <- function(id) {
         choices = NULL,
         multiple = TRUE,
         options = list(
-          labelField = "name",
-          searchField = "name",
-          valueField = "name",
           placeholder = "Select analyte below",
           onInitialize = I('function() { this.setValue(""); }'),
           closeAfterSelect = TRUE,
@@ -92,15 +89,20 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
         dplyr::select(Analyte) |>
         dplyr::distinct() |>
         dplyr::arrange(Analyte) |>
-        data.table::as.data.table()
+        dplyr::pull()
 
       shiny::updateSelectizeInput(
         session = session,
         inputId = "Analyte",
         choices = analytes,
-        selected = r6$Analyte
+        selected = r6$Analyte,
+        options = list(
+          maxOptions = length(analytes)
+        ),
+        server = TRUE
       )
-    }, ignoreInit = TRUE, domain = session)
+
+    }, domain = session)
 
     shiny::observeEvent(
       plotly::event_data(
@@ -145,12 +147,13 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
       )
     }, domain = session)
 
-    volcanoMultiSelectText <- shiny::eventReactive(c(input$Analyte), {
+    volcano_multi_select_text <- shiny::eventReactive(c(input$Analyte), {
+      r6$updateAnalyteAttributes()
       r6$volcanoMultiSelectText
     }, domain = session)
 
     output$volcanoMultiSelectText <- shiny::renderText({
-      shiny::HTML(volcanoMultiSelectText())
+      shiny::HTML(volcano_multi_select_text())
     })
 
     shiny::observeEvent(
@@ -164,17 +167,17 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
 
     shiny::observeEvent(c(input$Analyte), {
 
-      plotName <- parent$ns("VolcanoPlot")
+      plot_name <- parent$ns("VolcanoPlot")
 
       if (all(input$Analyte != "")) {
         if (length(input$Analyte) == 1) {
           keys <- glue::glue_collapse(input$Analyte, sep = "|")
-          shinyjs::runjs(glue::glue('annotatePointByKey("{plotName}","{keys}",5);'))
+          shinyjs::runjs(glue::glue('annotatePointByKey("{plot_name}","{keys}",5);'))
         } else {
           keys <- ""
-          shinyjs::runjs(glue::glue('annotatePointByKey("{plotName}","{keys}",5);'))
+          shinyjs::runjs(glue::glue('annotatePointByKey("{plot_name}","{keys}",5);'))
           keys <- glue::glue_collapse(input$Analyte, sep = "|")
-          shinyjs::runjs(glue::glue('updateSelectedKeys("{plotName}","{keys}");'))
+          shinyjs::runjs(glue::glue('updateSelectedKeys("{plot_name}","{keys}");'))
         }
 
         shinyjs::runjs(
@@ -199,30 +202,28 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
 
     }, ignoreInit = TRUE, domain = session)
 
-    AnalyteSearchErrorText <- shiny::eventReactive(
+    analyte_search_error_text <- shiny::eventReactive(
       c(input$analyteSearchResults, input$Analyte), {
-      searchResultData <- input$analyteSearchResults
-      shiny::req(searchResultData)
+      search_result_data <- input$analyteSearchResults
+      shiny::req(search_result_data)
 
       if (length(input$Analyte) > 0) {
         shiny::HTML("")
-      }
-      else if(searchResultData$total == 0) {
+      } else if (search_result_data$total == 0) {
         shiny::HTML(
           paste0(
             '<span style="color:black;font-size:smaller;padding-left:10px;"><b>"',
-            searchResultData$query,
+            search_result_data$query,
             '"</b> not found. Please try another value</span>'
           )
         )
-      }
-      else {
+      } else {
         shiny::HTML("")
       }
     }, domain = session)
 
     output$AnalyteSearchError <- shiny::renderUI({
-      AnalyteSearchErrorText()
+      analyte_search_error_text()
     })
 
 

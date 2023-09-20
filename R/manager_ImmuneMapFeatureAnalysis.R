@@ -4,6 +4,7 @@
 #' @field analysisMetadata - tibble - defines UI analysis choice metadata
 #' @field analysisChoices - tibble - values available for analysis choices on UI side
 #' @field Analysis - string - chosen analysis
+#' @importFrom arrow open_dataset
 #' @export
 ImmuneMapFeatureAnalysisManager <- R6::R6Class(
   "ImmuneMapFeatureAnalysisManager",
@@ -24,26 +25,15 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
       super$initialize(applicationName, id, namespace_config, remoteDB, localDB)
     },
-    
+
     #' @description
     #' #' helper function to get analysis choices for UI inputs based on chosen study
     #' @param study - string - chosen study
     getAnalysisChoices = function(study) {
 
-      AnalysisCellTypes <- self$localDB$getQuery(
-        "SELECT Analysis, CellType, count(1) [n]
-        FROM sourceData
-        WHERE ExperimentID  = ({study})
-        GROUP BY Analysis, CellType",
-        tibble::tibble(study = study)
-      )
-
-      StudyAnalyses <- self$localDB$getQuery(
-        "SELECT distinct Analysis FROM sourceData"
-        ) |>
-        dplyr::pull()
-
-      self$analysisMetadata <- tibble::tibble("Analysis" = StudyAnalyses) |>
+      self$analysisMetadata <- arrow::open_dataset("data/feature_data") |>
+        dplyr::collect() |>
+        dplyr::distinct(Analysis) |>
         dplyr::mutate(
           NestedSelect = ifelse(Analysis == "Cluster", FALSE, TRUE),
           MultipleSelect = ifelse(Analysis == "Cluster", TRUE, FALSE),
@@ -51,7 +41,13 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
           HideCellType = ifelse(Analysis == "Cluster", TRUE, FALSE)
         )
 
-      self$analysisChoices <- AnalysisCellTypes |>
+      self$analysisChoices <- arrow::open_dataset("data/feature_data") |>
+        dplyr::filter(
+          ExperimentID == self$Study
+        ) |>
+        dplyr::collect() |>
+        dplyr::group_by(Analysis, CellType) |>
+        dplyr::summarise(n = n(), .groups = "drop") |>
         dplyr::inner_join(
           self$analysisMetadata
           , by = "Analysis"
@@ -67,42 +63,48 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
       self$getAnalysisChoices(study)
 
       choices <- self$analysisChoices |>
-        tidyr::separate(Analysis, into = c("AnalysisGroup","Analysis"), sep = ";") |>
+        tidyr::separate(Analysis, into = c("AnalysisGroup", "Analysis"), sep = ";") |>
         dplyr::mutate(
           Analysis = ifelse(is.na(Analysis), CellType, Analysis),
           SortOrder = dplyr::case_when(
-            stringr::str_detect(AnalysisGroup,"Signaling") & Analysis == "Baseline" ~ 1000000000,
+            stringr::str_detect(AnalysisGroup, "Signaling") & Analysis == "Baseline" ~ 1000000000,
             TRUE ~ as.numeric(n)
           )
         ) |>
         dplyr::arrange(AnalysisGroup, desc(SortOrder))
 
-      nestedSelect <- choices |>
+      nested_select <- choices |>
         dplyr::select(NestedSelect) |>
         dplyr::distinct() |>
         dplyr::pull()
 
-      MultipleSelect <- choices |>
+      multiple_select <- choices |>
         dplyr::select(MultipleSelect) |>
         dplyr::distinct() |>
         dplyr::pull()
 
-      HideCellType <- choices |>
+      hide_cell_type <- choices |>
         dplyr::select(HideCellType) |>
         dplyr::distinct() |>
         dplyr::pull()
 
-      if (nestedSelect) {
+      if (nested_select) {
 
         choices <- choices |>
           dplyr::select(Analysis, AnalysisGroup) |>
-          dplyr::distinct()
+          dplyr::distinct() |>
+          dplyr::group_by(AnalysisGroup) |>
+          dplyr::group_map(
+            ~ purrr::set_names(stringr::str_c(.x$Analysis))
+          ) |>
+          purrr::set_names(
+            choices |>
+              dplyr::distinct(AnalysisGroup)|>
+              dplyr::pull()
+          )
 
-        choices <- purrr::imap(split(choices$Analysis, choices$AnalysisGroup), ~ setNames(.x, stringr::str_c(.x)))
 
-      }
-
-      else {
+      } else {
 
         choices <- choices |>
           dplyr::select(CellType) |>
@@ -113,9 +115,9 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
 
       return(
         list(
-          "nestedSelect" = nestedSelect,
-          "MultipleSelect" = MultipleSelect,
-          "HideCellType" = HideCellType,
+          "nestedSelect" = nested_select,
+          "MultipleSelect" = multiple_select,
+          "HideCellType" = hide_cell_type,
           "choices" = choices
         )
       )
@@ -159,33 +161,26 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
             choiceValues = glue::glue_collapse(karyotypes, sep = ";")
           )
         )
-      }
-
-      else if (self$namespace == "Comorbidity") {
+      } else if (self$namespace == "Comorbidity") {
         return(
           tibble::tibble(
             choiceNames =  karyotypes[1],
             choiceValues = karyotypes[1]
           )
         )
-      }
+      } else {
 
-      else {
-
-        karyotypeInputCounts <- self$localDB$getQuery(
-            "SELECT LabID, CellType, Analyte, Karyotype
-            FROM sourceData
-            WHERE ExperimentID  = ({study})
-            AND Analysis = ({analysis})
-            AND CellType IN ({cellType*})
-            AND Sex IS NOT NULL",
-            tibble::tibble(
-              study = self$Study,
-              analysis = self$Analysis,
-              cellType = self$CellType
-            )
+        karyotype_input_counts <- arrow::open_dataset("data/feature_data") |>
+          dplyr::filter(
+            ExperimentID == self$Study
           ) |>
-          dplyr::group_by(Analyte,Karyotype) |>
+          dplyr::collect() |>
+          dplyr::select(LabID, CellType, Analysis, Analyte, Karyotype) |>
+          dplyr::filter(
+            Analysis %in% self$Analysis,
+            CellType %in% self$CellType
+          ) |>
+          dplyr::group_by(Analyte, Karyotype) |>
           dplyr::summarise(n = dplyr::n_distinct(LabID), .groups = "drop") |>
           dplyr::ungroup() |>
           dplyr::group_by(Karyotype) |>
@@ -201,9 +196,10 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
           ) |>
           dplyr::arrange(sort)
 
+
         if (self$analysisType == "Continuous") {
           return(
-            karyotypeInputCounts |>
+            karyotype_input_counts |>
               dplyr::bind_rows(
                 tibble::tibble(
                   Karyotype = glue::glue_collapse(karyotypes, sep = ";"),
@@ -216,7 +212,8 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
                         data-placement="auto right"
                         title=""
                         class="fas fa-info-circle gtooltip info-tooltip"
-                        data-original-title="Test for differences in {self$analysisVariable} trajectories between Trisomy 21 & Controls">
+                        data-original-title="Test for differences in {self$analysisVariable}
+                        trajectories between Trisomy 21 & Controls">
                       </span>
                     </div>'
                   ),
@@ -225,10 +222,9 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
               ) |>
               dplyr::arrange(sort)
           )
-        }
-        else {
+        } else {
           return(
-            karyotypeInputCounts
+            karyotype_input_counts
           )
         }
       }
@@ -238,32 +234,30 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
     #' Get / set sample level data with filers applied
     getBaseData = function() {
 
-      self$BaseData <- self$localDB$getQuery(
-          "SELECT ExperimentStudyName, LabID, Karyotype, Sex, Age, BMI, Analysis, CellType, Analyte, MeasuredValue, Measurement
-            FROM sourceData
-            WHERE ExperimentID = ({study})
-            AND (Analysis = ({analysis}) OR  Analysis = ({compoundAnalysis}))
-            AND Age >= ({minAge})
-            AND Age <= ({maxAge})
-            AND Sex IN ({sexes*})
-          ",
-          tibble::tibble(
-            study = self$Study,
-            analysis = self$Analysis,
-            compoundAnalysis = glue::glue("{self$Analysis};{glue::glue_collapse(self$CellType,sep=';')}"),
-            minAge = min(self$Age),
-            maxAge = max(self$Age),
-            sexes = self$Sex
-          )
+      self$BaseData <- arrow::open_dataset("data/feature_data") |>
+        dplyr::filter(
+          ExperimentID == self$Study
         ) |>
-        tidyr::separate(Analysis, into = c("Analysis1","Analysis2"), sep = ";", remove = FALSE) |>
+        dplyr::collect() |>
+        dplyr::select(LabID, Karyotype, Sex, Age, BMI, Analysis, CellType, Analyte, MeasuredValue, Measurement) |>
+        dplyr::filter(
+          (
+            Analysis == self$Analysis |
+            Analysis == glue::glue("{self$Analysis};{glue::glue_collapse(self$CellType,sep=';')}")
+          ),
+          Age >= min(self$Age),
+          Age <= max(self$Age),
+          Sex %in% self$Sex,
+          Karyotype %in% unlist(stringr::str_split(self$Karyotype, pattern = ";"))
+        ) |>
+        tidyr::separate(Analysis, into = c("Analysis1", "Analysis2"), sep = ";", remove = FALSE) |>
         dplyr::rowwise() |>
         dplyr::mutate(
           CellTypeFilter = ifelse(self$Analysis == "Signaling", Analysis2, CellType)
         ) |>
         dplyr::ungroup() |>
         dplyr::filter(CellTypeFilter %in% self$CellType) |>
-        dplyr::select(-c(Analysis1,Analysis2)) |>
+        dplyr::select(-c(Analysis1, Analysis2)) |>
         dplyr::filter(!is.na(!!rlang::sym(self$analysisVariable))) |>
         dplyr::mutate(
           log2MeasuredValue = ifelse(MeasuredValue == 0, 0, log2(MeasuredValue)),
@@ -291,12 +285,12 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
               Analysis == "Cluster" ~ glue::glue("{Analysis};{CellType};{Analyte}"),
               Analysis == "Lineage" ~ glue::glue("{Analysis};{CellType};{Analyte}"),
               Analysis == "Cell Frequencies" ~ glue::glue(";{CellType};{Analyte}"),
-              grepl("Signaling",Analysis) ~ glue::glue("{ParsedAnalysis2};{ParsedAnalyte1};{Analyte}"),
+              grepl("Signaling", Analysis) ~ glue::glue("{ParsedAnalysis2};{ParsedAnalyte1};{Analyte}"),
               TRUE ~ glue::glue(";;{Analyte}")
             )
           ) |>
           dplyr::mutate_at(
-            dplyr::vars(self$analysisVariable), 
+            dplyr::vars(self$analysisVariable),
             ~forcats::fct_relevel(.x, self$groupBaselineLabel)
           ) |>
           CUSOMShinyHelpers::getStatTestByKeyGroup(
@@ -310,9 +304,9 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
             covariates = self$Covariates
           ) |>
           tidyr::separate(
-            col = CompoundAnalyte, 
+            col = CompoundAnalyte,
             into = c("Analysis", "CellType", "Analyte", "Analyte2"),
-            sep = ";", 
+            sep = ";",
             remove = FALSE
           ) |>
           dplyr::mutate(
@@ -322,27 +316,35 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
               Analysis %in% c("Baseline", "+ IFNA2A") ~ "Signaling Eiptope",
               TRUE ~ Analysis
             ),
-            formattedPValue = unlist(purrr::pmap(.l = list(p.value,p.value.adjustment.method), CUSOMShinyHelpers::formatPValue)),
-            text = glue::glue("{Analysis}: {CellType} <br />Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}")
+            formattedPValue = unlist(
+              purrr::pmap(
+                .l = list(p.value, p.value.adjustment.method),
+                CUSOMShinyHelpers::formatPValue
+              )
+            ),
+            text = glue::glue(
+              "{Analysis}: {CellType} <br />Analyte: {Analyte}<br />
+              fold change: {round(FoldChange,2)}<br />{formattedPValue}"
+            )
           ) |>
           dplyr::ungroup() |>
           dplyr::select(-c(CompoundAnalyte, Analyte2)) |>
           dplyr::relocate(Analysis, CellType, Analyte)
 
-      }
-
-      else {
+      } else {
 
         dataframe <- self$BaseData |>
-          dplyr::select(LabID, Analysis, CellType, Analyte, MeasuredValue, self$analysisVariable, self$Covariates, Karyotype) |>
-          tidyr::separate(Analysis, into = c("ParsedAnalysis1","ParsedAnalysis2"), sep = ";", remove = FALSE) |>
-          tidyr::separate(Analyte, into = c("ParsedAnalyte1","ParsedAnalyte2"), sep = ";", remove = FALSE) |>
+          dplyr::select(
+            LabID, Analysis, CellType, Analyte, MeasuredValue, self$analysisVariable, self$Covariates, Karyotype
+          ) |>
+          tidyr::separate(Analysis, into = c("ParsedAnalysis1", "ParsedAnalysis2"), sep = ";", remove = FALSE) |>
+          tidyr::separate(Analyte, into = c("ParsedAnalyte1", "ParsedAnalyte2"), sep = ";", remove = FALSE) |>
           dplyr::mutate(
             CompoundAnalyte = dplyr::case_when(
               Analysis == "Cluster" ~ glue::glue("{Analysis};{CellType};{Analyte}"),
               Analysis == "Lineage" ~ glue::glue("{Analysis};{CellType};{Analyte}"),
               Analysis == "Cell Frequencies" ~ glue::glue(";{CellType};{Analyte}"),
-              grepl("Signaling",Analysis) ~ glue::glue("{ParsedAnalysis2};{ParsedAnalyte1};{Analyte}"),
+              grepl("Signaling", Analysis) ~ glue::glue("{ParsedAnalysis2};{ParsedAnalyte1};{Analyte}"),
               TRUE ~ glue::glue(";;{Analyte}")
             )
           ) |>
@@ -356,37 +358,58 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
             interactionVariable = Karyotype,
             adjustmentMethod = self$AdjustmentMethod
           ) |>
-          tidyr::separate(col = CompoundAnalyte, into = c("Analysis", "CellType","Analyte","Analyte2"), sep = ";", remove = FALSE) |>
+          tidyr::separate(
+            col = CompoundAnalyte,
+            into = c("Analysis", "CellType", "Analyte", "Analyte2"),
+            sep = ";",
+            remove = FALSE
+          ) |>
           dplyr::mutate(
             Analyte = ifelse(is.na(Analyte2), Analyte, glue::glue("{Analyte};{Analyte2}")),
             Analysis = dplyr::case_when(
               Analysis == "" ~ "Lineage",
-              Analysis %in% c('Baseline','+ IFNA2A') ~ "Signaling Eiptope",
+              Analysis %in% c("Baseline", "+ IFNA2A") ~ "Signaling Eiptope",
               TRUE ~ Analysis
             ),
-            formattedPValue = unlist(purrr::pmap(.l = list(p.value,p.value.adjustment.method), CUSOMShinyHelpers::formatPValue)),
-            text = glue::glue('Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}')
+            formattedPValue = unlist(
+              purrr::pmap(
+                .l = list(p.value, p.value.adjustment.method),
+                CUSOMShinyHelpers::formatPValue
+              )
+            ),
+            text = glue::glue(
+              "Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"
+            )
           ) |>
           dplyr::ungroup() |>
-          dplyr::select(-c(CompoundAnalyte,Analyte2)) |>
-          dplyr::relocate(Analysis,CellType,Analyte)
+          dplyr::select(-c(CompoundAnalyte, Analyte2)) |>
+          dplyr::relocate(Analysis, CellType, Analyte)
       }
 
       if (nrow(dataframe) > 0) {
 
         self$VolcanoSummaryData <- dataframe |>
           dplyr::mutate(
-            log2FoldChange= log2(FoldChange),
+            log2FoldChange = log2(FoldChange),
             `-log10pvalue` = -log10(p.value),
             `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
-            formattedPValue = unlist(purrr::pmap(.l = list(p.value,p.value.adjustment.method), CUSOMShinyHelpers::formatPValue)),
-            text = glue::glue('Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}')
+            formattedPValue = unlist(
+              purrr::pmap(
+                .l = list(p.value, p.value.adjustment.method),
+                CUSOMShinyHelpers::formatPValue
+              )
+            ),
+            text = glue::glue(
+              "Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"
+            )
           )
 
         self$VolcanoPlotTitle <- glue::glue("Effect of {self$analysisVariableLabel} on all {self$analytesLabel}")
         self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$log2FoldChange))
         self$VolcanoSummaryDataXAxisLabel <- "log<sub>2</sub>(Fold Change)"
-        self$VolcanoSummaryDataYAxisLabel <- glue::glue("-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})")
+        self$VolcanoSummaryDataYAxisLabel <- glue::glue(
+          "-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})"
+        )
 
       }
     }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/manager_ImmuneMapApp.R
 \name{ImmuneMapAppManager}
 \alias{ImmuneMapAppManager}
-\title{R6 Class to manage the Immune Map application - subclass of the core TrisomExplorerAppManager}
+\title{R6 Class to manage the Immune Map application - subclass of the core TrisomExplorerAppManager  -- DEPRECATED --}
 \description{
 subclass of the core TrisomExplorerAppManager - inherits core attributes and methods
 }

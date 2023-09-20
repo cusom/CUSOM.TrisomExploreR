@@ -60,6 +60,8 @@ Retains chosen values from inputs, performs data retrieval, analysis, and plotti
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-CellTypeAnalysisManager-new}{\code{CellTypeAnalysisManager$new()}}
+\item \href{#method-CellTypeAnalysisManager-getCellTypes}{\code{CellTypeAnalysisManager$getCellTypes()}}
+\item \href{#method-CellTypeAnalysisManager-getAnalytes}{\code{CellTypeAnalysisManager$getAnalytes()}}
 \item \href{#method-CellTypeAnalysisManager-getCovariateChoices}{\code{CellTypeAnalysisManager$getCovariateChoices()}}
 \item \href{#method-CellTypeAnalysisManager-getAnalyteData}{\code{CellTypeAnalysisManager$getAnalyteData()}}
 \item \href{#method-CellTypeAnalysisManager-getPlot}{\code{CellTypeAnalysisManager$getPlot()}}
@@ -99,6 +101,26 @@ Create a new CellTypeAnalysisManager object
 \subsection{Returns}{
 A new `CellTypeAnalysisManager` object.
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-CellTypeAnalysisManager-getCellTypes"></a>}}
+\if{latex}{\out{\hypertarget{method-CellTypeAnalysisManager-getCellTypes}{}}}
+\subsection{Method \code{getCellTypes()}}{
+helper function to get cell type list for input
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CellTypeAnalysisManager$getCellTypes()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-CellTypeAnalysisManager-getAnalytes"></a>}}
+\if{latex}{\out{\hypertarget{method-CellTypeAnalysisManager-getAnalytes}{}}}
+\subsection{Method \code{getAnalytes()}}{
+helper function to get list of genes for input
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CellTypeAnalysisManager$getAnalytes()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CellTypeAnalysisManager-getCovariateChoices"></a>}}

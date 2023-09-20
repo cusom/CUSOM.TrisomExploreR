@@ -128,6 +128,9 @@ in the active volcano plot (usually between 1 - 3)}
 \item \href{#method-FeatureAnalysisManager-getFormattedVolcanoSummaryData}{\code{FeatureAnalysisManager$getFormattedVolcanoSummaryData()}}
 \item \href{#method-FeatureAnalysisManager-getVolcanoPlot}{\code{FeatureAnalysisManager$getVolcanoPlot()}}
 \item \href{#method-FeatureAnalysisManager-updateAnalyteAttributes}{\code{FeatureAnalysisManager$updateAnalyteAttributes()}}
+\item \href{#method-FeatureAnalysisManager-get_analyte_plot_method}{\code{FeatureAnalysisManager$get_analyte_plot_method()}}
+\item \href{#method-FeatureAnalysisManager-get_analyte_plot_title}{\code{FeatureAnalysisManager$get_analyte_plot_title()}}
+\item \href{#method-FeatureAnalysisManager-get_analyte_plot_x_axis_label}{\code{FeatureAnalysisManager$get_analyte_plot_x_axis_label()}}
 \item \href{#method-FeatureAnalysisManager-getAnalyteData}{\code{FeatureAnalysisManager$getAnalyteData()}}
 \item \href{#method-FeatureAnalysisManager-getAnalytePlot}{\code{FeatureAnalysisManager$getAnalytePlot()}}
 \item \href{#method-FeatureAnalysisManager-getFormattedAnalyteSummaryData}{\code{FeatureAnalysisManager$getFormattedAnalyteSummaryData()}}
@@ -379,6 +382,75 @@ helper function to update various attributes for the chosen analyte
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$updateAnalyteAttributes()}\if{html}{\out{</div>}}
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-FeatureAnalysisManager-get_analyte_plot_method"></a>}}
+\if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-get_analyte_plot_method}{}}}
+\subsection{Method \code{get_analyte_plot_method()}}{
+small helper function to determine plot method for instance/namespace
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$get_analyte_plot_method(analysis_type, analyte_count)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{analysis_type}}{- string - analysis type for this instance/namespace}
+
+\item{\code{analyte_count}}{int - number of selected analytes}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-FeatureAnalysisManager-get_analyte_plot_title"></a>}}
+\if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-get_analyte_plot_title}{}}}
+\subsection{Method \code{get_analyte_plot_title()}}{
+small helper function to generate plot title based on criteria
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$get_analyte_plot_title(
+  analysis_variable,
+  plot_method,
+  analyte,
+  group_variable
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{analysis_variable}}{- string - name of analysis variable}
+
+\item{\code{plot_method}}{- string - one of boxplot, scatterplot, or heatmap}
+
+\item{\code{analyte}}{- string vector - vector of chosen analytes}
+
+\item{\code{group_variable}}{- string - grouping variable used in analysis (Karyotype)}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-FeatureAnalysisManager-get_analyte_plot_x_axis_label"></a>}}
+\if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-get_analyte_plot_x_axis_label}{}}}
+\subsection{Method \code{get_analyte_plot_x_axis_label()}}{
+small helper function to generate x-axis label for analyte plot
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$get_analyte_plot_x_axis_label(
+  namespace,
+  analysis_variable
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{namespace}}{- string - namespace}
+
+\item{\code{analysis_variable}}{- string - name of analysis variable}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-FeatureAnalysisManager-getAnalyteData"></a>}}

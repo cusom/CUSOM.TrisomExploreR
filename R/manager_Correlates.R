@@ -441,15 +441,31 @@ CorrelatesManager <- R6::R6Class(
     },
 
     #' @description
+    #' small helper function to determine plot method for instance/namespace
+    #' @param analysis_type - string - analysis type for this instance/namespace
+    #' @param analyte_count int - number of selected analytes
+    get_analyte_plot_method = function(analysis_type, analyte_count) {
+      if (analyte_count > 1) {
+        return("heatmap")
+      } else if (analysis_type == "Categorical") {
+        return("boxplot")
+      } else if (analysis_type == "Continuous") {
+        return("scatterplot")
+      } else {
+        return("unknown")
+      }
+    },
+
+    #' @description
     #' set analyte sample level data
     #'
     #' @return none
     getAnalyteData = function() {
 
-      self$AnalytePlotMethod <- getAnalytePlotMethod(self$analysisType, length(self$Analyte))
+      self$AnalytePlotMethod <- self$get_analyte_plot_method(self$analysisType, length(self$Analyte))
       self$CorrelationAnalytePlotTitle <- glue::glue('{CUSOMShinyHelpers::parseDelimitedString(self$Analyte,1)} vs {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte,1)}')
 
-      if(length(self$Analyte) == 1) {
+      if (length(self$Analyte) == 1) {
         # Query on X-axis, Comparison on y-axis
         self$AnalyteData <- self$remoteDB$getQuery(
             "[shiny].[GetAnalyteDataByPlatform] ?, ?",
@@ -1052,22 +1068,3 @@ CorrelatesManager <- R6::R6Class(
 
   )
 )
-
-#' small helper function to determin plot method for instance/namespace
-#' @param analysisType - string - analysis type for this instance/namespace
-#' @param analyteCount int - number of selected analytes
-#' @return string
-getAnalytePlotMethod <- function(analysisType, analyteCount) {
-  if(analyteCount > 1) {
-    return("Heatmap")
-  }
-  else if(analysisType == "Categorical") {
-    return("boxplot")
-  }
-  else if(analysisType == "Continuous") {
-    return("scatterplot")
-  }
-  else {
-    return("Unknown")
-  }
-}

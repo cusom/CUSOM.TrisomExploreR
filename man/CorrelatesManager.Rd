@@ -115,6 +115,7 @@ Enables analysis of cross-omics correlations
 \item \href{#method-CorrelatesManager-getVolcanoPlot}{\code{CorrelatesManager$getVolcanoPlot()}}
 \item \href{#method-CorrelatesManager-getFormattedVolcanoSummaryData}{\code{CorrelatesManager$getFormattedVolcanoSummaryData()}}
 \item \href{#method-CorrelatesManager-updateAnalyteAttributes}{\code{CorrelatesManager$updateAnalyteAttributes()}}
+\item \href{#method-CorrelatesManager-get_analyte_plot_method}{\code{CorrelatesManager$get_analyte_plot_method()}}
 \item \href{#method-CorrelatesManager-getAnalyteData}{\code{CorrelatesManager$getAnalyteData()}}
 \item \href{#method-CorrelatesManager-getAnalytePlot}{\code{CorrelatesManager$getAnalytePlot()}}
 \item \href{#method-CorrelatesManager-getFormattedAnalyteSummaryData}{\code{CorrelatesManager$getFormattedAnalyteSummaryData()}}
@@ -266,6 +267,25 @@ update analyte fields
 
 \subsection{Returns}{
 none
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-CorrelatesManager-get_analyte_plot_method"></a>}}
+\if{latex}{\out{\hypertarget{method-CorrelatesManager-get_analyte_plot_method}{}}}
+\subsection{Method \code{get_analyte_plot_method()}}{
+small helper function to determine plot method for instance/namespace
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$get_analyte_plot_method(analysis_type, analyte_count)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{analysis_type}}{- string - analysis type for this instance/namespace}
+
+\item{\code{analyte_count}}{int - number of selected analytes}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}

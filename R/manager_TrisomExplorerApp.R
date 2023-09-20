@@ -5,6 +5,7 @@
 #' @field module_config - list -
 #' @field analysis_config - list -
 #' @field input_config - list -
+#' @importFrom arrow open_dataset
 #' @export
 TrisomExplorerAppManager <- R6::R6Class(
   "TrisomExplorerAppManager",
@@ -101,76 +102,34 @@ TrisomExplorerAppManager <- R6::R6Class(
         AnalysisVariableName, AnalysisVariableLabel, AnalysisType,
         AnalysisVariableBaselineLabel, AnalysisVolcanoPlotTopAnnotation)
 
-      self$input_config$statTests <- c("Linear Model", "Wilcoxon test")
-
-      self$input_config$statTestTibble <- tibble::tibble(
-        "Text" = c("Linear Model", "Wilcoxon test"),
-        "URL" = c("https://en.wikipedia.org/wiki/Linear_regression",
-          "https://en.wikipedia.org/wiki/Wilcoxon_signed-rank_test"
-        ),
-        "TooltipText" = c("Linear regression is a linear approach for
-        modelling the relationship between a numerical response and one
-        or more explanatory variables.<br /> <br />Click this icon to
-        learn more...",
-        "The Wilcoxon Two-Sample signed-rank test (aka Mann-Whitney U test)
-        is a non-parametric statistical hypothesis test. <br /> <br />Click
-        this icon to learn more...")
-      )
+      inputs <- jsonlite::fromJSON("Data/inputs.json")
 
       self$input_config$statTestschoiceNames <- purrr::pmap(
-        self$input_config$statTestTibble,
+        inputs$stat_tests,
         CUSOMShinyHelpers::createTooltip
       )
-
-      self$input_config$adjustmentMethodsTibble <- tibble::tibble(
-          "Text" = c("Benjamini-Hochberg (FDR)", "none"),
-          "URL" = c("https://en.wikipedia.org/wiki/False_discovery_rate#Benjamini%E2%80%93Hochberg_procedure", ""),
-          "TooltipText" = c("Multiple testing correction refers to making statistical tests
-          more stringent in order to counteract the problem of multiple testing.<br /> <br />
-          The false discovery rate (FDR) is a method of conceptualizing the rate of type I
-          errors in null hypothesis testing when conducting multiple comparisons. <br /> <br />
-          Click here to learn more...", ""),
-          "ShowTooltip" = c(TRUE, FALSE)
-        )
-
-      self$input_config$adjustmentMethods <- c("Benjamini-Hochberg (FDR)", "none")
 
       self$input_config$adjustmentMethodsNames <- purrr::pmap(
-        self$input_config$adjustmentMethodsTibble,
+        inputs$adj_methods,
         CUSOMShinyHelpers::createTooltip
       )
 
-      self$input_config$platforms <- remoteDB$getQuery(
-        "[shiny].[GetApplicationPlatforms] ?",
-        tibble::tibble("ApplicationID" = ApplicationId)
-        ) |>
+      self$input_config$platforms <- inputs$platforms
+
+      self$input_config$experimentIDs <- inputs$experiment_ids
+
+      self$input_config$karyotypes <- arrow::open_dataset("Data/participants") |>
+        dplyr::collect() |>
+        dplyr::distinct(Karyotype) |>
         dplyr::pull()
 
-      self$input_config$experimentIDs <- remoteDB$getQuery(
-        "[shiny].[GetApplicationStudies] ?",
-        tibble::tibble("ApplicationID" = ApplicationId)
-        ) |>
-        dplyr::filter(!is.na(ExperimentStudyName))
-
-      self$input_config$LabIDs <- localDB$getQuery(
-        "SELECT distinct LabID FROM ParticipantEncounter"
-        ) |>
+      self$input_config$sexes <- arrow::open_dataset("Data/participants") |>
+        dplyr::collect() |>
+        dplyr::distinct(Sex) |>
         dplyr::pull()
 
-      self$input_config$karyotypes <- localDB$getQuery(
-        "SELECT distinct Karyotype FROM allParticipants"
-        ) |>
-        dplyr::pull()
-
-      self$input_config$sexes <- localDB$getQuery(
-       "SELECT distinct Sex FROM allParticipants WHERE Sex IS NOT NULL"
-        ) |>
-        dplyr::distinct() |>
-        dplyr::pull()
-
-      self$input_config$ages <- localDB$getQuery(
-        "SELECT AgeAtTimeOfVisit FROM ParticipantEncounter"
-      ) |>
+      self$input_config$ages <- arrow::open_dataset("Data/participant_encounter") |>
+        dplyr::collect() |>
         tidyr::drop_na() |>
         dplyr::summarise(
           min = round(min(AgeAtTimeOfVisit)),
@@ -181,35 +140,34 @@ TrisomExplorerAppManager <- R6::R6Class(
         ) |>
         dplyr::pull()
 
-      self$input_config$Conditions <- localDB$getQuery(
-        "SELECT distinct Condition FROM ParticipantConditions"
-        ) |>
+      self$input_config$Conditions <- arrow::open_dataset("Data/participant_conditions") |>
+        dplyr::collect() |>
+        dplyr::distinct(Condition) |>
         dplyr::pull()
 
-      self$input_config$ConditionClasses <- localDB$getQuery(
-        "SELECT distinct ConditionClass FROM ParticipantConditions"
-        ) |>
+      self$input_config$ConditionClasses <- arrow::open_dataset("Data/participant_conditions") |>
+        dplyr::collect() |>
+        dplyr::distinct(ConditionClass) |>
         tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
         tidyr::drop_na() |>
         dplyr::select(ConditionClass) |>
         dplyr::distinct() |>
         dplyr::pull()
 
-      self$input_config$ConditionChoices <- localDB$getQuery(
-        "SELECT LabID,ConditionClass,Condition
-         FROM ParticipantConditions
-         WHERE HasCondition = 'True'"
-        ) |>
+      self$input_config$ConditionChoices <- arrow::open_dataset("Data/participant_conditions") |>
+        dplyr::collect() |>
+        dplyr::filter(HasCondition == "True") |>
+        dplyr::select(LabID, ConditionClass, Condition) |>
         dplyr::select(LabID, ConditionClass, Condition) |>
         dplyr::group_by(ConditionClass, Condition) |>
         dplyr::summarize(n = dplyr::n_distinct(LabID), .groups = "drop")  |>
         dplyr::filter(n >= 5) |>
         dplyr::left_join(
-          localDB$getQuery(
-            "SELECT distinct Condition,ConditionCensorshipAgeGroup
-             FROM ParticipantConditions
-             WHERE ConditionCensorshipAgeGroup IS NOT NULL"
-          )
+          arrow::open_dataset("Data/participant_conditions") |>
+            dplyr::collect() |>
+            dplyr::filter(!is.na(ConditionCensorshipAgeGroup)) |>
+            dplyr::distinct(Condition, ConditionCensorshipAgeGroup)
+
           , by = "Condition"
         ) |>
         dplyr::mutate(

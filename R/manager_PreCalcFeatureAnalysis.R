@@ -3,6 +3,7 @@
 #' subclass of FeatureAnalysisManager - overrides several class methods
 #' @field Age - numeric vector of chosen ages
 #' @field Sex - character vecotr of chosen sex(s)
+#' @importFrom arrow open_dataset
 #' @export
 PreCalcFeatureAnalysisManager <- R6::R6Class(
   "PreCalcFeatureAnalysisManager",
@@ -21,6 +22,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
     #' @param localDB R6 class - query manager for local database queries
     initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
       super$initialize(applicationName, id, namespace_config, remoteDB, localDB)
+      self$Adjusted <- TRUE
     },
 
     #' @description
@@ -39,61 +41,61 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
 
       if (self$analysisVariable == "Age") {
         return(
-          self$localDB$getQuery(
-          "SELECT * FROM analyteKaryotypeCounts"
-          ) |>
-          dplyr::ungroup() |>
-          dplyr::mutate(
-            sort = dplyr::case_when(
-              Karyotype == "Trisomy 21" ~ 1,
-              TRUE ~ 99
-            ),
-            choiceNames = glue::glue("{Karyotype} (n={n})"),
-            choiceValues = Karyotype
-          ) |>
-          dplyr::bind_rows(
-            tibble::tibble(
-              Karyotype = glue::glue_collapse(karyotypes, sep = ","),
-              n = NA,
-              sort = 999,
-              choiceNames =
-                glue::glue(
-                  '<div>{glue::glue_collapse(karyotypes,sep = " vs. ")}
-                    <span
-                      data-toggle="tooltip"
-                      data-placement="auto right"
-                      title=""
-                      class="fas fa-info-circle gtooltip info-tooltip"
-                      data-original-title="Test for differences in trajectories between Trisomy 21 & Controls">
-                    </span>
-                  </div>'
-                ),
-              choiceValues = glue::glue_collapse(karyotypes, sep = ";")
-            )
-          ) |>
-          dplyr::arrange(sort)
-        )
-      }
-
+          jsonlite::fromJSON("Data/inputs.json")$whole_blood_karyotype_counts |>
+            as.data.frame() |>
+            dplyr::mutate(
+              sort = dplyr::case_when(
+                Karyotype == "Trisomy 21" ~ 1,
+                TRUE ~ 99
+              ),
+              choiceNames = glue::glue("{Karyotype} (n={n})"),
+              choiceValues = Karyotype
+            ) |>
+            dplyr::bind_rows(
+              tibble::tibble(
+                Karyotype = glue::glue_collapse(karyotypes, sep = ","),
+                n = NA,
+                sort = 999,
+                choiceNames =
+                  glue::glue(
+                    '<div>{glue::glue_collapse(karyotypes,sep = " vs. ")}
+                      <span
+                        data-toggle="tooltip"
+                        data-placement="auto right"
+                        title=""
+                        class="fas fa-info-circle gtooltip info-tooltip"
+                        data-original-title="Test for differences in trajectories between Trisomy 21 & Controls">
+                      </span>
+                    </div>'
+                  ),
+                choiceValues = glue::glue_collapse(karyotypes, sep = ";")
+              )
+            ) |>
+            dplyr::arrange(sort)
+          )
+        }
     },
 
     #' @description
     #' Set Volcano Summary Data along with other volcano plot properties
     getVolcanoSummaryData = function() {
 
-      self$VolcanoSummaryData <- self$localDB$getQuery(
-        "SELECT g.AnalyteID, g.Analyte, s.FoldChange, s.pvalue, s.padj
-          FROM PrecalculatedDESeq2 s
-          INNER JOIN Genes g ON AnalyteID = s.Geneid
-          WHERE [namespace] = ({namespace})
-          AND samples = ({karyotypes})
-          AND selected_parameters = ({covariates})",
-          tibble::tibble(
-            namespace = self$namespace,
-            karyotypes = glue::glue_collapse(self$Karyotype, ";"),
-            covariates = ifelse(is.null(self$Covariates), "none", glue::glue_collapse(self$Covariates, ";"))
-          )
+      params <- ifelse(
+        is.null(self$Covariates),
+        "none",
+        glue::glue_collapse(self$Covariates, ";")
+      )
+
+      self$VolcanoSummaryData <- arrow::open_dataset("Data/precalc_feature_data") |>
+        dplyr::filter(
+          namespace == self$namespace
         ) |>
+        dplyr::collect() |>
+        dplyr::filter(
+          samples == glue::glue_collapse(self$Karyotype, ";"),
+          selected_parameters == params
+        ) |>
+        dplyr::select("AnalyteID" = Geneid, "Analyte" = Gene_name, FoldChange, pvalue, padj) |>
         dplyr::rename(
           "p.value.original" = pvalue,
           "p.value" = padj
@@ -108,17 +110,19 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
               CUSOMShinyHelpers::formatPValue
             )
           ),
-          text = glue::glue("Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"),
-          "lmFormula" = "<a href='https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html' target='_blank'>DESeq2 model</a>",
+          text = glue::glue("Gene: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"),
+          "lmFormula" = "<a
+            href='https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html'
+            target='_blank'>DESeq2 model</a>",
           ivs = ""
         )
 
-        self$VolcanoPlotTitle <- glue::glue("Effect of {self$analysisVariableLabel} on all {self$analytesLabel}")
-        self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$log2FoldChange))
-        self$VolcanoSummaryDataXAxisLabel <- "log<sub>2</sub>(Fold Change)"
-        self$VolcanoSummaryDataYAxisLabel <- glue::glue(
-          "-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})"
-        )
+      self$VolcanoPlotTitle <- glue::glue("Effect of {self$analysisVariableLabel} on all {self$analytesLabel}")
+      self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$log2FoldChange))
+      self$VolcanoSummaryDataXAxisLabel <- "log<sub>2</sub>(Fold Change)"
+      self$VolcanoSummaryDataYAxisLabel <- glue::glue(
+        "-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})"
+      )
 
     },
 
@@ -126,8 +130,8 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
     #' get sample level data for selected analyte(s)
     getAnalyteData = function() {
 
-      self$AnalytePlotMethod <- getAnalytePlotMethod(self$analysisType, length(self$Analyte))
-      self$AnalytePlotTitle <- getAnalytePlotTitle(
+      self$AnalytePlotMethod <- self$get_analyte_plot_method(self$analysisType, length(self$Analyte))
+      self$AnalytePlotTitle <- self$get_analyte_plot_title(
         self$analysisVariable,
         self$AnalytePlotMethod,
         self$Analyte, self$Karyotype
@@ -141,7 +145,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
       if (length(self$Analyte) == 1) {
 
         self$AnalyteData <- self$remoteDB$getQuery(
-          "[shiny].[GetDataByStudyAnalyteAgeSexKaryotype] ?,?,?,?,?,?",
+          "EXEC [shiny].[GetDataByStudyAnalyteAgeSexKaryotype] ?,?,?,?,?,?",
           tibble::tibble(
             "StudyName" = self$Study,
             "Analyte" = self$Analyte,

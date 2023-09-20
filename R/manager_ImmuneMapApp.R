@@ -1,4 +1,4 @@
-#' R6 Class to manage the Immune Map application - subclass of the core TrisomExplorerAppManager
+#' R6 Class to manage the Immune Map application - subclass of the core TrisomExplorerAppManager  -- DEPRECATED --
 #' @description
 #' subclass of the core TrisomExplorerAppManager - inherits core attributes and methods
 #' @field analysis - string -
@@ -20,10 +20,8 @@ ImmuneMapAppManager <- R6::R6Class(
     #' @param remoteDB R6 class - query manager for remote database queries
     #' @param localDB R6 class - query manager for local database queries
     initialize = function(ApplicationId, remoteDB, localDB){
+      .Deprecated(new = "TrisomExplorerAppManager", old = "ImmuneMapAppManager")
       super$initialize(ApplicationId, remoteDB, localDB)
-
-      self$input_config$Queryplatforms <- self$input_config$Queryplatforms[grepl("Mass", self$input_config$Queryplatforms)]
-
     }
   )
 )

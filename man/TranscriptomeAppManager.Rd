@@ -2,7 +2,7 @@
 % Please edit documentation in R/manager_TranscriptomeApp.R
 \name{TranscriptomeAppManager}
 \alias{TranscriptomeAppManager}
-\title{R6 Class to manage TrisomExploreR Transcriptome application}
+\title{R6 Class to manage TrisomExploreR Transcriptome application  -- DEPRECATED --}
 \description{
 subclass of TrisomExplorerAppManager
 }

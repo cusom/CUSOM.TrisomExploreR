@@ -31,10 +31,8 @@
 #' @import purrr
 #' @import plotly
 #' @import glue
-#' @importFrom CUSOMShinyHelpers getGroupedStatTestByKeyGroup
-#' @importFrom CUSOMShinyHelpers getGroupedBoxplot
-#' @importFrom CUSOMShinyHelpers getStatAnnotationAnchorLines
-#' @importFrom CUSOMShinyHelpers getGroupedStatAnnotations
+#' @importFrom CUSOMShinyHelpers getGroupedStatTestByKeyGroup getGroupedBoxplot getStatAnnotationAnchorLines getGroupedStatAnnotations
+#' @importFrom arrow open_dataset
 #' @export
 CellTypeAnalysisManager <- R6::R6Class(
   "CellTypeAnalysisManager",
@@ -77,8 +75,20 @@ CellTypeAnalysisManager <- R6::R6Class(
 
       self$applicationName <- applicationName
       self$remoteDB <- remoteDB
-      self$localDB <- localDB
 
+    },
+
+    #' @description
+    #' helper function to get cell type list for input
+    getCellTypes = function() {
+      unname(unlist(jsonlite::fromJSON("Data/inputs.json")$cell_types))
+    },
+
+    #' @description
+    #' helper function to get list of genes for input
+    getAnalytes = function() {
+      arrow::open_dataset("Data/genes") |>
+        dplyr::collect()
     },
 
     #' @description
@@ -97,20 +107,23 @@ CellTypeAnalysisManager <- R6::R6Class(
 
       dataframe <- self$remoteDB$getQuery(
         "[shiny].[GetAnalyteDataByPlatform] ?,?",
-          tibble::tibble(
-          'Platform' = self$Platform,
-          'Analyte' = self$Analyte,
-          )
-        ) |>
+        tibble::tibble(
+          "Platform" = self$Platform,
+          "Analyte" = self$Analyte,
+        )
+      ) |>
         dplyr::left_join(
-          self$localDB$getQuery(
-            "SELECT pe.LabID, pe.record_id, pe.AgeAtTimeOfVisit as [Age], p.Karyotype, p.Sex
-              FROM ParticipantEncounter pe
-              INNER JOIN allPArticipants p ON p.record_id = pe.record_id"
-          ),
+          arrow::open_dataset("Data/participants") |>
+            dplyr::collect() |>
+            dplyr::inner_join(
+              arrow::open_dataset("Data/participant_encounter") |>
+                dplyr::collect() ,
+              by = "record_id"
+            ) |>
+            dplyr::select(LabID, record_id, "Age" = AgeAtTimeOfVisit, Karyotype, Sex),
           by = c("LabID", "record_id")
         ) |>
-        dplyr::rename( "CellType" = Specimen ) |>
+        dplyr::rename("CellType" = Specimen) |>
         dplyr::filter(
           CellType %in% self$CellType,
           (Sex %in% self$Sex | is.na(Sex)),
@@ -136,12 +149,12 @@ CellTypeAnalysisManager <- R6::R6Class(
         dplyr::distinct() |>
         dplyr::pull()
 
-      if(nrow(dataframe)>0) {
+      if (nrow(dataframe) > 0) {
 
-        countData <- dataframe |>
+        count_data <- dataframe |>
           dplyr::add_count(Karyotype, CellType)
 
-        statsData <- dataframe |>
+        stats_data <- dataframe |>
           dplyr::select(CellType, LabID,  Analyte, log2MeasuredValue, Karyotype, Sex, Age) |>
           CUSOMShinyHelpers::getGroupedStatTestByKeyGroup(
             groupVar = CellType,
@@ -156,19 +169,26 @@ CellTypeAnalysisManager <- R6::R6Class(
             covariates = self$Covariates
           ) |>
           dplyr::mutate(
-            p.value.text = unlist(purrr::pmap(.l = list(p.value,self$AdjustmentMethod), CUSOMShinyHelpers::formatPValue)),
-            p.value.is.significant = ifelse(p.value.text %in% c('No significant difference','Unable to compute p-value using chosen methods'),FALSE,TRUE),
-            p.value.adjustment.method = self$AdjustmentMethod
+            p.value.text = unlist(
+              purrr::pmap(
+                .l = list(p.value, self$AdjustmentMethod),
+                CUSOMShinyHelpers::formatPValue
+              )
+            ),
+            p.value.is.significant = ifelse(
+                p.value.text %in% c("No significant difference", "Unable to compute p-value using chosen methods"),
+                FALSE,
+                TRUE
+              ),
+              p.value.adjustment.method = self$AdjustmentMethod
           )
 
-        self$AnalyteData <- dplyr::inner_join(countData, statsData, by = "CellType") |>
+        self$AnalyteData <- dplyr::inner_join(count_data, stats_data, by = "CellType") |>
           dplyr::mutate(
-            text = glue::glue('{CellType}\n{MeasuredValue}\n{Karyotype} (n={n}) \n{p.value.text}')
+            text = glue::glue("{CellType}\n{MeasuredValue}\n{Karyotype} (n={n}) \n{p.value.text}")
           )
 
-      }
-
-      else {
+      } else {
 
         NULL
       }
@@ -183,12 +203,9 @@ CellTypeAnalysisManager <- R6::R6Class(
     #' @return plotly object
     getPlot = function(.data, ns) {
 
-      CellTypes <- self$localDB$getQuery(
-        "SELECT distinct [CellType] FROM CellTypes"
-        ) |>
-        dplyr::pull()
+      cell_types <- unname(unlist(jsonlite::fromJSON("Data/inputs.json")$cell_types))
 
-      AllCellTypes <- intersect( CellTypes, unique(self$CellType))
+      all_cell_types <- intersect(cell_types, unique(self$CellType))
 
       p <- .data |>
         CUSOMShinyHelpers::getGroupedBoxplot(
@@ -221,7 +238,7 @@ CellTypeAnalysisManager <- R6::R6Class(
             )
           ),
           title = list(
-            text = HTML(glue::glue('Effect of trisomy 21 on {self$Analyte} mRNA expression')),
+            text = HTML(glue::glue("Effect of trisomy 21 on {self$Analyte} mRNA expression")),
             font = list(
               family = "Arial",
               color = "rgb(58, 62, 65)",
@@ -235,8 +252,8 @@ CellTypeAnalysisManager <- R6::R6Class(
           ),
           xaxis = list(
             categoryorder = "array",
-            categoryarray = AllCellTypes,
-            fixedrange= TRUE
+            categoryarray = all_cell_types,
+            fixedrange = TRUE
           ),
           yaxis = list(
             title = list(
@@ -259,15 +276,15 @@ CellTypeAnalysisManager <- R6::R6Class(
       lines <- .data |>
         CUSOMShinyHelpers::getStatAnnotationAnchorLines(
           group = CellType,
-          groupMembers = CellTypes,
+          groupMembers = cell_types,
           significanceVariable = p.value,
           groupIsSignificant = p.value.is.significant,
           includeInsignificantValues = TRUE
         )
 
-      if(length(lines)>0) {
+      if (length(lines) > 0) {
 
-        significanceAnnotations <- CUSOMShinyHelpers::getGroupedStatAnnotations(
+        significance_annotations <- CUSOMShinyHelpers::getGroupedStatAnnotations(
           AnnotationAnchorLines = lines,
           statTest = self$StatTest,
           covariates = self$Covariates,
@@ -278,7 +295,7 @@ CellTypeAnalysisManager <- R6::R6Class(
         p <- p |>
           plotly::layout(
             shapes = lines,
-            annotations = significanceAnnotations
+            annotations = significance_annotations
           )
       }
 
@@ -288,7 +305,9 @@ CellTypeAnalysisManager <- R6::R6Class(
           displaylogo = FALSE,
           toImageButtonOptions = list(
             format = "svg",
-            filename = glue::glue('{self$applicationName} - {self$Analyte} Cell Type Plot {format(Sys.time(),"%Y%m%d_%H%M%S")}') ,
+            filename = glue::glue(
+              "{self$applicationName} - {self$Analyte} Cell Type Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
+            ),
             width = NULL,
             height = NULL
           ),

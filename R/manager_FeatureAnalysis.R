@@ -63,6 +63,7 @@
 #' @importFrom stringr str_split
 #' @importFrom heatmaply heatmaply
 #' @importFrom fgsea calcGseaStat
+#' @importFrom arrow open_dataset
 #' @export
 FeatureAnalysisManager <- R6::R6Class(
   "FeatureAnalysisManager",
@@ -135,7 +136,6 @@ FeatureAnalysisManager <- R6::R6Class(
 
       self$applicationName <- applicationName
       self$remoteDB <- remoteDB
-      self$localDB <- localDB
 
       namespace_config <- namespace_config |>
         dplyr::filter(Namespace == id)
@@ -168,32 +168,10 @@ FeatureAnalysisManager <- R6::R6Class(
     #' @description
     #' helper function to get formatted study choices based on experiments configured for this instance / namespace
     getStudies = function() {
+      jsonlite::fromJSON("Data/inputs.json")$study_choices |>
+        as.data.frame() |>
+        dplyr::filter(Values %in% self$experimentIDs)
 
-      self$remoteDB$getQuery(
-        "[shiny].[GetStudyDetailsByExperimentID] ?",
-        tibble::tibble("ExperimentIDList" = glue::glue_collapse(self$experimentIDs, sep = ";"))
-      ) |>
-        dplyr::mutate(
-          TooltipText = dplyr::case_when(
-            !is.na(ExperimentStudyTitle)  ~ glue::glue("{ExperimentStudyTitle} <br /><br />
-            {ExperimentStudyAdditionalText} <br /><br />Total Samples: {TotalSamples}"),
-            TRUE ~ glue::glue("{ExperimentStudyName} <br /><br />Total Samples: {TotalSamples}")
-          ),
-          ShowTooltip = TRUE,
-          PlatformGroupDisplayName = ifelse(
-            is.na(PlatformGroupDisplayName),
-            "Study",
-            PlatformGroupDisplayName
-          )
-        ) |>
-        dplyr::select(
-          "Values" = "ExperimentID",
-          "Text" = "ExperimentStudyName",
-          "URL" = "ExperimentStudyURL",
-          "TooltipText" = "TooltipText",
-          "ShowTooltip",
-          "FieldSet" = "PlatformGroupDisplayName"
-        )
     },
 
     #' @description
@@ -228,12 +206,9 @@ FeatureAnalysisManager <- R6::R6Class(
         )
       } else {
 
-        karyotype_input_counts <- self$localDB$getQuery(
-          "SELECT LabID,Analyte,Karyotype
-          FROM sourceData
-          WHERE ExperimentID  = ({study})",
-          tibble::tibble(study = self$Study)
-          ) |>
+        karyotype_input_counts <- arrow::open_dataset("Data/feature_data") |>
+          dplyr::filter(ExperimentID == self$Study) |>
+          dplyr::collect() |>
           dplyr::group_by(Analyte, Karyotype) |>
           dplyr::summarise(
             n = dplyr::n_distinct(LabID), .groups = "drop"
@@ -402,22 +377,18 @@ FeatureAnalysisManager <- R6::R6Class(
     #' Get / set sample level data with filers applied
     getBaseData = function() {
 
-      self$BaseData <- self$localDB$getQuery(
-        "SELECT ExperimentStudyName, LabID, Karyotype, Sex, Age, BMI, Analyte, MeasuredValue, Measurement
-          FROM sourceData
-          WHERE ExperimentID = ({study})
-          AND (Age >= ({minAge}) OR Age IS NULL)
-          AND (Age <= ({maxAge}) OR Age IS NULL)
-          AND Sex IN ({sexes*})
-          AND Karyotype IN ({karyotypes*})",
-        tibble::tibble(
-          study = self$Study,
-          minAge = min(self$Age),
-          maxAge = max(self$Age),
-          sexes = self$Sex,
-          karyotypes = unlist(stringr::str_split(self$Karyotype, pattern = ";"))
-        )
-      ) |>
+      self$BaseData <- arrow::open_dataset("data/feature_data") |>
+        dplyr::filter(
+          ExperimentID == self$Study
+        ) |>
+        dplyr::collect() |>
+        dplyr::select(LabID, Karyotype, Sex, Age, BMI, Analyte, MeasuredValue, Measurement) |>
+        dplyr::filter(
+          Age >= min(self$Age),
+          Age <= max(self$Age),
+          Sex %in% self$Sex,
+          Karyotype %in% unlist(stringr::str_split(self$Karyotype, pattern = ";"))
+        ) |>
         dplyr::filter(!is.na(!!rlang::sym(self$analysisVariable))) |>
         dplyr::mutate(
           log2MeasuredValue = ifelse(MeasuredValue == 0, 0, log2(MeasuredValue)),
@@ -681,11 +652,63 @@ FeatureAnalysisManager <- R6::R6Class(
     },
 
     #' @description
+    #' small helper function to determine plot method for instance/namespace
+    #' @param analysis_type - string - analysis type for this instance/namespace
+    #' @param analyte_count int - number of selected analytes
+    get_analyte_plot_method = function(analysis_type, analyte_count) {
+      if (analyte_count > 1) {
+        return("heatmap")
+      } else if (analysis_type == "Categorical") {
+        return("boxplot")
+      } else if (analysis_type == "Continuous") {
+        return("scatterplot")
+      } else {
+        return("unknown")
+      }
+    },
+
+    #' @description
+    #' small helper function to generate plot title based on criteria
+    #' @param analysis_variable - string - name of analysis variable
+    #' @param plot_method - string - one of boxplot, scatterplot, or heatmap
+    #' @param analyte - string vector - vector of chosen analytes
+    #' @param group_variable - string - grouping variable used in analysis (Karyotype)
+
+    get_analyte_plot_title = function(analysis_variable, plot_method, analyte, group_variable) {
+
+      group_var_count <- length(stringr::str_split(group_variable, pattern = ";", simplify = TRUE))
+
+      if (plot_method == "boxplot") {
+        return(glue::glue("Effect of {analysis_variable} on {analyte}"))
+      } else if (plot_method == "scatterplot" && group_var_count == 1) {
+        return(glue::glue("Effect of {analysis_variable} in {group_variable} on {analyte}"))
+      } else if (plot_method == "scatterplot" && group_var_count > 1) {
+        glue::glue("Comparison of {analysis_variable} trajectories between karyotype for {analyte}")
+      }
+    },
+
+    #' @description
+    #' small helper function to generate x-axis label for analyte plot
+    #' @param namespace - string - namespace
+    #' @param analysis_variable - string - name of analysis variable
+    get_analyte_plot_x_axis_label = function(namespace, analysis_variable) {
+      if (namespace == "Comorbidity") {
+        return(
+          glue::glue("Has Any {analysis_variable}")
+        )
+      } else {
+        return(
+          analysis_variable
+        )
+      }
+    },
+
+    #' @description
     #' get sample level data for selected analyte(s)
     getAnalyteData = function() {
 
-      self$AnalytePlotMethod <- getAnalytePlotMethod(self$analysisType, length(self$Analyte))
-      self$AnalytePlotTitle <- getAnalytePlotTitle(
+      self$AnalytePlotMethod <- self$get_analyte_plot_method(self$analysisType, length(self$Analyte))
+      self$AnalytePlotTitle <- self$get_analyte_plot_title(
         self$analysisVariableLabel,
         self$AnalytePlotMethod,
         self$Analyte,
@@ -727,7 +750,7 @@ FeatureAnalysisManager <- R6::R6Class(
             dplyr::filter(grepl(self$groupBaselineLabel, !!rlang::sym(self$analysisVariable))) |>
             dplyr::pull()
 
-          self$AnalytePlotXAxisLabel <- getAnalytePlotXAxisLabel(self$namespace, self$analysisVariableLabel)
+          self$AnalytePlotXAxisLabel <- self$get_analyte_plot_x_axis_label(self$namespace, self$analysisVariableLabel)
 
         }
 
@@ -1376,53 +1399,3 @@ FeatureAnalysisManager <- R6::R6Class(
 
   )
 )
-
-#' small helper function to determine plot method for instance/namespace
-#' @param analysis_type - string - analysis type for this instance/namespace
-#' @param analyte_count int - number of selected analytes
-#' @return string
-getAnalytePlotMethod <- function(analysis_type, analyte_count) {
-  if (analyte_count > 1) {
-    return("heatmap")
-  } else if (analysis_type == "Categorical") {
-    return("boxplot")
-  } else if (analysis_type == "Continuous") {
-    return("scatterplot")
-  } else {
-    return("unknown")
-  }
-}
-
-#' small helper function to generate plot title based on criteria
-#' @param analysis_variable - string - name of analysis variable
-#' @param plot_method - string - one of boxplot, scatterplot, or heatmap
-#' @param analyte - string vector - vector of chosen analytes
-#' @param group_variable - string - grouping variable used in analysis (Karyotype)
-#' @return string
-getAnalytePlotTitle <- function(analysis_variable, plot_method, analyte, group_variable) {
-
-  group_var_count <- length(stringr::str_split(group_variable, pattern = ";", simplify = TRUE))
-
-  if (plot_method == "boxplot") {
-    return(glue::glue("Effect of {analysis_variable} on {analyte}"))
-  } else if (plot_method == "scatterplot" && group_var_count == 1) {
-    return(glue::glue("Effect of {analysis_variable} in {group_variable} on {analyte}"))
-  } else if (plot_method == "scatterplot" && group_var_count > 1) {
-    glue::glue("Comparison of {analysis_variable} trajectories between karyotype for {analyte}")
-  }
-}
-
-#' small helper function to generate x-axis label for analyte plot
-#' @param namespace - string - namespace
-#' @param analysis_variable - string - name of analysis variable
-getAnalytePlotXAxisLabel <- function(namespace, analysis_variable) {
-  if (namespace == "Comorbidity") {
-    return(
-      glue::glue("Has Any {analysis_variable}")
-    )
-  } else {
-    return(
-      analysis_variable
-    )
-  }
-}

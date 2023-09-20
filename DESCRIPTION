@@ -1,6 +1,6 @@
 Package: TrisomExploreR
 Title: Common modules and logic for TrisomExplorer Applications
-Version: 0.1.0.9000
+Version: 0.2.1.9000
 Authors@R: 
     person("Kyle", "Bartsch", , "kyle.bartsch@cuanschutz.edu", role = c("aut", "cre"))
 Description: Provides common components / modules / styling / JS utilized
@@ -9,6 +9,8 @@ License: file LICENSE
 Depends: 
     R (>= 2.10)
 Imports: 
+    arrow,
+    AzureStor,
     bsplus,
     circlize,
     CUSOMShinyHelpers,
@@ -46,7 +48,8 @@ Imports:
     tidyr,
     tigris,
     UpSetR,
-    waiter
+    waiter,
+    writexl
 Remotes: 
     cusom/CUSOM.ShinyHelpers
 biocViews:

@@ -21,7 +21,7 @@ ODBCConnectionManager <- R6::R6Class(
     #' @param conn_args list - list of connection arguments to connect to database
     #' @return A new `ODBCConnectionManager` object.
     initialize = function(conn_args){
-      private$conn_args = conn_args     
+      private$conn_args = conn_args
     },
 
     #' @description
@@ -167,7 +167,7 @@ SQLiteConnectionManager <- R6::R6Class(
     #' @param filepath string - path to `.sqlite` database file
     #' @return A new `SQLiteConnectionManager` object.
     initialize = function(filepath) {
-      private$filepath = filepath
+      private$filepath <- filepath
     },
 
     #' @description
@@ -273,9 +273,7 @@ SQLiteQueryManager <- R6::R6Class(
 
       if (is.null(parameters)) {
         self$data <- DBI::dbGetQuery(private$dbhandle, self$queryString)
-      }
-
-      else {
+      } else {
 
         e <- new.env()
 
@@ -300,5 +298,92 @@ SQLiteQueryManager <- R6::R6Class(
       return(self$data)
 
     }
+  )
+)
+
+#' R6 Class to download remote blob files from Azure Storage
+#' @description
+#' download remote blob files from Azure Storage
+#'
+#' @field local_data_directory - string - defaults to `data` - path to download remote files locally
+#' @field files_downloaded - logical - are the remote files downloaded?
+#' @importFrom glue glue
+#' @importFrom AzureStor storage_endpoint storage_container storage_download
+#' @export
+AzureRemoteDataFileManager <- R6::R6Class(
+  "AzureRemoteDataFileManager",
+  private = list(
+    account_name = "",
+    key = "",
+    container_name = ""
+  ),
+  public = list(
+
+    local_data_directory = "",
+    files_downloaded = FALSE,
+    #' @description
+    #' Create a new instance of AzureRemoteDataFileManager object
+    #' @param account_name - string - Azure Storage Account name
+    #' @param key - string - authentication key for Azure storage account
+    #' @param container_name - string - name of target BLOB container
+    #' @param local_data_directory - string - defaults to `data` - path to donwload remote files locally
+    #' @param refresh - logical - force a refresh of locally dowloaded data?
+    #' @return A new `AzureRemoteDataFileManager` object.
+    initialize = function(account_name, key, container_name, local_data_directory = "data", refresh = TRUE) {
+
+      private$account_name <- account_name
+      private$key <- key
+      private$container_name <- container_name
+      self$local_data_directory <- local_data_directory
+
+      if (refresh) {
+        unlink(self$local_data_directory, recursive = TRUE)
+      }
+
+      self$files_downloaded <- self$download_blob_files()
+
+    },
+    #' @description
+    #' download all remote files locally
+    download_blob_files = function() {
+
+      result <- TRUE
+
+      if (length(list.files(self$local_data_directory)) == 0) {
+
+        tryCatch({
+          uri <- glue::glue("https://{private$account_name}.blob.core.windows.net")
+          endpoint <- AzureStor::storage_endpoint(uri, private$key)
+          container <- AzureStor::storage_container(endpoint, private$container_name)
+          blobs <- AzureStor::list_blobs(container)
+          sapply(blobs$name, function(x) {
+            src <- x
+            dest <- glue::glue("{self$local_data_directory}/{x}")
+            AzureStor::storage_download(container, src = src, dest = dest)
+            }
+          )
+        }, error = function(e) {
+           print(glue::glue("an error occured while downloading files: {e}"))
+           result <- FALSE
+        })
+
+      }
+
+      return(result)
+
+    },
+    #' @description
+    #' Helper function to get fully qualified directory name by file_group
+    #' @param file_group - string - name of target file group
+    get_file_group_directory = function(file_group) {
+
+      dirs <- list.dirs(self$local_data_directory)
+
+      fqdn <- dirs[intersect(which(grepl(file_group, dirs)), which(!grepl("=", dirs)))]
+
+      return(fqdn)
+
+    }
+
   )
 )

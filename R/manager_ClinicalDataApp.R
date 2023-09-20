@@ -10,6 +10,7 @@
 #' @import tibble
 #' @import tidyr
 #' @import purrr
+#' @importFrom arrow open_dataset
 #' @export
 ClinicalDataAppManager <- R6::R6Class(
   "ClinicalDataAppManager",
@@ -87,77 +88,24 @@ ClinicalDataAppManager <- R6::R6Class(
         tibble::tibble("ApplicationId" = ApplicationId)
       )
 
-      self$app_config$tutorials <- remoteDB$getQuery(
-        "[shiny].[GetApplicationTutorials] ?",
-        tibble::tibble("ApplicationId" = ApplicationId)
-      )
-
       self$module_config <- NULL
 
       self$analysis_config <- NULL
 
-      self$input_config$statTests <- c("Linear Model", "Wilcoxon test")
+      inputs <- jsonlite::fromJSON("Data/inputs.json")
 
-      self$input_config$statTestTibble <- tibble::tibble(
-        "Text" = c("Linear Model", "Wilcoxon test"),
-        "URL" = c("https://en.wikipedia.org/wiki/Linear_regression",
-          "https://en.wikipedia.org/wiki/Wilcoxon_signed-rank_test"
-        ),
-        "TooltipText" = c("Linear regression is a linear approach for modelling the 
-        relationship between a numerical response and one or more explanatory variables.
-        <br /> <br />Click this icon to learn more...",
-        "The Wilcoxon Two-Sample signed-rank test (aka Mann-Whitney U test) is a 
-        non-parametric statistical hypothesis test. <br /> <br />Click this icon to learn more..."
-        )
-      )
+      self$input_config$platforms <- inputs$platforms
 
-      self$input_config$statTestschoiceNames <- purrr::pmap(
-        self$input_config$statTestTibble,
-        CUSOMShinyHelpers::createTooltip
-      )
+      self$input_config$PlatformExperiments <- arrow::open_dataset("Data/platform_experiments") |>
+        dplyr::collect()
 
-      self$input_config$adjustmentMethodsTibble <- tibble::tibble(
-          "Text" = c("Benjamini-Hochberg (FDR)", "none"),
-          "URL" = c("https://en.wikipedia.org/wiki/False_discovery_rate#Benjamini%E2%80%93Hochberg_procedure",
-            ""),
-          "TooltipText" = c("Multiple testing correction refers to making statistical tests 
-          more stringent in order to counteract the problem of multiple testing.<br /> <br />
-          The false discovery rate (FDR) is a method of conceptualizing the rate of type I 
-          errors in null hypothesis testing when conducting multiple comparisons. <br /> <br />
-          Click here to learn more..." , ""),
-          "ShowTooltip" = c(TRUE, FALSE)
-        )
+      self$input_config$Enrollments <- arrow::open_dataset("Data/participants") |>
+        dplyr::collect() |>
+        dplyr::group_by(Karyotype) |>
+        dplyr::summarise(ParticipantCount = n())
 
-      self$input_config$adjustmentMethods <- c("Benjamini-Hochberg (FDR)", "none")
-
-      self$input_config$adjustmentMethodsNames <- purrr::pmap(
-        self$input_config$adjustmentMethodsTibble,
-        CUSOMShinyHelpers::createTooltip
-      )
-
-      self$input_config$platforms <- remoteDB$getQuery(
-        "[shiny].[GetApplicationPlatforms] ?",
-        tibble::tibble("ApplicationID" = ApplicationId)
-      ) |>
-        dplyr::pull()
-
-      self$input_config$PlatformExperiments <- remoteDB$getQuery(
-        " SELECT * FROM [shiny].[vw_ApplicationExperiments]"
-        , NULL
-      )
-
-      self$input_config$Enrollments <- localDB$getQuery(
-        "SELECT Karyotype, count(1) as [ParticipantCount]
-        FROM AllParticipants
-        GROUP BY Karyotype"
-        )
-
-      self$input_config$SampleDetail <- remoteDB$getQuery(
-        "SELECT *
-         FROM [shiny].[vw_FreezerProSampleDetail]",
-        NULL
-        ) |>
-       dplyr::rename("record_id" = GUI, "LabID" = `Lab ID`)
+      self$input_config$SampleDetail <- arrow::open_dataset("Data/sample_detail") |>
+        dplyr::collect()
 
       self$input_config$AnalysisAvailable <- self$input_config$PlatformExperiments |>
         dplyr::filter(!is.na(PlatformGroup), !is.na(TotalSamples), !is.na(ExperimentStudyName)) |>
@@ -175,27 +123,23 @@ ClinicalDataAppManager <- R6::R6Class(
             dplyr::pull()
         )
 
-      self$input_config$probandRelationships <- localDB$getQuery(
-        "SELECT distinct ProbandRelationship
-          FROM AllParticipants"
-      )
+      self$input_config$probandRelationships <- arrow::open_dataset("Data/participants") |>
+        dplyr::collect() |>
+        dplyr::distinct(ProbandRelationship)
 
-      self$input_config$karyotypes <- localDB$getQuery(
-        "SELECT distinct Karyotype
-          FROM AllParticipants"
-      ) |>
+      self$input_config$karyotypes <- arrow::open_dataset("Data/participants") |>
+        dplyr::collect() |>
+        dplyr::distinct(Karyotype) |>
         dplyr::pull()
 
-      self$input_config$sexes <- localDB$getQuery(
-        "SELECT distinct Sex
-          FROM AllParticipants"
-        ) |>
+      self$input_config$sexes <- arrow::open_dataset("Data/participants") |>
+        dplyr::collect() |>
+        dplyr::distinct(Sex) |>
         dplyr::pull()
 
-      self$input_config$ages <- localDB$getQuery(
-        "SELECT distinct AgeAtTimeOfVisit
-          FROM ParticipantEncounter"
-        ) |>
+      self$input_config$ages <- arrow::open_dataset("Data/participant_encounter") |>
+        dplyr::collect() |>
+        dplyr::distinct(AgeAtTimeOfVisit) |>
         tidyr::drop_na() |>
         dplyr::summarise(
           min = round(min(AgeAtTimeOfVisit)),
@@ -206,40 +150,45 @@ ClinicalDataAppManager <- R6::R6Class(
         ) |>
         dplyr::pull()
 
-      self$input_config$Conditions <- localDB$getQuery(
-        "SELECT distinct Condition
-          FROM ParticipantConditions"
-        ) |>
+      self$input_config$Conditions <- arrow::open_dataset("Data/participant_conditions") |>
+        dplyr::collect() |>
+        dplyr::distinct(Condition) |>
         dplyr::pull()
 
-      self$input_config$ConditionClasses <- localDB$getQuery(
-        "SELECT distinct ConditionClass
-          FROM ParticipantConditions"
-        ) |>
+      self$input_config$ConditionClasses <- arrow::open_dataset("Data/participant_conditions") |>
+        dplyr::collect() |>
+        dplyr::distinct(ConditionClass) |>
         tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
         tidyr::drop_na() |>
         dplyr::select(ConditionClass) |>
         dplyr::distinct() |>
+        dplyr::arrange(ConditionClass) |>
         dplyr::pull()
 
-      self$input_config$ConditionChoices_df <- localDB$getQuery(
-          "SELECT *
-            FROM ParticipantConditions"
-        ) |>
+      self$input_config$ConditionsChoices <- arrow::open_dataset("Data/participant_conditions") |>
+        dplyr::collect() |>
         dplyr::filter(HasCondition == "True") |>
         dplyr::select(record_id, ConditionClass, Condition) |>
         dplyr::group_by(ConditionClass, Condition) |>
         dplyr::summarize(n = dplyr::n_distinct(record_id), .groups = "drop")  |>
         dplyr::filter(n >= 5) |>
-        tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE)
-
-      self$input_config$ConditionsChoices <- split(
-        setNames(
-          self$input_config$ConditionChoices_df$Condition,
-          glue::glue("{self$input_config$ConditionChoices_df$Condition}")
-        ),
-        self$input_config$ConditionChoices_df$ConditionClass
-      )
+        tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
+        tidyr::drop_na() |>
+        dplyr::group_by(ConditionClass) |>
+        dplyr::group_map(
+          ~ purrr::set_names(stringr::str_c(.x$Condition))
+        ) |>
+        purrr::set_names(
+          arrow::open_dataset("Data/participant_conditions") |>
+            dplyr::collect() |>
+            dplyr::filter(HasCondition == "True") |>
+            dplyr::select(ConditionClass) |>
+            tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
+            dplyr::distinct() |>
+            tidyr::drop_na() |>
+            dplyr::arrange(ConditionClass) |>
+            dplyr::pull()
+        )
 
     }
   )
