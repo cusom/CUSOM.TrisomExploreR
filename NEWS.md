@@ -1,4 +1,4 @@
-# TrisomExploreR 0.2.2.9000
+# TrisomExploreR 0.2.3.9000
 
 ## New Functionality 
 
@@ -17,6 +17,7 @@ Major changes related to an effort to separate data from local application insta
 Minor changes to code formatting and linting.
 Added labels above all input elements that are rendered server-side for additional context for user. 
 Moving call to download files outside of init for `AzureRemoteDataFileManager` class. Must explicity call `download_files` method to invoke local file download. 
+Optimized calls to `annotatePointByKey` JS function. Now, trace and point indicies are provided directly rather than having the function foreach through all traces based on key name. Annotation text is driven from R rather than an attempt to parse the `text` property of the specific point in the trace. 
 
 ***
 ## Bug Fixes 

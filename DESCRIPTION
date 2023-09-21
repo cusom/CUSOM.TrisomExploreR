@@ -1,6 +1,6 @@
 Package: TrisomExploreR
 Title: Common modules and logic for TrisomExplorer Applications
-Version: 0.2.2.9000
+Version: 0.2.3.9000
 Authors@R: 
     person("Kyle", "Bartsch", , "kyle.bartsch@cuanschutz.edu", role = c("aut", "cre"))
 Description: Provides common components / modules / styling / JS utilized
