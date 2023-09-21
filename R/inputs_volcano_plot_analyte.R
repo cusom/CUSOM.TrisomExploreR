@@ -72,6 +72,10 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
       parent_input = input
     )
 
+    rv <- shiny::reactiveValues(
+      event_data = ""
+    )
+
     shiny::insertUI(
       session = parent,
       selector = paste0("#", parent$ns("volcanoMultiSelectTextPlaceholder")),
@@ -118,6 +122,8 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
         session = parent
       )
 
+      rv$event_data <<- e
+
       shiny::updateSelectizeInput(
         session = session,
         inputId = "Analyte",
@@ -140,6 +146,8 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
         session = parent
       )
 
+      rv$event_data <<- e
+
       shiny::updateSelectizeInput(
         session = session,
         inputId = "Analyte",
@@ -158,11 +166,11 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
 
     shiny::observeEvent(
       c(gargoyle::watch("sync_analyte_choice", session = session)), {
-      shiny::updateSelectizeInput(
-        session = session,
-        inputId = "Analyte",
-        selected = r6$Analyte
-      )
+          shiny::updateSelectizeInput(
+            session = session,
+            inputId = "Analyte",
+            selected = r6$Analyte
+          )
     }, ignoreInit = TRUE,  domain = session)
 
     shiny::observeEvent(c(input$Analyte), {
@@ -171,11 +179,33 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
 
       if (all(input$Analyte != "")) {
         if (length(input$Analyte) == 1) {
+          rv$event_data <<- rv$event_data |>
+            dplyr::filter(key == input$Analyte)
           keys <- glue::glue_collapse(input$Analyte, sep = "|")
-          shinyjs::runjs(glue::glue('annotatePointByKey("{plot_name}","{keys}",5);'))
+          shinyjs::runjs(
+            glue::glue(
+              'annotatePointByKey(
+                "{plot_name}",
+                {rv$event_data$curveNumber},
+                {rv$event_data$pointNumber},
+                "{keys}",
+                5
+              );'
+            )
+          )
         } else {
           keys <- ""
-          shinyjs::runjs(glue::glue('annotatePointByKey("{plot_name}","{keys}",5);'))
+          shinyjs::runjs(
+            glue::glue(
+              'annotatePointByKey(
+                "{plot_name}",
+                -1,
+                -1,
+                "{keys}",
+                5
+              );'
+            )
+          )
           keys <- glue::glue_collapse(input$Analyte, sep = "|")
           shinyjs::runjs(glue::glue('updateSelectedKeys("{plot_name}","{keys}");'))
         }

@@ -41,35 +41,15 @@ openSideBarPanel = function(gd) {
   
 }
 
-annotatePointByKey = function(plotName,keyName,annotationsToKeep) {
+annotatePointByKey = function(plotName,trace,keyIndex,annotationText,annotationsToKeep) {
   
   var el = document.getElementById(plotName);
   var data = el.data;
-  var trace = -1;
-  var keyIndex = -1;
 
   if (data !== undefined) {
     
     selectedIndex = Array.from({ length: data.length }, (v, i) => []);
-    
-    // for each trace
-    for (var i = 0; i < data.length; i++) {
-      
-      keys = data[i].key;
-      
-      if(keys !== undefined) {
-        // for each key in trace, find key index based on key name
-        for(var j = 0; j < keys.length; j++) {
-          if (keys[j] == keyName) {
-            trace = i;
-            keyIndex = j;
-            break;
-          }
-        }
-      }
-      
-    }
-
+   
     annotations = el.layout.annotations.slice(0,annotationsToKeep) || [];
 
     if(trace > -1 & keyIndex > -1) {
@@ -77,17 +57,6 @@ annotatePointByKey = function(plotName,keyName,annotationsToKeep) {
       selectedIndex[trace][0] = keyIndex;
     
       Plotly.update(plotName, {selectedpoints: selectedIndex});
-      
-      var textArray = -1
-      if(Array.isArray(data[trace].text)) {
-        textArray = data[trace].text[keyIndex].split('<');
-      }
-      else {
-        textArray = data[trace].text.split()[keyIndex].split('<');
-      }
-      
-      var analyteIndex = textArray.findIndex(x => x.includes("Analyte"));
-      var annotationText = textArray[analyteIndex].split(':')[1].trim();
     
       annotation = {
         text: annotationText,
