@@ -1,4 +1,4 @@
-# TrisomExploreR 0.2.1.9000
+# TrisomExploreR 0.2.2.9000
 
 ## New Functionality 
 
@@ -14,7 +14,9 @@ Major changes related to an effort to separate data from local application insta
 
 ***
 ## Minor Changes
-Minor changes to code formatting and linting
+Minor changes to code formatting and linting.
+Added labels above all input elements that are rendered server-side for additional context for user. 
+Moving call to download files outside of init for `AzureRemoteDataFileManager` class. Must explicity call `download_files` method to invoke local file download. 
 
 ***
 ## Bug Fixes 
