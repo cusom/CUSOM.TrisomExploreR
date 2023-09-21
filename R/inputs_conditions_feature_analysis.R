@@ -5,8 +5,7 @@
 conditions_feature_analysis_inputs_ui <- function(id, input_config) {
   ns <- shiny::NS(id)
   shiny::tagList(
-    shiny::uiOutput(ns("ConditionsInputs")),
-    shiny::tags$br()
+    shiny::uiOutput(ns("ConditionsInputs"))
   )
 }
 
@@ -15,7 +14,7 @@ conditions_feature_analysis_inputs_ui <- function(id, input_config) {
 #' @param r6 - R6 class defining server-side logic for inputs
 #' @param input_config - list - list of default values for various input widgets to be used server-side
 #' @param parent - session object - parent session
-#' @import dplyr 
+#' @import dplyr
 #' @importFrom bsplus bs_modal
 #' @importFrom bsplus bs_attach_modal
 #' @import glue
@@ -93,7 +92,8 @@ conditions_feature_analysis_inputs_server <- function(id, r6, input_config, pare
             icon = shiny::icon("file-medical"),
             width = "99%"
           ) |>
-            bsplus::bs_attach_modal(id_modal = ns("Conditions-Picker"))
+            bsplus::bs_attach_modal(id_modal = ns("Conditions-Picker")),
+          shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;")
         )
       }
       else {

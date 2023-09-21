@@ -43,6 +43,7 @@ cell_type_inputs_ui <- function(id, input_config) {
           )
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        tags$b("Cell Type(s)"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("CellType")),
           type = "html",
@@ -50,6 +51,7 @@ cell_type_inputs_ui <- function(id, input_config) {
           proxy.height = "20px"
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        tags$b("Gene"),
         shiny::tags$div(
           id = "AnalyteInput",
           shinycustomloader::withLoader(
@@ -89,6 +91,8 @@ cell_type_inputs_ui <- function(id, input_config) {
           choiceNames = input_config$statTestschoiceNames,
           choiceValues = input_config$statTests
         ),
+        tags$br(),
+        tags$b("Adjust for covariates"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("Covariates")),
           type = "html",
@@ -151,11 +155,12 @@ cell_type_inputs_server <- function(id, r6) {
     )
 
     output$CellType <- shiny::renderUI({
+      cell_types <- r6$getCellTypes()
       shinyWidgets::pickerInput(
         inputId = ns("CellType"),
-        label = "Cell Type(s)",
-        choices = r6$getCellTypes(),
-        selected = r6$getCellTypes(),
+        label = NULL,
+        choices = cell_types,
+        selected = cell_types,
         options = list(
           `actions-box` = TRUE
         ),
@@ -164,14 +169,17 @@ cell_type_inputs_server <- function(id, r6) {
     })
 
     output$Analyte <- shiny::renderUI({
+
+      analytes <- r6$getAnalytes()
+
       shiny::selectizeInput(
         inputId = ns("Analyte"),
-        label = "Gene",
-        choices = r6$getAnalytes(),
+        label = NULL,
+        choices = analytes,
         options = list(
-          labelField = "name",
-          searchField = "name",
-          valueField = "name",
+          # labelField = "name",
+          # searchField = "name",
+          # valueField = "name",
           placeholder = "Search for Gene",
           onInitialize = I('function() { this.setValue(""); }'),
           closeAfterSelect = TRUE,
@@ -190,7 +198,8 @@ cell_type_inputs_server <- function(id, r6) {
                   { priority: 'event' }
                 );
               };
-            }"))
+            }")),
+          maxOptions = nrow(analytes)
         )
       )
     })
@@ -202,10 +211,9 @@ cell_type_inputs_server <- function(id, r6) {
         choices <- r6$getCovariateChoices()
 
         shiny::tagList(
-          shiny::tags$br(),
           shinyWidgets::awesomeCheckboxGroup(
             inputId = ns("Covariates"),
-            label = "Adjust for covariates",
+            label = NULL,
             choices = choices,
             selected = choices,
             inline = TRUE
@@ -242,7 +250,7 @@ cell_type_inputs_server <- function(id, r6) {
           )
       }
 
-    },  domain = session)
+    }, ignoreInit = TRUE, domain = session)
 
     ## when a gene is chosen -- trigger the plot
     shiny::observeEvent(c(input$Refresh), {

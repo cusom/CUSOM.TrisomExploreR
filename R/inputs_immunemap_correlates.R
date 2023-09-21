@@ -56,6 +56,7 @@ immunemap_correlates_inputs_ui <- function(id, input_config) {
             selected = "NA"
           )
         ),
+        tags$b("1) Select Query Platform"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("QueryPlatform")),
           type = "html",
@@ -144,10 +145,10 @@ immunemap_correlates_inputs_ui <- function(id, input_config) {
             CUSOMShinyHelpers::createTooltip(
               "Beta Regression",
               "",
-              "Beta regression is useful in situations where the dependent variable is continuous and 
-              restricted to the unit interval (0, 1), e.g., resulting from rates or proportions. 
-              It is modeled to be beta-distributed with parametrization using mean and precision parameter 
-              (called phi). The mean is linked, as in generalized linear models (GLMs), 
+              "Beta regression is useful in situations where the dependent variable is continuous and
+              restricted to the unit interval (0, 1), e.g., resulting from rates or proportions.
+              It is modeled to be beta-distributed with parametrization using mean and precision parameter
+              (called phi). The mean is linked, as in generalized linear models (GLMs),
               to the responses through a link function (logit) and a linear predictor."
             )
           ),
@@ -237,7 +238,7 @@ immunemap_correlates_inputs_server <- function(id, r6) {
 
       shinyWidgets::prettyRadioButtons(
         inputId = ns("QueryPlatform"),
-        label = "1) Select Query Platform",
+        label = NULL,
         choiceNames = platforms,
         choiceValues = platforms,
         selected = character(0)

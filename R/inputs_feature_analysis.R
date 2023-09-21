@@ -59,6 +59,7 @@ feature_analysis_inputs_ui <- function(id, input_config) {
           )
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        tags$b("Karyotype"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("Karyotype")),
           type = "html",
@@ -67,6 +68,7 @@ feature_analysis_inputs_ui <- function(id, input_config) {
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         TrisomExploreR::conditions_feature_analysis_inputs_ui(ns("conditions")),
+        tags$b("Sex"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("Sex")),
           type = "html",
@@ -93,6 +95,8 @@ feature_analysis_inputs_ui <- function(id, input_config) {
           choiceNames = input_config$statTestschoiceNames,
           choiceValues = input_config$statTests
         ),
+        tags$br(),
+        tags$b("Adjust for covariates"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("Covariates")),
           type = "html",
@@ -167,7 +171,7 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
 
       CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
         inputId = ns("Study"),
-        label = "",
+        label = NULL,
         fieldSetData = choices,
         selected = selected
       ) |>
@@ -220,7 +224,7 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
 
       input <- shinyWidgets::prettyRadioButtons(
         inputId = ns("Karyotype"),
-        label = "Karyotype",
+        label = NULL,
         choiceNames = lapply(karyotype_choices$choiceNames, shiny::HTML),
         choiceValues = karyotype_choices$choiceValues,
         inline = FALSE,
@@ -244,7 +248,7 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
 
       shinyWidgets::awesomeCheckboxGroup(
         inputId = ns("Sex"),
-        label = "Sex",
+        label = NULL,
         choices = input_config$sexes,
         selected = input_config$sexes,
         inline = TRUE,
@@ -270,10 +274,9 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
         choices <- r6$getCovariateChoices()
 
         shiny::tagList(
-          shiny::tags$br(),
           shinyWidgets::awesomeCheckboxGroup(
             inputId = ns("Covariates"),
-            label = "Adjust for covariates",
+            label = NULL,
             choices = choices,
             selected = choices,
             inline = TRUE

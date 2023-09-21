@@ -72,6 +72,7 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
           )
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        tags$b("Karyotype"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("Karyotype")),
           type = "html",
@@ -93,6 +94,7 @@ precalc_feature_analysis_inputs_ui <- function(id, input_config) {
             choiceValues = input_config$statTests[1]
           )
         ),
+        tags$b("Adjust for covariates"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("Covariates")),
           type = "html",
@@ -186,7 +188,7 @@ precalc_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
       input <- shinyWidgets::prettyRadioButtons(
         inputId = ns("Karyotype"),
-        label = "Karyotype",
+        label = NULL,
         choiceNames = lapply(karyotype_choices$choiceNames, shiny::HTML),
         choiceValues = karyotype_choices$choiceValues,
         inline = FALSE,
@@ -216,7 +218,7 @@ precalc_feature_analysis_inputs_server <- function(id, r6, input_config) {
           shiny::tags$br(),
           shinyWidgets::awesomeCheckboxGroup(
             inputId = ns("Covariates"),
-            label = "Adjust for covariates",
+            label = NULL,
             choices = choices,
             selected = choices,
             inline = TRUE

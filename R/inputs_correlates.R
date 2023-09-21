@@ -56,6 +56,7 @@ correlates_inputs_ui <- function(id, input_config) {
             selected = "NA"
           )
         ),
+        tags$b("1) Select Query Platform"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("QueryPlatform")),
           type = "html",
@@ -198,7 +199,7 @@ correlates_inputs_server <- function(id, r6) {
 
       shinyWidgets::prettyRadioButtons(
         inputId = ns("QueryPlatform"),
-        label = "1) Select Query Platform",
+        label = NULL,
         choiceNames = platforms,
         choiceValues = platforms,
         selected = character(0)

@@ -59,6 +59,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
           )
         ),
         shiny::tags$br(),
+        tags$b("Analysis Choices"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("CellType")),
           type = "html",
@@ -75,6 +76,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
           )
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        tags$b("Karyotype"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("Karyotype")),
           type = "html",
@@ -83,6 +85,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         TrisomExploreR::conditions_feature_analysis_inputs_ui(ns("conditions")),
+        tags$b("Sex"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("Sex")),
           type = "html",
@@ -109,6 +112,7 @@ immunemap_feature_analysis_inputs_ui <- function(id, input_config) {
           choiceNames = input_config$statTestschoiceNames,
           choiceValues = input_config$statTests
         ),
+        tags$b("Adjust for covariates"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("Covariates")),
           type = "html",
@@ -209,7 +213,7 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
       widget <- shiny::selectizeInput(
         inputId = ns("CellType"),
-        label = "Analysis Choices",
+        label = NULL,
         width = "90%",
         choices = CellTypeArgs()$choices,
         selected = CellTypeArgs()$choices,
@@ -283,7 +287,7 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
       input <- shinyWidgets::prettyRadioButtons(
         inputId = ns("Karyotype"),
-        label = "Karyotype",
+        label = NULL,
         choiceNames = lapply(karyotypeChoices$choiceNames, shiny::HTML),
         choiceValues = karyotypeChoices$choiceValues,
         inline = FALSE,
@@ -307,7 +311,7 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
 
       shinyWidgets::awesomeCheckboxGroup(
         inputId = ns("Sex"),
-        label = "Sex",
+        label = NULL,
         choices = input_config$sexes,
         selected = input_config$sexes,
         inline = TRUE,
@@ -336,7 +340,7 @@ immunemap_feature_analysis_inputs_server <- function(id, r6, input_config) {
           shiny::tags$br(),
           shinyWidgets::awesomeCheckboxGroup(
             inputId = ns("Covariates"),
-            label = "Adjust for covariates",
+            label = NULL,
             choices = choices,
             selected = choices,
             inline = TRUE
