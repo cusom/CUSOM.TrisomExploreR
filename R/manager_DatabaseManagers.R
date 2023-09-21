@@ -327,29 +327,25 @@ AzureRemoteDataFileManager <- R6::R6Class(
     #' @param key - string - authentication key for Azure storage account
     #' @param container_name - string - name of target BLOB container
     #' @param local_data_directory - string - defaults to `data` - path to donwload remote files locally
-    #' @param refresh - logical - force a refresh of locally dowloaded data?
     #' @return A new `AzureRemoteDataFileManager` object.
-    initialize = function(account_name, key, container_name, local_data_directory = "data", refresh = TRUE) {
+    initialize = function(account_name, key, container_name, local_data_directory = "data") {
 
       private$account_name <- account_name
       private$key <- key
       private$container_name <- container_name
       self$local_data_directory <- local_data_directory
 
-      if (refresh) {
-        unlink(self$local_data_directory, recursive = TRUE)
-      }
-
-      self$files_downloaded <- self$download_blob_files()
-
     },
     #' @description
     #' download all remote files locally
-    download_blob_files = function() {
+    #' @param reload_files - logical - whether to clear out existing file directory before downloading data
+    download_files = function(reload_files = TRUE) {
 
-      result <- TRUE
+      self$files_downloaded <- FALSE
 
-      if (length(list.files(self$local_data_directory)) == 0) {
+      if (reload_files) {
+
+        unlink(self$local_data_directory, recursive = TRUE)
 
         tryCatch({
           uri <- glue::glue("https://{private$account_name}.blob.core.windows.net")
@@ -362,14 +358,16 @@ AzureRemoteDataFileManager <- R6::R6Class(
             AzureStor::storage_download(container, src = src, dest = dest)
             }
           )
+          print(glue::glue("{length(list.files(self$local_data_directory, recursive = TRUE))} files downloaded"))
+          self$files_downloaded <- TRUE
         }, error = function(e) {
-           print(glue::glue("an error occured while downloading files: {e}"))
-           result <- FALSE
+            print(glue::glue("an error occured while downloading files: {e}"))
+            self$files_downloaded <- TRUE
         })
 
+      } else {
+        print(glue::glue("{length(list.files(self$local_data_directory, recursive = TRUE))} existing files found"))
       }
-
-      return(result)
 
     },
     #' @description

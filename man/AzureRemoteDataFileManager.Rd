@@ -19,7 +19,7 @@ download remote blob files from Azure Storage
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-AzureRemoteDataFileManager-new}{\code{AzureRemoteDataFileManager$new()}}
-\item \href{#method-AzureRemoteDataFileManager-download_blob_files}{\code{AzureRemoteDataFileManager$download_blob_files()}}
+\item \href{#method-AzureRemoteDataFileManager-download_files}{\code{AzureRemoteDataFileManager$download_files()}}
 \item \href{#method-AzureRemoteDataFileManager-get_file_group_directory}{\code{AzureRemoteDataFileManager$get_file_group_directory()}}
 \item \href{#method-AzureRemoteDataFileManager-clone}{\code{AzureRemoteDataFileManager$clone()}}
 }
@@ -34,8 +34,7 @@ Create a new instance of AzureRemoteDataFileManager object
   account_name,
   key,
   container_name,
-  local_data_directory = "data",
-  refresh = TRUE
+  local_data_directory = "data"
 )}\if{html}{\out{</div>}}
 }
 
@@ -49,8 +48,6 @@ Create a new instance of AzureRemoteDataFileManager object
 \item{\code{container_name}}{- string - name of target BLOB container}
 
 \item{\code{local_data_directory}}{- string - defaults to `data` - path to donwload remote files locally}
-
-\item{\code{refresh}}{- logical - force a refresh of locally dowloaded data?}
 }
 \if{html}{\out{</div>}}
 }
@@ -59,14 +56,21 @@ A new `AzureRemoteDataFileManager` object.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-AzureRemoteDataFileManager-download_blob_files"></a>}}
-\if{latex}{\out{\hypertarget{method-AzureRemoteDataFileManager-download_blob_files}{}}}
-\subsection{Method \code{download_blob_files()}}{
+\if{html}{\out{<a id="method-AzureRemoteDataFileManager-download_files"></a>}}
+\if{latex}{\out{\hypertarget{method-AzureRemoteDataFileManager-download_files}{}}}
+\subsection{Method \code{download_files()}}{
 download all remote files locally
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{AzureRemoteDataFileManager$download_blob_files()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{AzureRemoteDataFileManager$download_files(reload_files = TRUE)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{reload_files}}{- logical - whether to clear out existing file directory before downloading data}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-AzureRemoteDataFileManager-get_file_group_directory"></a>}}
