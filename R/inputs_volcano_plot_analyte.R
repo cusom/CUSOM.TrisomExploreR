@@ -72,10 +72,6 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
       parent_input = input
     )
 
-    rv <- shiny::reactiveValues(
-      event_data = ""
-    )
-
     shiny::insertUI(
       session = parent,
       selector = paste0("#", parent$ns("volcanoMultiSelectTextPlaceholder")),
@@ -122,7 +118,7 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
         session = parent
       )
 
-      rv$event_data <<- e
+      r6$volcanoEventData <- e
 
       shiny::updateSelectizeInput(
         session = session,
@@ -146,7 +142,7 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
         session = parent
       )
 
-      rv$event_data <<- e
+      r6$volcanoEventData <- e
 
       shiny::updateSelectizeInput(
         session = session,
@@ -156,9 +152,10 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
     }, domain = session)
 
     volcano_multi_select_text <- shiny::eventReactive(c(input$Analyte), {
-      r6$updateAnalyteAttributes()
-      r6$volcanoMultiSelectText
-    }, domain = session)
+
+      r6$getVolcanoMultiSelectText()
+
+    }, domain = session, ignoreInit = TRUE)
 
     output$volcanoMultiSelectText <- shiny::renderText({
       shiny::HTML(volcano_multi_select_text())
@@ -175,58 +172,10 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
 
     shiny::observeEvent(c(input$Analyte), {
 
-      plot_name <- parent$ns("VolcanoPlot")
-
-      if (all(input$Analyte != "")) {
-        if (length(input$Analyte) == 1) {
-          rv$event_data <<- rv$event_data |>
-            dplyr::filter(key == input$Analyte)
-          keys <- glue::glue_collapse(input$Analyte, sep = "|")
-          shinyjs::runjs(
-            glue::glue(
-              'annotatePointByKey(
-                "{plot_name}",
-                {rv$event_data$curveNumber},
-                {rv$event_data$pointNumber},
-                "{keys}",
-                5
-              );'
-            )
-          )
-        } else {
-          keys <- ""
-          shinyjs::runjs(
-            glue::glue(
-              'annotatePointByKey(
-                "{plot_name}",
-                -1,
-                -1,
-                "{keys}",
-                5
-              );'
-            )
-          )
-          keys <- glue::glue_collapse(input$Analyte, sep = "|")
-          shinyjs::runjs(glue::glue('updateSelectedKeys("{plot_name}","{keys}");'))
-        }
-
-        shinyjs::runjs(
-          paste0("
-            Shiny.setInputValue(
-              '", ns("analyteSearchResults"), "',
-              {
-                query: '", input$Analyte, "',
-                total: ", length(input$Analyte), "
-              },
-              { priority: 'event' }
-            );"
-          )
-        )
-
-      } else {
-        keys <- ""
-        shinyjs::runjs(glue::glue('annotatePointByKey("{plotName}","{keys}",5);'))
-      }
+      r6$annotate_volcano_point(
+        "VolcanoPlot",
+        parent$ns
+      )
 
       gargoyle::trigger("show_analyte_plot", session = session)
 

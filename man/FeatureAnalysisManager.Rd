@@ -77,6 +77,10 @@ volcano plot (Up in X, Increasing with X, etc. )}
 \item{\code{volcanoPlotExpectedTraceCount}}{- numeric - number of base traces present
 in the active volcano plot (usually between 1 - 3)}
 
+\item{\code{volcanoSourceData}}{- tibble of formatted source data used for volcano plot - includes trace groups}
+
+\item{\code{volcanoEventData}}{- tibble of click and selection data from volcano plot}
+
 \item{\code{VolcanoSummaryDataFoldChangeFilter}}{- deprecated?}
 
 \item{\code{volcanoMultiSelectText}}{- string - text shown below volcano plot when multiple analytes are chosen}
@@ -128,6 +132,8 @@ in the active volcano plot (usually between 1 - 3)}
 \item \href{#method-FeatureAnalysisManager-getFormattedVolcanoSummaryData}{\code{FeatureAnalysisManager$getFormattedVolcanoSummaryData()}}
 \item \href{#method-FeatureAnalysisManager-getVolcanoPlot}{\code{FeatureAnalysisManager$getVolcanoPlot()}}
 \item \href{#method-FeatureAnalysisManager-updateAnalyteAttributes}{\code{FeatureAnalysisManager$updateAnalyteAttributes()}}
+\item \href{#method-FeatureAnalysisManager-annotate_volcano_point}{\code{FeatureAnalysisManager$annotate_volcano_point()}}
+\item \href{#method-FeatureAnalysisManager-getVolcanoMultiSelectText}{\code{FeatureAnalysisManager$getVolcanoMultiSelectText()}}
 \item \href{#method-FeatureAnalysisManager-get_analyte_plot_method}{\code{FeatureAnalysisManager$get_analyte_plot_method()}}
 \item \href{#method-FeatureAnalysisManager-get_analyte_plot_title}{\code{FeatureAnalysisManager$get_analyte_plot_title()}}
 \item \href{#method-FeatureAnalysisManager-get_analyte_plot_x_axis_label}{\code{FeatureAnalysisManager$get_analyte_plot_x_axis_label()}}
@@ -380,6 +386,35 @@ Get volcano plot
 helper function to update various attributes for the chosen analyte
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$updateAnalyteAttributes()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-FeatureAnalysisManager-annotate_volcano_point"></a>}}
+\if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-annotate_volcano_point}{}}}
+\subsection{Method \code{annotate_volcano_point()}}{
+helper function to add annotation to volcano plot based on chosen analyte
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$annotate_volcano_point(plot_name, ns)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{plot_name}}{string - name of target volcano plot}
+
+\item{\code{ns}}{namespace to properly derive fully-qualified plot name}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-FeatureAnalysisManager-getVolcanoMultiSelectText"></a>}}
+\if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getVolcanoMultiSelectText}{}}}
+\subsection{Method \code{getVolcanoMultiSelectText()}}{
+small helper function to get correct value for volcanoMultiSelectText
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getVolcanoMultiSelectText()}\if{html}{\out{</div>}}
 }
 
 }

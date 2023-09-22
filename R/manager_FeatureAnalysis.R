@@ -36,6 +36,8 @@
 #' volcano plot (Up in X, Increasing with X, etc. )
 #' @field volcanoPlotExpectedTraceCount - numeric - number of base traces present
 #' in the active volcano plot (usually between 1 - 3)
+#' @field volcanoSourceData - tibble of formatted source data used for volcano plot - includes trace groups
+#' @field volcanoEventData - tibble of click and selection data from volcano plot
 #' @field VolcanoSummaryDataFoldChangeFilter - deprecated?
 #' @field volcanoMultiSelectText - string - text shown below volcano plot when multiple analytes are chosen
 #' @field Analyte - string vector - analyte(s) chosen for analysis
@@ -106,6 +108,14 @@ FeatureAnalysisManager <- R6::R6Class(
     VolcanoPlotTitle = "",
     volcanoTopAnnotationLabel = "",
     volcanoPlotExpectedTraceCount = 3,
+    volcanoSourceData = NULL,
+    volcanoEventData = tibble::tibble(
+      curveNumber = -1,
+      pointNumber = -1,
+      x = -1,
+      y = -1,
+      key = ""
+    ),
     VolcanoSummaryDataFoldChangeFilter = NULL,
     volcanoMultiSelectText = "",
 
@@ -512,13 +522,13 @@ FeatureAnalysisManager <- R6::R6Class(
     #'
     getVolcanoPlot = function(.data, ns) {
 
-      .data <- .data |>
+      self$volcanoSourceData <- .data |>
         dplyr::mutate(
           shape = "circle",
           selectedPoint = 0
         )
 
-      a <- .data |>
+      a <- self$volcanoSourceData |>
         CUSOMShinyHelpers::getVolcanoAnnotations(
           foldChangeVar = !!rlang::sym(self$FoldChangeVar),
           significanceVariable = !!rlang::sym(self$SignificanceVariable),
@@ -528,7 +538,7 @@ FeatureAnalysisManager <- R6::R6Class(
           includeThresholdLabel = FALSE
         )
 
-      .data <- .data |>
+      self$volcanoSourceData <- self$volcanoSourceData |>
         CUSOMShinyHelpers::addSignificanceGroup(
           foldChangeVar = !!rlang::sym(self$FoldChangeVar),
           significanceVariable = !!rlang::sym(self$SignificanceVariable),
@@ -537,11 +547,11 @@ FeatureAnalysisManager <- R6::R6Class(
           originalSignificanceThreshold = a$parameters$significanceThreshold
         )
 
-      self$volcanoPlotExpectedTraceCount <- .data |>
+      self$volcanoPlotExpectedTraceCount <- self$volcanoSourceData |>
         dplyr::distinct(significanceGroup, shape) |>
         nrow()
 
-      p <- .data |>
+      p <- self$volcanoSourceData |>
         CUSOMShinyHelpers::getVolcanoPlot(
           foldChangeVariable = !!rlang::sym(self$FoldChangeVar),
           significanceVariable = !!rlang::sym(self$SignificanceVariable),
@@ -649,6 +659,103 @@ FeatureAnalysisManager <- R6::R6Class(
           dplyr::select(text) |>
           dplyr::pull()
       }
+    },
+
+    #' @description
+    #' helper function to add annotation to volcano plot based on chosen analyte
+    #' @param plot_name string - name of target volcano plot
+    #' @param ns namespace to properly derive fully-qualified plot name
+    annotate_volcano_point = function(plot_name, ns) {
+
+      plot_name <- ns(plot_name)
+
+      if (all(self$Analyte != "")) {
+        if (length(self$Analyte) == 1) {
+          if (
+            all(
+              self$Analyte != self$volcanoEventData$key |
+              length(self$Analyte) != nrow(self$volcanoEventData)
+              )
+            ) {
+            self$volcanoEventData <- self$volcanoSourceData |>
+              dplyr::arrange(desc(significanceGroup)) |>
+              dplyr::select(significanceGroup, key = Analyte, x = log2FoldChange, y = `-log10pvalue`) |>
+              dplyr::mutate(
+                t = dplyr::dense_rank(significanceGroup),
+                curveNumber = t - 1
+              ) |>
+              dplyr::group_by(significanceGroup) |>
+              dplyr::mutate(
+                r = dplyr::row_number(),
+                pointNumber = r - 1
+              ) |>
+              dplyr::ungroup() |>
+              dplyr::filter(key == self$Analyte) |>
+              dplyr::select(curveNumber, pointNumber, x, y, key)
+          }
+
+          self$volcanoEventData <- self$volcanoEventData |>
+            dplyr::filter(key == self$Analyte)
+
+          keys <- glue::glue_collapse(self$Analyte, sep = "|")
+          shinyjs::runjs(
+            glue::glue(
+              'annotatePointByKey(
+                "{plot_name}",
+                {self$volcanoEventData$curveNumber},
+                {self$volcanoEventData$pointNumber},
+                "{keys}",
+                5
+              );'
+            )
+          )
+        } else {
+          keys <- ""
+          shinyjs::runjs(
+            glue::glue(
+              'annotatePointByKey(
+                "{plot_name}",
+                -1,
+                -1,
+                "{keys}",
+                5
+              );'
+            )
+          )
+          keys <- glue::glue_collapse(self$Analyte, sep = "|")
+          shinyjs::runjs(glue::glue('updateSelectedKeys("{plot_name}","{keys}");'))
+        }
+
+        shinyjs::runjs(
+          paste0("
+            Shiny.setInputValue(
+              '", ns("analyteSearchResults"), "',
+              {
+                query: '", self$Analyte, "',
+                total: ", self$Analyte, "
+              },
+              { priority: 'event' }
+            );"
+          )
+        )
+
+      } else {
+        keys <- ""
+
+        shinyjs::runjs(glue::glue('annotatePointByKey("{plot_name}","{keys}",5);'))
+      }
+
+    },
+
+    #' @description
+    #' small helper function to get correct value for volcanoMultiSelectText
+    getVolcanoMultiSelectText = function() {
+      if (length(self$Analyte) > 1 & self$volcanoMultiSelectText == "") {
+        self$updateAnalyteAttributes()
+      } else if (length(self$Analyte) == 1)  {
+        self$volcanoMultiSelectText <- ""
+      }
+      return(self$volcanoMultiSelectText)
     },
 
     #' @description
