@@ -30,12 +30,7 @@ download remote blob files from Azure Storage
 \subsection{Method \code{new()}}{
 Create a new instance of AzureRemoteDataFileManager object
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{AzureRemoteDataFileManager$new(
-  account_name,
-  key,
-  container_name,
-  local_data_directory = "data"
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{AzureRemoteDataFileManager$new(account_name, key, container_name)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -46,8 +41,6 @@ Create a new instance of AzureRemoteDataFileManager object
 \item{\code{key}}{- string - authentication key for Azure storage account}
 
 \item{\code{container_name}}{- string - name of target BLOB container}
-
-\item{\code{local_data_directory}}{- string - defaults to `data` - path to donwload remote files locally}
 }
 \if{html}{\out{</div>}}
 }

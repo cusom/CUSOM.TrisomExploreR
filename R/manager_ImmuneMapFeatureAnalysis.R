@@ -31,7 +31,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
     #' @param study - string - chosen study
     getAnalysisChoices = function(study) {
 
-      self$analysisMetadata <- arrow::open_dataset("data/feature_data") |>
+      self$analysisMetadata <- arrow::open_dataset("Remote_Data/feature_data") |>
         dplyr::collect() |>
         dplyr::distinct(Analysis) |>
         dplyr::mutate(
@@ -41,7 +41,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
           HideCellType = ifelse(Analysis == "Cluster", TRUE, FALSE)
         )
 
-      self$analysisChoices <- arrow::open_dataset("data/feature_data") |>
+      self$analysisChoices <- arrow::open_dataset("Remote_Data/feature_data") |>
         dplyr::filter(
           ExperimentID == self$Study
         ) |>
@@ -170,7 +170,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
         )
       } else {
 
-        karyotype_input_counts <- arrow::open_dataset("data/feature_data") |>
+        karyotype_input_counts <- arrow::open_dataset("Remote_Data/feature_data") |>
           dplyr::filter(
             ExperimentID == self$Study
           ) |>
@@ -234,7 +234,7 @@ ImmuneMapFeatureAnalysisManager <- R6::R6Class(
     #' Get / set sample level data with filers applied
     getBaseData = function() {
 
-      self$BaseData <- arrow::open_dataset("data/feature_data") |>
+      self$BaseData <- arrow::open_dataset("Remote_Data/feature_data") |>
         dplyr::filter(
           ExperimentID == self$Study
         ) |>

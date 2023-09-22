@@ -92,19 +92,19 @@ ClinicalDataAppManager <- R6::R6Class(
 
       self$analysis_config <- NULL
 
-      inputs <- jsonlite::fromJSON("Data/inputs.json")
+      inputs <- jsonlite::fromJSON("Remote_Data/inputs.json")
 
       self$input_config$platforms <- inputs$platforms
 
-      self$input_config$PlatformExperiments <- arrow::open_dataset("Data/platform_experiments") |>
+      self$input_config$PlatformExperiments <- arrow::open_dataset("Remote_Data/platform_experiments") |>
         dplyr::collect()
 
-      self$input_config$Enrollments <- arrow::open_dataset("Data/participants") |>
+      self$input_config$Enrollments <- arrow::open_dataset("Remote_Data/participants") |>
         dplyr::collect() |>
         dplyr::group_by(Karyotype) |>
         dplyr::summarise(ParticipantCount = n())
 
-      self$input_config$SampleDetail <- arrow::open_dataset("Data/sample_detail") |>
+      self$input_config$SampleDetail <- arrow::open_dataset("Remote_Data/sample_detail") |>
         dplyr::collect()
 
       self$input_config$AnalysisAvailable <- self$input_config$PlatformExperiments |>
@@ -123,21 +123,21 @@ ClinicalDataAppManager <- R6::R6Class(
             dplyr::pull()
         )
 
-      self$input_config$probandRelationships <- arrow::open_dataset("Data/participants") |>
+      self$input_config$probandRelationships <- arrow::open_dataset("Remote_Data/participants") |>
         dplyr::collect() |>
         dplyr::distinct(ProbandRelationship)
 
-      self$input_config$karyotypes <- arrow::open_dataset("Data/participants") |>
+      self$input_config$karyotypes <- arrow::open_dataset("Remote_Data/participants") |>
         dplyr::collect() |>
         dplyr::distinct(Karyotype) |>
         dplyr::pull()
 
-      self$input_config$sexes <- arrow::open_dataset("Data/participants") |>
+      self$input_config$sexes <- arrow::open_dataset("Remote_Data/participants") |>
         dplyr::collect() |>
         dplyr::distinct(Sex) |>
         dplyr::pull()
 
-      self$input_config$ages <- arrow::open_dataset("Data/participant_encounter") |>
+      self$input_config$ages <- arrow::open_dataset("Remote_Data/participant_encounter") |>
         dplyr::collect() |>
         dplyr::distinct(AgeAtTimeOfVisit) |>
         tidyr::drop_na() |>
@@ -150,12 +150,12 @@ ClinicalDataAppManager <- R6::R6Class(
         ) |>
         dplyr::pull()
 
-      self$input_config$Conditions <- arrow::open_dataset("Data/participant_conditions") |>
+      self$input_config$Conditions <- arrow::open_dataset("Remote_Data/participant_conditions") |>
         dplyr::collect() |>
         dplyr::distinct(Condition) |>
         dplyr::pull()
 
-      self$input_config$ConditionClasses <- arrow::open_dataset("Data/participant_conditions") |>
+      self$input_config$ConditionClasses <- arrow::open_dataset("Remote_Data/participant_conditions") |>
         dplyr::collect() |>
         dplyr::distinct(ConditionClass) |>
         tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
@@ -165,7 +165,7 @@ ClinicalDataAppManager <- R6::R6Class(
         dplyr::arrange(ConditionClass) |>
         dplyr::pull()
 
-      self$input_config$ConditionsChoices <- arrow::open_dataset("Data/participant_conditions") |>
+      self$input_config$ConditionsChoices <- arrow::open_dataset("Remote_Data/participant_conditions") |>
         dplyr::collect() |>
         dplyr::filter(HasCondition == "True") |>
         dplyr::select(record_id, ConditionClass, Condition) |>
@@ -179,7 +179,7 @@ ClinicalDataAppManager <- R6::R6Class(
           ~ purrr::set_names(stringr::str_c(.x$Condition))
         ) |>
         purrr::set_names(
-          arrow::open_dataset("Data/participant_conditions") |>
+          arrow::open_dataset("Remote_Data/participant_conditions") |>
             dplyr::collect() |>
             dplyr::filter(HasCondition == "True") |>
             dplyr::select(ConditionClass) |>

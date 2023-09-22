@@ -31,7 +31,7 @@ ImmuneMapComorbidityManager <- R6::R6Class(
     #' Overrides super method with data model specific to Immune Maps data
     getBaseData = function() {
 
-      base_data <- arrow::open_dataset("data/feature_data") |>
+      base_data <- arrow::open_dataset("Remote_Data/feature_data") |>
         dplyr::filter(
           ExperimentID == self$Study
         ) |>
@@ -63,7 +63,7 @@ ImmuneMapComorbidityManager <- R6::R6Class(
           log2Measurement = glue::glue("log<sub>2</sub>({Measurement})")
         )
 
-      condition_data <- arrow::open_dataset("data/participant_conditions") |>
+      condition_data <- arrow::open_dataset("Remote_Data/participant_conditions") |>
         dplyr::collect() |>
         dplyr::select(record_id, Condition, HasCondition) |>
         dplyr::filter(

@@ -81,13 +81,13 @@ CellTypeAnalysisManager <- R6::R6Class(
     #' @description
     #' helper function to get cell type list for input
     getCellTypes = function() {
-      unname(unlist(jsonlite::fromJSON("Data/inputs.json")$cell_types))
+      unname(unlist(jsonlite::fromJSON("Remote_Data/inputs.json")$cell_types))
     },
 
     #' @description
     #' helper function to get list of genes for input
     getAnalytes = function() {
-      arrow::open_dataset("Data/genes") |>
+      arrow::open_dataset("Remote_Data/genes") |>
         dplyr::collect()
     },
 
@@ -113,10 +113,10 @@ CellTypeAnalysisManager <- R6::R6Class(
         )
       ) |>
         dplyr::left_join(
-          arrow::open_dataset("Data/participants") |>
+          arrow::open_dataset("Remote_Data/participants") |>
             dplyr::collect() |>
             dplyr::inner_join(
-              arrow::open_dataset("Data/participant_encounter") |>
+              arrow::open_dataset("Remote_Data/participant_encounter") |>
                 dplyr::collect() ,
               by = "record_id"
             ) |>
@@ -203,7 +203,7 @@ CellTypeAnalysisManager <- R6::R6Class(
     #' @return plotly object
     getPlot = function(.data, ns) {
 
-      cell_types <- unname(unlist(jsonlite::fromJSON("Data/inputs.json")$cell_types))
+      cell_types <- unname(unlist(jsonlite::fromJSON("Remote_Data/inputs.json")$cell_types))
 
       all_cell_types <- intersect(cell_types, unique(self$CellType))
 

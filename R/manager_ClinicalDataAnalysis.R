@@ -101,7 +101,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
       self$AllN <- sum(data$Enrollments$ParticipantCount)
 
-      self$ConditionClassData <- arrow::open_dataset("Data/participant_conditions") |>
+      self$ConditionClassData <- arrow::open_dataset("Remote_Data/participant_conditions") |>
         dplyr::collect() |>
         tidyr::separate_rows(ConditionClass, sep = ";", convert = TRUE) |>
         dplyr::filter(!is.na(Condition))
@@ -135,7 +135,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
 
       self$PlatformExperiments <- data$PlatformExperiments
 
-      self$ParticipantPlatformExperiment <- arrow::open_dataset("Data/participant_platform_experiment") |>
+      self$ParticipantPlatformExperiment <- arrow::open_dataset("Remote_Data/participant_platform_experiment") |>
         dplyr::collect()
 
     },
@@ -192,7 +192,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' @return none
     getParticipantData = function() {
 
-      self$ParticipantData <- arrow::open_dataset("Data/participants") |>
+      self$ParticipantData <- arrow::open_dataset("Remote_Data/participants") |>
         dplyr::collect() |>
         dplyr::filter(
           Sex %in% self$Sex,
@@ -1465,12 +1465,12 @@ ClinicalDataAnalysisManager <- R6::R6Class(
     #' @return none
     update_upset_plot_data = function() {
 
-      condition_data <- arrow::open_dataset("Data/participant_conditions") |>
+      condition_data <- arrow::open_dataset("Remote_Data/participant_conditions") |>
         dplyr::collect() |>
         tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
         dplyr::filter(HasCondition == "True") |>
         dplyr::inner_join(
-          arrow::open_dataset("Data/participants") |>
+          arrow::open_dataset("Remote_Data/participants") |>
             dplyr::collect() |>
             dplyr::filter(
               Sex %in% self$Sex,

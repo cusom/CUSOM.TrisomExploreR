@@ -178,7 +178,7 @@ FeatureAnalysisManager <- R6::R6Class(
     #' @description
     #' helper function to get formatted study choices based on experiments configured for this instance / namespace
     getStudies = function() {
-      jsonlite::fromJSON("Data/inputs.json")$study_choices |>
+      jsonlite::fromJSON("Remote_Data/inputs.json")$study_choices |>
         as.data.frame() |>
         dplyr::filter(Values %in% self$experimentIDs)
 
@@ -216,7 +216,7 @@ FeatureAnalysisManager <- R6::R6Class(
         )
       } else {
 
-        karyotype_input_counts <- arrow::open_dataset("Data/feature_data") |>
+        karyotype_input_counts <- arrow::open_dataset("Remote_Data/feature_data") |>
           dplyr::filter(ExperimentID == self$Study) |>
           dplyr::collect() |>
           dplyr::group_by(Analyte, Karyotype) |>
@@ -387,7 +387,7 @@ FeatureAnalysisManager <- R6::R6Class(
     #' Get / set sample level data with filers applied
     getBaseData = function() {
 
-      self$BaseData <- arrow::open_dataset("data/feature_data") |>
+      self$BaseData <- arrow::open_dataset("Remote_Data/feature_data") |>
         dplyr::filter(
           ExperimentID == self$Study
         ) |>

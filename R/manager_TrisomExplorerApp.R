@@ -102,7 +102,7 @@ TrisomExplorerAppManager <- R6::R6Class(
         AnalysisVariableName, AnalysisVariableLabel, AnalysisType,
         AnalysisVariableBaselineLabel, AnalysisVolcanoPlotTopAnnotation)
 
-      inputs <- jsonlite::fromJSON("Data/inputs.json")
+      inputs <- jsonlite::fromJSON("Remote_Data/inputs.json")
 
       self$input_config$statTestschoiceNames <- purrr::pmap(
         inputs$stat_tests,
@@ -118,17 +118,17 @@ TrisomExplorerAppManager <- R6::R6Class(
 
       self$input_config$experimentIDs <- inputs$experiment_ids
 
-      self$input_config$karyotypes <- arrow::open_dataset("Data/participants") |>
+      self$input_config$karyotypes <- arrow::open_dataset("Remote_Data/participants") |>
         dplyr::collect() |>
         dplyr::distinct(Karyotype) |>
         dplyr::pull()
 
-      self$input_config$sexes <- arrow::open_dataset("Data/participants") |>
+      self$input_config$sexes <- arrow::open_dataset("Remote_Data/participants") |>
         dplyr::collect() |>
         dplyr::distinct(Sex) |>
         dplyr::pull()
 
-      self$input_config$ages <- arrow::open_dataset("Data/participant_encounter") |>
+      self$input_config$ages <- arrow::open_dataset("Remote_Data/participant_encounter") |>
         dplyr::collect() |>
         tidyr::drop_na() |>
         dplyr::summarise(
@@ -140,12 +140,12 @@ TrisomExplorerAppManager <- R6::R6Class(
         ) |>
         dplyr::pull()
 
-      self$input_config$Conditions <- arrow::open_dataset("Data/participant_conditions") |>
+      self$input_config$Conditions <- arrow::open_dataset("Remote_Data/participant_conditions") |>
         dplyr::collect() |>
         dplyr::distinct(Condition) |>
         dplyr::pull()
 
-      self$input_config$ConditionClasses <- arrow::open_dataset("Data/participant_conditions") |>
+      self$input_config$ConditionClasses <- arrow::open_dataset("Remote_Data/participant_conditions") |>
         dplyr::collect() |>
         dplyr::distinct(ConditionClass) |>
         tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
@@ -154,7 +154,7 @@ TrisomExplorerAppManager <- R6::R6Class(
         dplyr::distinct() |>
         dplyr::pull()
 
-      self$input_config$ConditionChoices <- arrow::open_dataset("Data/participant_conditions") |>
+      self$input_config$ConditionChoices <- arrow::open_dataset("Remote_Data/participant_conditions") |>
         dplyr::collect() |>
         dplyr::filter(HasCondition == "True") |>
         dplyr::select(LabID, ConditionClass, Condition) |>
@@ -163,7 +163,7 @@ TrisomExplorerAppManager <- R6::R6Class(
         dplyr::summarize(n = dplyr::n_distinct(LabID), .groups = "drop")  |>
         dplyr::filter(n >= 5) |>
         dplyr::left_join(
-          arrow::open_dataset("Data/participant_conditions") |>
+          arrow::open_dataset("Remote_Data/participant_conditions") |>
             dplyr::collect() |>
             dplyr::filter(!is.na(ConditionCensorshipAgeGroup)) |>
             dplyr::distinct(Condition, ConditionCensorshipAgeGroup)

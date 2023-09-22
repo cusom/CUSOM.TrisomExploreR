@@ -319,21 +319,21 @@ AzureRemoteDataFileManager <- R6::R6Class(
   ),
   public = list(
 
-    local_data_directory = "",
+    local_data_directory = "Remote_Data",
     files_downloaded = FALSE,
     #' @description
     #' Create a new instance of AzureRemoteDataFileManager object
     #' @param account_name - string - Azure Storage Account name
     #' @param key - string - authentication key for Azure storage account
     #' @param container_name - string - name of target BLOB container
-    #' @param local_data_directory - string - defaults to `data` - path to donwload remote files locally
+
     #' @return A new `AzureRemoteDataFileManager` object.
-    initialize = function(account_name, key, container_name, local_data_directory = "data") {
+    initialize = function(account_name, key, container_name) {
 
       private$account_name <- account_name
       private$key <- key
       private$container_name <- container_name
-      self$local_data_directory <- local_data_directory
+      self$local_data_directory <- "Remote_Data"
 
     },
     #' @description

@@ -41,7 +41,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
 
       if (self$analysisVariable == "Age") {
         return(
-          jsonlite::fromJSON("Data/inputs.json")$whole_blood_karyotype_counts |>
+          jsonlite::fromJSON("Remote_Data/inputs.json")$whole_blood_karyotype_counts |>
             as.data.frame() |>
             dplyr::mutate(
               sort = dplyr::case_when(
@@ -86,7 +86,7 @@ PreCalcFeatureAnalysisManager <- R6::R6Class(
         glue::glue_collapse(self$Covariates, ";")
       )
 
-      self$VolcanoSummaryData <- arrow::open_dataset("Data/precalc_feature_data") |>
+      self$VolcanoSummaryData <- arrow::open_dataset("Remote_Data/precalc_feature_data") |>
         dplyr::filter(
           namespace == self$namespace
         ) |>

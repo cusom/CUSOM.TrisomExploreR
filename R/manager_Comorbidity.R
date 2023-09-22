@@ -34,7 +34,7 @@ ComorbidityManager <- R6::R6Class(
     #' @return none
     getBaseData = function() {
 
-      base_data <- arrow::open_dataset("data/feature_data") |>
+      base_data <- arrow::open_dataset("Remote_Data/feature_data") |>
         dplyr::filter(
           ExperimentID == self$Study
         ) |>
@@ -51,7 +51,7 @@ ComorbidityManager <- R6::R6Class(
           log2Measurement = glue::glue("log<sub>2</sub>({Measurement})")
         )
 
-      condition_data <- arrow::open_dataset("data/participant_conditions") |>
+      condition_data <- arrow::open_dataset("Remote_Data/participant_conditions") |>
         dplyr::collect() |>
         dplyr::filter(Condition %in% unlist(shinyTree::get_selected(self$Conditions))) |>
         dplyr::mutate(HasConditionFlag = ifelse(HasCondition == "True", 1, ifelse(HasCondition == "False", 0, NA))) |>

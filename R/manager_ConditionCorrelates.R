@@ -261,7 +261,7 @@ ConditionCorrelatesManager <- R6::R6Class(
         ) |>
         dplyr::rename(record_id = Record_ID) |>
         dplyr::inner_join(
-          arrow::open_dataset("Data/participant_conditions") |>
+          arrow::open_dataset("Remote_Data/participant_conditions") |>
             dplyr::collect()|>
             dplyr::mutate(HasConditionFlag = ifelse(
               HasCondition == "True", 1,
@@ -276,10 +276,10 @@ ConditionCorrelatesManager <- R6::R6Class(
           , by = "record_id"
         ) |>
         dplyr::inner_join(
-          arrow::open_dataset("Data/participant_encounter") |>
+          arrow::open_dataset("Remote_Data/participant_encounter") |>
             dplyr::collect()|>
             dplyr::inner_join(
-              arrow::open_dataset("Data/participants") |>
+              arrow::open_dataset("Remote_Data/participants") |>
                 dplyr::collect(),
               by = "record_id"
             ) |>
@@ -305,7 +305,7 @@ ConditionCorrelatesManager <- R6::R6Class(
         dplyr::summarise(n = dplyr::n_distinct(record_id), .groups = "drop") |>
         tidyr::pivot_wider(id_cols = Condition, names_from = HasConditionFlag, values_from = n, values_fill = 0) |>
         dplyr::inner_join(
-          arrow::open_dataset("Data/participant_conditions") |>
+          arrow::open_dataset("Remote_Data/participant_conditions") |>
             dplyr::collect()|>
             dplyr::select(Condition, ConditionCensorshipAgeGroup) |>
             dplyr::distinct() |>
