@@ -1,4 +1,4 @@
-# TrisomExploreR 0.2.5.9000
+# TrisomExploreR 0.2.6.9000
 
 ## New Functionality 
 
@@ -11,6 +11,7 @@ Major changes related to an effort to separate data from local application insta
 - Two manager classes are now deprecated due to these changes: 
 1. TranscriptomeAppManager
 2. ImmuneMapAppManager
+Added new `ODBCQueryManager` method to `INSERT` data to target table
 
 ***
 ## Minor Changes
