@@ -27,6 +27,7 @@ Manage ODBC Database queries
 \itemize{
 \item \href{#method-ODBCQueryManager-new}{\code{ODBCQueryManager$new()}}
 \item \href{#method-ODBCQueryManager-getQuery}{\code{ODBCQueryManager$getQuery()}}
+\item \href{#method-ODBCQueryManager-insertData}{\code{ODBCQueryManager$insertData()}}
 \item \href{#method-ODBCQueryManager-clone}{\code{ODBCQueryManager$clone()}}
 }
 }
@@ -90,6 +91,25 @@ Execute parameterized query against target database
 }
 \subsection{Returns}{
 tibble
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ODBCQueryManager-insertData"></a>}}
+\if{latex}{\out{\hypertarget{method-ODBCQueryManager-insertData}{}}}
+\subsection{Method \code{insertData()}}{
+insert data to table in target database
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ODBCQueryManager$insertData(table_name, values)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{table_name}}{- string - name of target table}
+
+\item{\code{values}}{- tibble - tibble of values to insert to table. Should match target table schema.}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}

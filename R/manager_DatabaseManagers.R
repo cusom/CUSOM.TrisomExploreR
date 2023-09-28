@@ -139,6 +139,49 @@ ODBCQueryManager <- R6::R6Class(
 
       return(self$data)
 
+    },
+
+    #' @description
+    #' insert data to table in target database
+    #' @param table_name - string - name of target table
+    #' @param values - tibble - tibble of values to insert to table. Should match target table schema.
+    insertData = function(table_name, values) {
+
+      stopifnot(class(table_name) %in% c("character"))
+      stopifnot(any(class(values) %in% c("tbl_df", "tbl", "data.frame", "tibble", "tribble")))
+
+      self$connect()
+
+      tryCatch({
+
+      if (stringr::str_detect(table_name, ".")) {
+
+        table_names <- stringr::str_split(table_name, pattern = "\\.", simplify = TRUE)
+
+        table_id <- DBI::Id(
+          schema = table_names[1],
+          table = table_names[2]
+        )
+
+        DBI::dbAppendTable(
+          conn = private$dbhandle,
+          name = table_id,
+          value = values
+        )
+      } else {
+        DBI::dbAppendTable(
+          conn = private$dbhandle,
+          name = table_name,
+          value = values
+        )
+      }
+      }, error = function(e) {
+        print(glue::glue("an error occured {e}"))
+      })
+
+      self$disconnect()
+
+      return(TRUE)
     }
 
   )
