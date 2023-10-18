@@ -1,4 +1,4 @@
-# TrisomExploreR 0.2.6.9000
+# TrisomExploreR 0.2.7.9000
 
 ## New Functionality 
 
@@ -26,4 +26,5 @@ Moved calls to `annotatePointByKey` to `FeatureAnalysis` module. Added logic to 
 - Resolved issue where UI could become unresponsive when rendering a volcano plot with > 10000 analytes: updated `Analyte` selectize input to render server-side with new '`maxOptions = length(analytes)`' options arg. 
 - Resolved issue where Volcano Multi-Select text would persist when only 1 Analyte is chosen: added a call to `r6$updateAnalyteAttributes()` to ensure new text is calculated based on chosen analytes.
 -correcting inconsistent references to local file directory. Removed class init param and set as hard coded value "Remote_Data/"
+-Resolved "cannot add bindings to locked environment" error by adding required properties to `Correlates Manager` class to handle new logic for analyte annotations
 
