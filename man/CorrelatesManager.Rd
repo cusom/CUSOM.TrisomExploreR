@@ -85,6 +85,10 @@ Enables analysis of cross-omics correlations
 
 \item{\code{volcanoPlotExpectedTraceCount}}{- numeric - number of base traces present in the active volcano plot (usually between 1 - 3)}
 
+\item{\code{volcanoEventData}}{- tibble of click and selection data from volcano plot}
+
+\item{\code{volcanoMultiSelectText}}{- string - text shown below volcano plot when multiple analytes are chosen}
+
 \item{\code{HeatmapData}}{- tibble - data to use for heatmap plot when multiple analytes are chosen}
 
 \item{\code{HeatmapText}}{- string vector - text used for hover on heatmap plot}
@@ -115,6 +119,8 @@ Enables analysis of cross-omics correlations
 \item \href{#method-CorrelatesManager-getVolcanoPlot}{\code{CorrelatesManager$getVolcanoPlot()}}
 \item \href{#method-CorrelatesManager-getFormattedVolcanoSummaryData}{\code{CorrelatesManager$getFormattedVolcanoSummaryData()}}
 \item \href{#method-CorrelatesManager-updateAnalyteAttributes}{\code{CorrelatesManager$updateAnalyteAttributes()}}
+\item \href{#method-CorrelatesManager-annotate_volcano_point}{\code{CorrelatesManager$annotate_volcano_point()}}
+\item \href{#method-CorrelatesManager-getVolcanoMultiSelectText}{\code{CorrelatesManager$getVolcanoMultiSelectText()}}
 \item \href{#method-CorrelatesManager-get_analyte_plot_method}{\code{CorrelatesManager$get_analyte_plot_method()}}
 \item \href{#method-CorrelatesManager-getAnalyteData}{\code{CorrelatesManager$getAnalyteData()}}
 \item \href{#method-CorrelatesManager-getAnalytePlot}{\code{CorrelatesManager$getAnalytePlot()}}
@@ -174,9 +180,6 @@ return hidden /shown / disabled / enabled class for GSEA button based on
 \if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$addGSEAInputClass()}\if{html}{\out{</div>}}
 }
 
-\subsection{Returns}{
-string
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CorrelatesManager-getQueryAnalytes"></a>}}
@@ -218,7 +221,7 @@ none
 \if{html}{\out{<a id="method-CorrelatesManager-getVolcanoPlot"></a>}}
 \if{latex}{\out{\hypertarget{method-CorrelatesManager-getVolcanoPlot}{}}}
 \subsection{Method \code{getVolcanoPlot()}}{
-Get volcano plot
+Get Volcano Plot
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$getVolcanoPlot(.data, ns)}\if{html}{\out{</div>}}
 }
@@ -226,7 +229,7 @@ Get volcano plot
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{.data}}{tibble - data for volcano plot}
+\item{\code{.data}}{- tibble - data for volcano plot}
 
 \item{\code{ns}}{- namespace to apply to plot object}
 }
@@ -268,6 +271,35 @@ update analyte fields
 \subsection{Returns}{
 none
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-CorrelatesManager-annotate_volcano_point"></a>}}
+\if{latex}{\out{\hypertarget{method-CorrelatesManager-annotate_volcano_point}{}}}
+\subsection{Method \code{annotate_volcano_point()}}{
+helper function to add annotation to volcano plot based on chosen analyte
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$annotate_volcano_point(plot_name, ns)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{plot_name}}{string - name of target volcano plot}
+
+\item{\code{ns}}{namespace to properly derive fully-qualified plot name}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-CorrelatesManager-getVolcanoMultiSelectText"></a>}}
+\if{latex}{\out{\hypertarget{method-CorrelatesManager-getVolcanoMultiSelectText}{}}}
+\subsection{Method \code{getVolcanoMultiSelectText()}}{
+small helper function to get correct value for volcanoMultiSelectText
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$getVolcanoMultiSelectText()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CorrelatesManager-get_analyte_plot_method"></a>}}
@@ -381,13 +413,13 @@ plotly object
 \subsection{Method \code{getGSEAPathwayData()}}{
 Set selected GSEA pathway data
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$getGSEAPathwayData(pathName)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$getGSEAPathwayData(path_name)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{pathName}}{- string - selected pathway name}
+\item{\code{path_name}}{- string - selected pathway name}
 }
 \if{html}{\out{</div>}}
 }

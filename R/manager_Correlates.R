@@ -40,6 +40,8 @@
 #' @field VolcanoSummaryMaxFoldChange - numeric - maxiumum abs. value of fold change
 #' @field VolcanoPlotTitle - string - title to show above volcano plot
 #' @field volcanoPlotExpectedTraceCount - numeric - number of base traces present in the active volcano plot (usually between 1 - 3)
+#' @field volcanoEventData - tibble of click and selection data from volcano plot
+#' @field volcanoMultiSelectText - string - text shown below volcano plot when multiple analytes are chosen
 #' @field HeatmapData - tibble - data to use for heatmap plot when multiple analytes are chosen
 #' @field HeatmapText - string vector - text used for hover on heatmap plot
 #' @field HeatmapLimit - numeric - maxiumum abs correlation value used to determine upper/lower bounds of heatmap
@@ -97,6 +99,14 @@ CorrelatesManager <- R6::R6Class(
     VolcanoSummaryMaxFoldChange = 0,
     VolcanoPlotTitle = "",
     volcanoPlotExpectedTraceCount = 3,
+    volcanoEventData = tibble::tibble(
+      curveNumber = -1,
+      pointNumber = -1,
+      x = -1,
+      y = -1,
+      key = ""
+    ),
+    volcanoMultiSelectText = "",
 
     AnalyteData = NULL,
     AnalyteDataDownload = NULL,
@@ -152,13 +162,11 @@ CorrelatesManager <- R6::R6Class(
     #' @description
     #' return hidden /shown / disabled / enabled class for GSEA button based on
     #'  chosen comparison platform and whether or not Volcano Plot is rendered
-    #'
-    #' @return string
     addGSEAInputClass = function() {
       hide <- "hide"
       disabled <- "disabled"
       if (!is.null(self$ComparisonPlatform)) {
-        if (grepl('SOMA',self$ComparisonPlatform) | grepl('RNA', self$ComparisonPlatform)) {
+        if (grepl("SOMA", self$ComparisonPlatform) | grepl("RNA", self$ComparisonPlatform)) {
           hide <- "show"
         }
         if (!is.null(self$VolcanoSummaryData)) {
@@ -177,7 +185,7 @@ CorrelatesManager <- R6::R6Class(
     getQueryAnalytes = function() {
       return(
         self$remoteDB$getQuery(
-          "[shiny].[GetQueryAnalytes] ?",
+          "EXEC [shiny].[GetQueryAnalytes] ?",
           tibble::tibble("QueryPlatform" = self$QueryPlatform)
           ) |>
           dplyr::arrange(QueryAnalyte) |>
@@ -204,7 +212,7 @@ CorrelatesManager <- R6::R6Class(
 
       self$Adjusted <- self$AdjustmentMethod != "none"
 
-      correlationData <- self$remoteDB$getQuery(
+      correlation_data <- self$remoteDB$getQuery(
         "[shiny].[GetCorrelationDataset] ?, ?, ?",
         tibble::tibble(
           "QueryPlatform" = self$QueryPlatform,
@@ -217,15 +225,15 @@ CorrelatesManager <- R6::R6Class(
         "AnalyteID" = ComparisonAnalyteID
       )
 
-      self$CorrelationMeasureName <- unique(correlationData$CorrelationMeasureName)
+      self$CorrelationMeasureName <- unique(correlation_data$CorrelationMeasureName)
 
-      max_finite <- correlationData |>
+      max_finite <- correlation_data |>
         dplyr::filter(p.value > 0) |>
         dplyr::pull(p.value) |>
         min() |>
         (\(x) {-log10(x)})()
 
-      self$VolcanoSummaryData <- correlationData |>
+      self$VolcanoSummaryData <- correlation_data |>
         dplyr::mutate(
           shape = ifelse(p.value == 0, "triangle-up", "circle"),
           p.value = ifelse(p.value == 0, 10^-(max_finite * 1.05), p.value),
@@ -237,21 +245,32 @@ CorrelatesManager <- R6::R6Class(
         dplyr::select(-rank) |>
         dplyr::mutate(
           "p.value.adjustment.method" = "BH",
-          formattedPValue = unlist(purrr::pmap(.l = list(p.value,p.value.adjustment.method), CUSOMShinyHelpers::formatPValue)),
-          text = glue::glue('Analyte: {Analyte} <br />{self$CorrelationMeasureName}:{round(CorrelationValue,2)} <br />{formattedPValue}')
+          formattedPValue = unlist(
+            purrr::pmap(
+              .l = list(p.value, p.value.adjustment.method),
+              CUSOMShinyHelpers::formatPValue
+              )
+            ),
+          text = glue::glue(
+            "Analyte: {Analyte} <br />{self$CorrelationMeasureName}:{round(CorrelationValue,2)} <br />{formattedPValue}"
+            )
         ) |>
         dplyr::ungroup()
 
-      self$VolcanoPlotTitle <- glue::glue('Correlation between {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte,1)} and {self$ComparisonPlatform}')
+      self$VolcanoPlotTitle <- glue::glue(
+        "Correlation between {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte,1)} and {self$ComparisonPlatform}"
+      )
       self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$CorrelationValue))
       self$VolcanoSummaryDataXAxisLabel <- self$CorrelationMeasureName
-      self$VolcanoSummaryDataYAxisLabel <- glue::glue("-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})")
+      self$VolcanoSummaryDataYAxisLabel <- glue::glue(
+        "-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})"
+      )
 
     },
 
     #' @description
-    #' Get volcano plot
-    #' @param .data tibble - data for volcano plot
+    #' Get Volcano Plot
+    #' @param .data - tibble - data for volcano plot
     #' @param ns - namespace to apply to plot object
     #'
     #' @return plotly object
@@ -268,7 +287,7 @@ CorrelatesManager <- R6::R6Class(
           significanceVariable = `-log10pvalue`,
           selected = selectedPoint,
           arrowLabelTextVar = Analyte,
-          titleText = glue::glue("Correlation with {self$QueryAnalyte}:") ,
+          titleText = glue::glue("Correlation with {self$QueryAnalyte}:"),
           includeThresholdLabel = FALSE
         )
 
@@ -289,17 +308,17 @@ CorrelatesManager <- R6::R6Class(
         CUSOMShinyHelpers::getVolcanoPlot(
           foldChangeVariable = CorrelationValue,
           significanceVariable = `-log10pvalue`,
-          significanceGroup =  significanceGroup,
+          significanceGroup = significanceGroup,
           text = text,
           key = Analyte,
           color = color,
           shape = shape,
           plotName = ""
-        )  |>
+        ) |>
         plotly::layout(
           showlegend = TRUE,
           legend = list(
-            orientation = 'h',
+            orientation = "h",
             itemclick = "toggleothers",
             itemsizing = "constant",
             valign = "middle",
@@ -370,8 +389,8 @@ CorrelatesManager <- R6::R6Class(
             ),
             fixedrange = FALSE
           ),
-          annotations=c(a$annotations, a$arrow),
-          margin = list( t = 75)
+          annotations = c(a$annotations, a$arrow),
+          margin = list(t = 75)
         ) |>
         plotly::config(
           displayModeBar = TRUE,
@@ -412,11 +431,15 @@ CorrelatesManager <- R6::R6Class(
     #' @return tibble
     getFormattedVolcanoSummaryData =  function(.data) {
 
-      oldNames = c("QueryPlatform","QueryAnalyte","ComparisonPlatform","Analyte","p.value","-log10pvalue")
-      newNames = c("Query Platform","Query Analyte","Comparison Platform","Comparison Analyte","q-value (BH Adjusted)","-log10(q-value)")
+      old_names <- c("QueryPlatform", "QueryAnalyte", "ComparisonPlatform",
+      "Analyte", "p.value", "-log10pvalue"
+      )
+      new_names <- c("Query Platform", "Query Analyte", "Comparison Platform",
+      "Comparison Analyte", "q-value (BH Adjusted)", "-log10(q-value)"
+      )
 
       .data |>
-        dplyr::rename_with(~ newNames, all_of(oldNames)) |>
+        dplyr::rename_with(~ new_names, all_of(old_names)) |>
         dplyr::rename(`:=`(!!rlang::quo_name(self$CorrelationMeasureName), CorrelationValue))
 
     },
@@ -427,17 +450,115 @@ CorrelatesManager <- R6::R6Class(
     #' @return none
     updateAnalyteAttributes = function() {
 
-      self$AnalyteSearchName <- CUSOMShinyHelpers::parseDelimitedString(self$Analyte,1)
+      self$AnalyteSearchName <- CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)
 
-      if(length(self$Analyte) == 1 ) {
+      if (length(self$Analyte) == 1) {
 
         self$ComparisonAnalytePlotStatAnnotation <- self$VolcanoSummaryData |>
           dplyr::filter(Analyte == self$Analyte) |>
           dplyr::ungroup() |>
-          dplyr::select(p.value,p.value.adjustment.method) |>
-          dplyr::mutate(formatted.p.value = CUSOMShinyHelpers::formatPValue(p.value,p.value.adjustment.method)) |>
+          dplyr::select(p.value, p.value.adjustment.method) |>
+          dplyr::mutate(formatted.p.value = CUSOMShinyHelpers::formatPValue(p.value, p.value.adjustment.method)) |>
           dplyr::select(formatted.p.value)
       }
+    },
+
+    #' @description
+    #' helper function to add annotation to volcano plot based on chosen analyte
+    #' @param plot_name string - name of target volcano plot
+    #' @param ns namespace to properly derive fully-qualified plot name
+    annotate_volcano_point = function(plot_name, ns) {
+
+      plot_name <- ns(plot_name)
+
+      if (all(self$Analyte != "")) {
+        if (length(self$Analyte) == 1) {
+          if (
+            all(
+              self$Analyte != self$volcanoEventData$key |
+              length(self$Analyte) != nrow(self$volcanoEventData)
+              )
+            ) {
+            self$volcanoEventData <- self$volcanoSourceData |>
+              dplyr::arrange(desc(significanceGroup)) |>
+              dplyr::select(significanceGroup, key = Analyte, x = log2FoldChange, y = `-log10pvalue`) |>
+              dplyr::mutate(
+                t = dplyr::dense_rank(significanceGroup),
+                curveNumber = t - 1
+              ) |>
+              dplyr::group_by(significanceGroup) |>
+              dplyr::mutate(
+                r = dplyr::row_number(),
+                pointNumber = r - 1
+              ) |>
+              dplyr::ungroup() |>
+              dplyr::filter(key == self$Analyte) |>
+              dplyr::select(curveNumber, pointNumber, x, y, key)
+          }
+
+          self$volcanoEventData <- self$volcanoEventData |>
+            dplyr::filter(key == self$Analyte)
+
+          keys <- glue::glue_collapse(self$Analyte, sep = "|")
+          shinyjs::runjs(
+            glue::glue(
+              'annotatePointByKey(
+                "{plot_name}",
+                {self$volcanoEventData$curveNumber},
+                {self$volcanoEventData$pointNumber},
+                "{keys}",
+                5
+              );'
+            )
+          )
+        } else {
+          keys <- ""
+          shinyjs::runjs(
+            glue::glue(
+              'annotatePointByKey(
+                "{plot_name}",
+                -1,
+                -1,
+                "{keys}",
+                5
+              );'
+            )
+          )
+          keys <- glue::glue_collapse(self$Analyte, sep = "|")
+          shinyjs::runjs(glue::glue('updateSelectedKeys("{plot_name}","{keys}");'))
+        }
+
+        shinyjs::runjs(
+          paste0("
+            Shiny.setInputValue(
+              '", ns("analyteSearchResults"), "',
+              {
+                query: '", self$Analyte, "',
+                total: ", self$Analyte, "
+              },
+              { priority: 'event' }
+            );"
+          )
+        )
+
+      } else {
+        keys <- ""
+
+        shinyjs::runjs(glue::glue('annotatePointByKey("{plot_name}","{keys}",5);'))
+      }
+
+    },
+
+    #' @description
+    #' small helper function to get correct value for volcanoMultiSelectText
+    getVolcanoMultiSelectText = function() {
+
+      if (length(self$Analyte) > 1 & self$volcanoMultiSelectText == "") {
+        self$updateAnalyteAttributes()
+      } else if (length(self$Analyte) == 1)  {
+        self$volcanoMultiSelectText <- ""
+      }
+      return(self$volcanoMultiSelectText)
     },
 
     #' @description
@@ -463,7 +584,10 @@ CorrelatesManager <- R6::R6Class(
     getAnalyteData = function() {
 
       self$AnalytePlotMethod <- self$get_analyte_plot_method(self$analysisType, length(self$Analyte))
-      self$CorrelationAnalytePlotTitle <- glue::glue('{CUSOMShinyHelpers::parseDelimitedString(self$Analyte,1)} vs {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte,1)}')
+      self$CorrelationAnalytePlotTitle <- glue::glue(
+        "{CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)} 
+        vs {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte, 1)}"
+        )
 
       if (length(self$Analyte) == 1) {
         # Query on X-axis, Comparison on y-axis
@@ -485,35 +609,36 @@ CorrelatesManager <- R6::R6Class(
                 "Analyte" = self$QueryAnalyte
               )
             ) |>
-              dplyr::filter(outlier==FALSE) |>
-              dplyr::select(LabID,  "QueryAnalyte" = Analyte, MeasuredValue, Measurement) |>
+              dplyr::filter(outlier == FALSE) |>
+              dplyr::select(LabID, "QueryAnalyte" = Analyte, MeasuredValue, Measurement) |>
               dplyr::rename(x = MeasuredValue)
-            , by="LabID"
+            , by = "LabID"
           ) |>
           dplyr::mutate(
             log2x = log2(x),
             log2y = log2(y),
             "ComparisonPlatform" = self$ComparisonPlatform,
             "QueryPlatform" = self$QueryPlatform,
-            xLabel = CUSOMShinyHelpers::parseDelimitedString(QueryAnalyte,1),
-            yLabel = CUSOMShinyHelpers::parseDelimitedString(ComparisonAnalyte,1)
+            xLabel = CUSOMShinyHelpers::parseDelimitedString(QueryAnalyte, 1),
+            yLabel = CUSOMShinyHelpers::parseDelimitedString(ComparisonAnalyte, 1)
           )
 
-        self$ComparisonMeasurement <- self$AnalyteData[1,'Measurement.y']
-        self$ComparisonAnalyteLabel <- self$AnalyteData[1,'yLabel']
+        self$ComparisonMeasurement <- self$AnalyteData[1, "Measurement.y"]
+        self$ComparisonAnalyteLabel <- self$AnalyteData[1, "yLabel"]
 
-        self$QueryMeasurement <- self$AnalyteData[1,'Measurement.x']
-        self$QueryAnalyteLabel <- self$AnalyteData[1,'xLabel']
+        self$QueryMeasurement <- self$AnalyteData[1, "Measurement.x"]
+        self$QueryAnalyteLabel <- self$AnalyteData[1, "xLabel"]
 
-      }
-
-      else {
+      } else {
 
         dataset <- self$VolcanoSummaryData |>
           dplyr::filter(AnalyteID %in% self$Analyte) |>
-          dplyr::select(Analyte,AnalyteID, CorrelationValue, text) |>
+          dplyr::select(Analyte, AnalyteID, CorrelationValue, text) |>
           dplyr::arrange(-CorrelationValue) |>
-          dplyr::mutate(Analyte = forcats::fct_inorder(Analyte), "Analysis" = glue::glue("{self$CorrelationMeasureName}"))
+          dplyr::mutate(
+            Analyte = forcats::fct_inorder(Analyte),
+            "Analysis" = glue::glue("{self$CorrelationMeasureName}")
+          )
 
         self$HeatmapLimit <- dataset |>
           dplyr::pull(CorrelationValue) |>
@@ -542,13 +667,18 @@ CorrelatesManager <- R6::R6Class(
     #' @return plotly object
     getAnalytePlot = function(.data, ns) {
 
-      if(self$AnalytePlotMethod == "scatterplot") {
+      if (self$AnalytePlotMethod == "scatterplot") {
 
         p <- .data |>
           dplyr::mutate(Density = CUSOMShinyHelpers::getDensityColors(x, y, transform = TRUE)) |>
           dplyr::arrange(Density) |>
           dplyr::ungroup() |>
-          dplyr::mutate(text = glue::glue("{xLabel} log<sub>2</sub>({self$ComparisonMeasurement}): {round(log2x,2)}<br>{yLabel} log<sub>2</sub>({self$QueryMeasurement}): {round(log2y,2)}<br>Density: {Density}")) |>
+          dplyr::mutate(
+            text = glue::glue(
+              "{xLabel} log<sub>2</sub>({self$ComparisonMeasurement}): 
+              {round(log2x,2)}<br>{yLabel} log<sub>2</sub>({self$QueryMeasurement}): 
+              {round(log2y,2)}<br>Density: {Density}")
+            ) |>
           CUSOMShinyHelpers::getScatterPlotWithSmoothing(
             xVar = log2x,
             yVar = log2y,
@@ -557,11 +687,11 @@ CorrelatesManager <- R6::R6Class(
             smoothingMethod = "lm"
           )
 
-        p <- plotly::ggplotly(p, tooltip="text") |>
+        p <- plotly::ggplotly(p, tooltip = "text") |>
           plotly::layout(
             showlegend = TRUE,
             legend = list(
-              orientation = 'h',
+              orientation = "h",
               itemclick = "toggleothers",
               itemsizing = "constant",
               itemwidth = 30,
@@ -601,7 +731,7 @@ CorrelatesManager <- R6::R6Class(
             ),
             xaxis = list(
               title = list(
-                text = glue::glue("{self$QueryAnalyteLabel} log<sub>2</sub>({self$QueryMeasurement})") ,
+                text = glue::glue("{self$QueryAnalyteLabel} log<sub>2</sub>({self$QueryMeasurement})"),
                 standoff = 0,
                 font = list(
                   family = "Arial",
@@ -650,7 +780,7 @@ CorrelatesManager <- R6::R6Class(
                 )
               )
             ),
-            margin = list( t = 75)
+            margin = list(t = 75)
           ) |>
           plotly::config(
             displayModeBar = TRUE,
@@ -675,9 +805,7 @@ CorrelatesManager <- R6::R6Class(
 
         p
 
-      }
-
-      else {
+      } else {
         # heatmap
 
         p <- heatmaply::heatmaply(
@@ -688,7 +816,7 @@ CorrelatesManager <- R6::R6Class(
           key = ~ name,
           showticklabels = c(FALSE, TRUE),
           main = glue::glue("{self$CorrelationMeasureName}"),
-          margins = c(60,100,40,20),
+          margins = c(60, 100, 40, 20),
           subplot_widths = 0.65,
           yaxis_width = 10,
           grid_color = "white",
@@ -704,7 +832,7 @@ CorrelatesManager <- R6::R6Class(
           branches_lwd = 0.1,
           fontsize_row = 10,
           fontsize_col = 1,
-          heatmap_layers = theme(axis.line=element_blank()),
+          heatmap_layers = theme(axis.line = element_blank()),
           plot_method = "plotly",
           colorbar_len = 0.5,
           colorbar_yanchor = "middle",
@@ -743,7 +871,7 @@ CorrelatesManager <- R6::R6Class(
           displaylogo = FALSE,
           toImageButtonOptions = list(
             format = "svg",
-            filename = glue::glue('{self$applicationName} - Heatmap {format(Sys.time(),"%Y%m%d_%H%M%S")}') ,
+            filename = glue::glue("{self$applicationName} - Heatmap {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"),
             width = NULL,
             height = NULL
           ),
@@ -774,13 +902,13 @@ CorrelatesManager <- R6::R6Class(
       xlabel <- glue::glue("{self$QueryAnalyteLabel} log<sub>2</sub>({self$QueryMeasurement})")
       ylabel <- glue::glue("{self$ComparisonAnalyteLabel} log<sub>2</sub>({self$ComparisonMeasurement})")
 
-      if(length(self$Analyte) == 1) {
+      if (length(self$Analyte) == 1) {
 
         return(
           self$AnalyteData |>
-            dplyr::select(-c(Measurement.x, Measurement.y,xLabel,yLabel,x,y)) |>
-            dplyr::rename_with(~gsub("(?<!^|\\s)([A-Z]+)", " \\1", ., perl = T), everything()) |>
-            dplyr::rename(`:=`(!!xlabel,log2x), `:=`(!!ylabel, log2y))
+            dplyr::select(-c(Measurement.x, Measurement.y, xLabel, yLabel, x, y)) |>
+            dplyr::rename_with(~gsub("(?<!^|\\s)([A-Z]+)", " \\1", ., perl = TRUE), everything()) |>
+            dplyr::rename(`:=`(!!xlabel, log2x), `:=`(!!ylabel, log2y))
         )
 
       } else {
@@ -788,8 +916,8 @@ CorrelatesManager <- R6::R6Class(
         self$AnalyteData |>
           dplyr::inner_join(self$VolcanoSummaryData, by = c("name" = "AnalyteID")) |>
           dplyr::select(QueryPlatform, QueryAnalyte, ComparisonPlatform, Analyte, CorrelationValue) |>
-          dplyr::rename(`:=`(!!self$CorrelationMeasureName,CorrelationValue)) |>
-          dplyr::rename_with(~gsub("(?<!^|\\s)([A-Z]+)", " \\1", ., perl=T), everything())
+          dplyr::rename(`:=`(!!self$CorrelationMeasureName, CorrelationValue)) |>
+          dplyr::rename_with(~gsub("(?<!^|\\s)([A-Z]+)", " \\1", ., perl = TRUE), everything())
       }
 
     },
@@ -806,13 +934,13 @@ CorrelatesManager <- R6::R6Class(
 
       ranks <- self$VolcanoSummaryData |>
         dplyr::rowwise() |>
-        dplyr::mutate(ParsedComparisonAnalyte = CUSOMShinyHelpers::parseDelimitedString(Analyte,1)) |>
+        dplyr::mutate(ParsedComparisonAnalyte = CUSOMShinyHelpers::parseDelimitedString(Analyte, 1)) |>
         dplyr::ungroup() |>
         dplyr::mutate(
           ID = ParsedComparisonAnalyte,
           t = (`-log10pvalue` * CorrelationValue)
         ) |>
-        dplyr::select(ID,t) |>
+        dplyr::select(ID, t) |>
         #dplyr::select(ID = ParsedComparisonAnalyte, t = CorrelationValue) |>
         dplyr::filter(!is.na(t)) |>
         dplyr::arrange(-abs(t)) |>
@@ -822,10 +950,24 @@ CorrelatesManager <- R6::R6Class(
       gsea <- CUSOMShinyHelpers::runfGSEA(geneset = TrisomExploreR:::GSEA_hallmarks, ranks = ranks) |>
         dplyr::mutate(
           Leading.edge.genes = purrr::map_chr(leadingEdge, toString),
-          Leading.edge.genes = gsub(' ','',Leading.edge.genes)
+          Leading.edge.genes = gsub(" ", "", Leading.edge.genes)
         ) |>
-        dplyr::select("Gene.set" = pathway, "Size" = size, ES, NES, "p.value" = pval, "q.value" = padj, Leading.edge.genes) |>
-        dplyr::mutate(Gene.set = stringr::str_to_title(trimws(gsub('_',' ',gsub('HALLMARK','',Gene.set)))))
+        dplyr::select(
+          "Gene.set" = pathway,
+          "Size" = size,
+          ES,
+          NES,
+          "p.value" = pval,
+          "q.value" = padj,
+          Leading.edge.genes
+        ) |>
+        dplyr::mutate(
+          Gene.set = stringr::str_to_title(
+            trimws(
+              gsub("_", " ", gsub("HALLMARK", "", Gene.set))
+            )
+          )
+        )
 
       self$GSEAData <- list(
         "ranks" = ranks,
@@ -859,7 +1001,7 @@ CorrelatesManager <- R6::R6Class(
         plotly::plot_ly(
           type = "bar",
           x = ~ `-log10qvalue`,
-          y = ~ reorder(Gene.set,NES),
+          y = ~ reorder(Gene.set, NES),
           hoverinfo = "text",
           hovertext = ~ text,
           customdata = ~ Leading.edge.genes,
@@ -872,7 +1014,7 @@ CorrelatesManager <- R6::R6Class(
             cmid = 0,
             cmin = -limit,
             colorbar = list(
-              title = 'NES',
+              title = "NES",
               tickmode = "auto",
               len = 0.5,
               yanchor = "middle",
@@ -924,7 +1066,7 @@ CorrelatesManager <- R6::R6Class(
           displaylogo = FALSE,
           toImageButtonOptions = list(
             format = "svg",
-            filename = glue::glue('{self$applicationName} - GSEA Plot {format(Sys.time(),"%Y%m%d_%H%M%S")}') ,
+            filename = glue::glue("{self$applicationName} - GSEA Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"),
             width = NULL,
             height = NULL
           ),
@@ -941,16 +1083,16 @@ CorrelatesManager <- R6::R6Class(
 
     #' @description
     #' Set selected GSEA pathway data
-    #' @param pathName - string - selected pathway name
+    #' @param path_name - string - selected pathway name
     #' @return none
-    getGSEAPathwayData = function(pathName) {
+    getGSEAPathwayData = function(path_name) {
 
-      gseaParam <- 0
+      gsea_param <- 0
 
       stats <- self$GSEAData$ranks
 
-      pathwayNammed <- self$GSEAData$gsea |>
-        dplyr::filter(Gene.set == pathName) |>
+      pathway_nammed <- self$GSEAData$gsea |>
+        dplyr::filter(Gene.set == path_name) |>
         dplyr::select(Leading.edge.genes) |>
         dplyr::mutate(id = dplyr::row_number()) |>
         tidyr::separate_rows(Leading.edge.genes, sep = ",") |>
@@ -959,31 +1101,31 @@ CorrelatesManager <- R6::R6Class(
 
       rnk <- rank(-stats)
       ord <- order(rnk)
-      statsAdj <- stats[ord]
-      statsAdj <- sign(statsAdj) * (abs(statsAdj)^gseaParam)
-      statsAdj <- statsAdj/max(abs(statsAdj))
+      stats_adj <- stats[ord]
+      stats_adj <- sign(stats_adj) * (abs(stats_adj)^gsea_param)
+      stats_adj <- stats_adj / max(abs(stats_adj))
 
-      pathway <- unname(as.vector(na.omit(match(pathwayNammed, names(statsAdj)))))
+      pathway <- unname(as.vector(na.omit(match(pathway_nammed, names(stats_adj)))))
       pathway <- sort(pathway)
 
-      gseaRes <- fgsea::calcGseaStat(
-        statsAdj,
+      gsea_res <- fgsea::calcGseaStat(
+        stats_adj,
         selectedStats = pathway,
         returnAllExtremes = TRUE
       )
 
-      bottoms <- gseaRes$bottoms
-      tops <- gseaRes$tops
-      n <- length(statsAdj)
+      bottoms <- gsea_res$bottoms
+      tops <- gsea_res$tops
+      n <- length(stats_adj)
       xs <- as.vector(rbind(pathway - 1, pathway))
       ys <- as.vector(rbind(bottoms, tops))
 
-      GSEAScores <- tibble::tibble(
+      gsea_scores <- tibble::tibble(
         x = c(0, xs, n + 1),
         y = c(0, ys, 0)
       ) |>
       dplyr::inner_join(
-        tibble::tibble(x = pathway, Gene = pathwayNammed),
+        tibble::tibble(x = pathway, Gene = pathway_nammed),
         by = "x"
       ) |>
       dplyr::rename("Rank" = x, "ES" = y) |>
@@ -991,19 +1133,21 @@ CorrelatesManager <- R6::R6Class(
 
       self$GSEAPathwayData <- self$VolcanoSummaryData |>
         dplyr::filter(Analyte %in% self$Analyte) |>
-        dplyr::select(Analyte, CorrelationValue,"-log<sub>10</sub>(q-value)" = `-log10pvalue`) |>
+        dplyr::select(Analyte, CorrelationValue, "-log<sub>10</sub>(q-value)" = `-log10pvalue`) |>
         tidyr::separate(col = "Analyte", into = "Gene", remove = FALSE) |>
-        dplyr::left_join(GSEAScores, by = "Gene" ) |>
+        dplyr::left_join(gsea_scores, by = "Gene") |>
         dplyr::group_by(Gene) |>
         dplyr::arrange(-CorrelationValue) |>
         dplyr::mutate(r = dplyr::row_number()) |>
         dplyr:: ungroup() |>
         dplyr::filter(r == 1) |>
-        dplyr::select(-c(ES,r)) |>
+        dplyr::select(-c(ES, r)) |>
         dplyr::mutate(
-          CorrelationValue = format(CorrelationValue,scientific = TRUE),
-          `-log<sub>10</sub>(q-value)` = format(`-log<sub>10</sub>(q-value)`,scientific = TRUE),
-          Gene = glue::glue("<a href=\"https://www.genecards.org/Search/Keyword?queryString={Gene}\" target=\"_blank\">{Gene}</a>")
+          CorrelationValue = format(CorrelationValue, scientific = TRUE),
+          `-log<sub>10</sub>(q-value)` = format(`-log<sub>10</sub>(q-value)`, scientific = TRUE),
+          Gene = glue::glue(
+            "<a href=\"https://www.genecards.org/Search/Keyword?queryString={Gene}\" target=\"_blank\">{Gene}</a>"
+          )
         ) |>
         dplyr::relocate(Gene) |>
         dplyr::arrange(Rank) |>
@@ -1014,7 +1158,7 @@ CorrelatesManager <- R6::R6Class(
       self$GSEAAnalytes <- self$GSEAPathwayData |>
         dplyr::select(Analyte) |>
         dplyr::summarise(text = toString(Analyte)) |>
-        dplyr::mutate(text = gsub(', ','|',text)) |>
+        dplyr::mutate(text = gsub(", ", "|", text)) |>
         dplyr::pull()
 
       self$GSEAGenesetName <- glue::glue("HALLMARK_{gsub(' ','_',stringr::str_to_upper(self$GSEATraceName))}")
@@ -1047,7 +1191,9 @@ CorrelatesManager <- R6::R6Class(
         displaylogo = FALSE,
         toImageButtonOptions = list(
           format = "svg",
-          filename = glue::glue('{self$applicationName} - {self$Study} GSEA Enrichment Plot {format(Sys.time(),"%Y%m%d_%H%M%S")}') ,
+          filename = glue::glue(
+            "{self$applicationName} - {self$Study} GSEA Enrichment Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
+          ) ,
           width = NULL,
           height = NULL
         ),
