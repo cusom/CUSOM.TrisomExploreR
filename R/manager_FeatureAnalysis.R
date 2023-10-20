@@ -679,7 +679,12 @@ FeatureAnalysisManager <- R6::R6Class(
             ) {
             self$volcanoEventData <- self$volcanoSourceData |>
               dplyr::arrange(desc(significanceGroup)) |>
-              dplyr::select(significanceGroup, key = Analyte, x = !!self$FoldChangeVar, y = !!self$SignificanceVariable) |>
+              dplyr::select(
+                significanceGroup, 
+                key = Analyte, 
+                x = !!self$FoldChangeVar, 
+                y = !!self$SignificanceVariable
+              ) |>
               dplyr::mutate(
                 t = dplyr::dense_rank(significanceGroup),
                 curveNumber = t - 1

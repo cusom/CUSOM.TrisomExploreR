@@ -233,7 +233,9 @@ CorrelatesManager <- R6::R6Class(
         dplyr::filter(p.value > 0) |>
         dplyr::pull(p.value) |>
         min() |>
-        (\(x) {-log10(x)})()
+        (\(x) {
+          -log10(x)
+        })()
 
       self$VolcanoSummaryData <- correlation_data |>
         dplyr::mutate(
@@ -260,7 +262,9 @@ CorrelatesManager <- R6::R6Class(
         dplyr::ungroup()
 
       self$VolcanoPlotTitle <- glue::glue(
-        "Correlation between {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte,1)} and {self$ComparisonPlatform}"
+        "Correlation between\\
+         {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte,1)}\\
+          and {self$ComparisonPlatform}"
       )
       self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$CorrelationValue))
       self$VolcanoSummaryDataXAxisLabel <- self$CorrelationMeasureName
@@ -470,7 +474,7 @@ CorrelatesManager <- R6::R6Class(
     #' @param plot_name string - name of target volcano plot
     #' @param ns namespace to properly derive fully-qualified plot name
     annotate_volcano_point = function(plot_name, ns) {
-      
+
       plot_name <- ns(plot_name)
 
       if (all(self$Analyte != "")) {
@@ -481,10 +485,15 @@ CorrelatesManager <- R6::R6Class(
               length(self$Analyte) != nrow(self$volcanoEventData)
               )
             ) {
-              
+
             self$volcanoEventData <- self$volcanoSourceData |>
               dplyr::arrange(desc(significanceGroup)) |>
-              dplyr::select(significanceGroup, key = Analyte, x = !!self$FoldChangeVar, y = !!self$SignificanceVariable) |>
+              dplyr::select(
+                significanceGroup,
+                key = Analyte,
+                x = !!self$FoldChangeVar,
+                y = !!self$SignificanceVariable
+              ) |>
               dplyr::mutate(
                 t = dplyr::dense_rank(significanceGroup),
                 curveNumber = t - 1
@@ -588,7 +597,7 @@ CorrelatesManager <- R6::R6Class(
 
       self$AnalytePlotMethod <- self$get_analyte_plot_method(self$analysisType, length(self$Analyte))
       self$CorrelationAnalytePlotTitle <- glue::glue(
-        "{CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)}
+        "{CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)}\\
         vs {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte, 1)}"
         )
 
@@ -678,9 +687,9 @@ CorrelatesManager <- R6::R6Class(
           dplyr::ungroup() |>
           dplyr::mutate(
             text = glue::glue(
-              "{xLabel} log<sub>2</sub>({self$ComparisonMeasurement}):
-              {round(log2x,2)}<br>{yLabel} log<sub>2</sub>({self$QueryMeasurement}):
-              {round(log2y,2)}<br>Density: {Density}")
+              "{xLabel} log<sub>2</sub>({self$ComparisonMeasurement}):{round(log2x,2)}
+              {yLabel} log<sub>2</sub>({self$QueryMeasurement}):{round(log2y,2)}
+              Density: {Density}")
             ) |>
           CUSOMShinyHelpers::getScatterPlotWithSmoothing(
             xVar = log2x,
