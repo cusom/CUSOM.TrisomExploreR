@@ -85,6 +85,8 @@ Enables analysis of cross-omics correlations
 
 \item{\code{volcanoPlotExpectedTraceCount}}{- numeric - number of base traces present in the active volcano plot (usually between 1 - 3)}
 
+\item{\code{volcanoSourceData}}{- tibble of formatted source data used for volcano plot - includes trace groups}
+
 \item{\code{volcanoEventData}}{- tibble of click and selection data from volcano plot}
 
 \item{\code{volcanoMultiSelectText}}{- string - text shown below volcano plot when multiple analytes are chosen}
