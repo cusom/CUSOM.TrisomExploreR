@@ -262,9 +262,9 @@ CorrelatesManager <- R6::R6Class(
         dplyr::ungroup()
 
       self$VolcanoPlotTitle <- glue::glue(
-        "Correlation between\\
-         {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte,1)}\\
-          and {self$ComparisonPlatform}"
+        "Correlation between \\
+         {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte,1)} \\
+         and {self$ComparisonPlatform}"
       )
       self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$CorrelationValue))
       self$VolcanoSummaryDataXAxisLabel <- self$CorrelationMeasureName
@@ -597,8 +597,8 @@ CorrelatesManager <- R6::R6Class(
 
       self$AnalytePlotMethod <- self$get_analyte_plot_method(self$analysisType, length(self$Analyte))
       self$CorrelationAnalytePlotTitle <- glue::glue(
-        "{CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)}\\
-        vs {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte, 1)}"
+        "{CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)} \\
+        vs. {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte, 1)}"
         )
 
       if (length(self$Analyte) == 1) {
