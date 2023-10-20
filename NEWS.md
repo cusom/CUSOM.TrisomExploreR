@@ -1,4 +1,4 @@
-# TrisomExploreR 0.2.7.9000
+# TrisomExploreR 0.2.8.9000
 
 ## New Functionality 
 
@@ -19,7 +19,8 @@ Minor changes to code formatting and linting.
 Added labels above all input elements that are rendered server-side for additional context for user. 
 Moving call to download files outside of init for `AzureRemoteDataFileManager` class. Must explicity call `download_files` method to invoke local file download. 
 Optimized calls to `annotatePointByKey` JS function. Now, trace and point indicies are provided directly rather than having the function foreach through all traces based on key name. Annotation text is driven from R rather than an attempt to parse the `text` property of the specific point in the trace. 
-Moved calls to `annotatePointByKey` to `FeatureAnalysis` module. Added logic to figure out trace and key indext to annotate when an analyte is chosen from drop down rather than via click event from Volcano Plot. 
+Moved calls to `annotatePointByKey` to `FeatureAnalysis` module. Added logic to figure out trace and key indext to annotate when an analyte is chosen from drop down rather than via click event from Volcano Plot.
+
 
 ***
 ## Bug Fixes 
@@ -27,4 +28,4 @@ Moved calls to `annotatePointByKey` to `FeatureAnalysis` module. Added logic to 
 - Resolved issue where Volcano Multi-Select text would persist when only 1 Analyte is chosen: added a call to `r6$updateAnalyteAttributes()` to ensure new text is calculated based on chosen analytes.
 -correcting inconsistent references to local file directory. Removed class init param and set as hard coded value "Remote_Data/"
 -Resolved "cannot add bindings to locked environment" error by adding required properties to `Correlates Manager` class to handle new logic for analyte annotations
-
+-Resolved "Error in <-: dims [product 1] do not match the length of object [0]" error by adding logic to match selected heatmap point using `AnalyteId` or `Analyte`
