@@ -490,15 +490,17 @@ CorrelatesManager <- R6::R6Class(
               dplyr::arrange(desc(significanceGroup)) |>
               dplyr::select(
                 significanceGroup,
+                shape,
                 key = Analyte,
                 x = !!self$FoldChangeVar,
                 y = !!self$SignificanceVariable
               ) |>
               dplyr::mutate(
-                t = dplyr::dense_rank(significanceGroup),
+                group = glue::glue("{significanceGroup}-{shape}"),
+                t = dplyr::dense_rank(group),
                 curveNumber = t - 1
               ) |>
-              dplyr::group_by(significanceGroup) |>
+              dplyr::group_by(group) |>
               dplyr::mutate(
                 r = dplyr::row_number(),
                 pointNumber = r - 1
