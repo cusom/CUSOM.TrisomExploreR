@@ -326,7 +326,10 @@ correlates_inputs_server <- function(id, r6) {
     shiny::observeEvent(c(input$getData), {
 
       shiny::validate(
-        shiny::need(input$getData > 0, "")
+        shiny::need(input$getData > 0, ""),
+        shiny::need(input$QueryPlatform != "", ""),
+        shiny::need(input$QueryAnalyte != "", ""),
+        shiny::need(input$ComparisonPlatform != "", "")
       )
 
       gargoyle::trigger("get_volcano_data", session = session)

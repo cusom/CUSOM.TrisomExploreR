@@ -207,6 +207,21 @@ CorrelatesManager <- R6::R6Class(
     },
 
     #' @description
+    #' validate that all inputs have been chosen to fetch volcano summary data
+    #'
+    validate_volcano_plot = function() {
+      if (
+        self$QueryPlatform != ""
+        & self$QueryAnalyte != ""
+        & self$ComparisonPlatform != ""
+        ) {
+        return(TRUE)
+      } else {
+        return(FALSE)
+      }
+    },
+
+    #' @description
     #' Set Volcano Summary Data along with other volcano plot properties
     #'
     #' @return none

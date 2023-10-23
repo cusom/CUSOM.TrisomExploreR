@@ -57,7 +57,7 @@ volcano_plot_server <- function(id, r6, ...) {
       c(gargoyle::watch("get_volcano_data", session = session)), {
 
       shiny::validate(
-        shiny::need(!is.null(r6$Study), "")
+        shiny::need(r6$validate_volcano_plot(), "")
       )
 
       shinybusy::show_modal_spinner(
@@ -78,7 +78,7 @@ volcano_plot_server <- function(id, r6, ...) {
 
       })
 
-    }, ignoreInit = TRUE)
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
     output$VolcanoPlot <- plotly::renderPlotly({
 
