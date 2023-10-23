@@ -1,4 +1,4 @@
-# TrisomExploreR 0.2.9.9000
+# TrisomExploreR 0.2.10.9000
 
 ## New Functionality 
 
@@ -30,3 +30,4 @@ Moved calls to `annotatePointByKey` to `FeatureAnalysis` module. Added logic to 
 -Resolved "cannot add bindings to locked environment" error by adding required properties to `Correlates Manager` class to handle new logic for analyte annotations
 -Resolved "Error in <-: dims [product 1] do not match the length of object [0]" error by adding logic to match selected heatmap point using `AnalyteId` or `Analyte`
 -Resolved bug where the wrong analyte could be chosen and annotated on volcano plot after clicking on heatmap plot from a multi-analyte selection.
+-Resolved bug where correlation volcano plot attempts to render before all required inputs have been chosen

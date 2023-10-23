@@ -46,6 +46,7 @@ Subclass of Feature Analysis Manager R6 Class to enable comorbidity-specific ana
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="get_analyte_plot_title"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-get_analyte_plot_title'><code>TrisomExploreR::FeatureAnalysisManager$get_analyte_plot_title()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="get_analyte_plot_x_axis_label"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-get_analyte_plot_x_axis_label'><code>TrisomExploreR::FeatureAnalysisManager$get_analyte_plot_x_axis_label()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="updateAnalyteAttributes"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-updateAnalyteAttributes'><code>TrisomExploreR::FeatureAnalysisManager$updateAnalyteAttributes()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="TrisomExploreR" data-topic="FeatureAnalysisManager" data-id="validate_volcano_plot"><a href='../../TrisomExploreR/html/FeatureAnalysisManager.html#method-FeatureAnalysisManager-validate_volcano_plot'><code>TrisomExploreR::FeatureAnalysisManager$validate_volcano_plot()</code></a></span></li>
 </ul>
 </details>
 }}

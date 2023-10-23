@@ -117,6 +117,7 @@ Enables analysis of cross-omics correlations
 \item \href{#method-CorrelatesManager-addGSEAInputClass}{\code{CorrelatesManager$addGSEAInputClass()}}
 \item \href{#method-CorrelatesManager-getQueryAnalytes}{\code{CorrelatesManager$getQueryAnalytes()}}
 \item \href{#method-CorrelatesManager-getComparisonPlatforms}{\code{CorrelatesManager$getComparisonPlatforms()}}
+\item \href{#method-CorrelatesManager-validate_volcano_plot}{\code{CorrelatesManager$validate_volcano_plot()}}
 \item \href{#method-CorrelatesManager-getVolcanoSummaryData}{\code{CorrelatesManager$getVolcanoSummaryData()}}
 \item \href{#method-CorrelatesManager-getVolcanoPlot}{\code{CorrelatesManager$getVolcanoPlot()}}
 \item \href{#method-CorrelatesManager-getFormattedVolcanoSummaryData}{\code{CorrelatesManager$getFormattedVolcanoSummaryData()}}
@@ -203,6 +204,16 @@ string vector
 gets comparison platforms for cross-omics analysis
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$getComparisonPlatforms()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-CorrelatesManager-validate_volcano_plot"></a>}}
+\if{latex}{\out{\hypertarget{method-CorrelatesManager-validate_volcano_plot}{}}}
+\subsection{Method \code{validate_volcano_plot()}}{
+validate that all inputs have been chosen to fetch volcano summary data
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$validate_volcano_plot()}\if{html}{\out{</div>}}
 }
 
 }

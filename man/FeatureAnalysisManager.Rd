@@ -128,6 +128,7 @@ in the active volcano plot (usually between 1 - 3)}
 \item \href{#method-FeatureAnalysisManager-addInputSpecialClass}{\code{FeatureAnalysisManager$addInputSpecialClass()}}
 \item \href{#method-FeatureAnalysisManager-addGSEAInputClass}{\code{FeatureAnalysisManager$addGSEAInputClass()}}
 \item \href{#method-FeatureAnalysisManager-getBaseData}{\code{FeatureAnalysisManager$getBaseData()}}
+\item \href{#method-FeatureAnalysisManager-validate_volcano_plot}{\code{FeatureAnalysisManager$validate_volcano_plot()}}
 \item \href{#method-FeatureAnalysisManager-getVolcanoSummaryData}{\code{FeatureAnalysisManager$getVolcanoSummaryData()}}
 \item \href{#method-FeatureAnalysisManager-getFormattedVolcanoSummaryData}{\code{FeatureAnalysisManager$getFormattedVolcanoSummaryData()}}
 \item \href{#method-FeatureAnalysisManager-getVolcanoPlot}{\code{FeatureAnalysisManager$getVolcanoPlot()}}
@@ -330,6 +331,16 @@ If volcano summary plot has been rendered, enable button
 Get / set sample level data with filers applied
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getBaseData()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-FeatureAnalysisManager-validate_volcano_plot"></a>}}
+\if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-validate_volcano_plot}{}}}
+\subsection{Method \code{validate_volcano_plot()}}{
+validate that all inputs have been chosen to fetch volcano summary data
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$validate_volcano_plot()}\if{html}{\out{</div>}}
 }
 
 }
