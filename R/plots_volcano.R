@@ -66,17 +66,15 @@ volcano_plot_server <- function(id, r6, ...) {
         text = "Calculating data for Volcano Plot..."
       )
 
-      shiny::isolate({
 
-        r6$getVolcanoSummaryData()
+      r6$getVolcanoSummaryData()
 
-        gargoyle::trigger("update_volcano_analytes", session = session)
+      gargoyle::trigger("update_volcano_analytes", session = session)
 
-        gargoyle::trigger("validate_GSEA", session = session)
+      gargoyle::trigger("validate_GSEA", session = session)
 
-        r6$VolcanoSummaryData
+      r6$VolcanoSummaryData
 
-      })
 
     }, ignoreInit = TRUE, ignoreNULL = TRUE)
 

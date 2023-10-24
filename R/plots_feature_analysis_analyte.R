@@ -105,7 +105,7 @@ feature_analysis_analyte_plot_server <- function(id, r6) {
 
       shinybusy::remove_modal_spinner()
 
-      shiny::isolate(r6$AnalyteData)
+      r6$AnalyteData
 
     }, ignoreInit = TRUE)
 

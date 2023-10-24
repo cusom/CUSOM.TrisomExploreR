@@ -91,6 +91,11 @@ volcano_plot_analyte_input_server <- function(id, r6, parent) {
         dplyr::arrange(Analyte) |>
         dplyr::pull()
 
+      if (!any(r6$Analyte %in% analytes)) {
+        r6$Analyte <- ""
+        gargoyle::trigger("show_analyte_plot", session = session)
+      }
+
       shiny::updateSelectizeInput(
         session = session,
         inputId = "Analyte",
