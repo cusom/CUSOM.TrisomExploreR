@@ -1416,7 +1416,7 @@ FeatureAnalysisManager <- R6::R6Class(
       ord <- order(rnk)
       stats_adj <- stats[ord]
       stats_adj <- sign(stats_adj) * (abs(stats_adj)^gsea_param)
-      stats_adj <- statsAdj / max(abs(stats_adj))
+      stats_adj <- stats_adj / max(abs(stats_adj))
 
       pathway <- unname(as.vector(na.omit(match(pathway_nammed, names(stats_adj)))))
       pathway <- sort(pathway)
