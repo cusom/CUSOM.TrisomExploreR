@@ -1,4 +1,4 @@
-# TrisomExploreR 0.2.11.9000
+# TrisomExploreR 0.2.12.9000
 
 ## New Functionality 
 
@@ -21,6 +21,7 @@ Added new `ODBCQueryManager` method to `INSERT` data to target table
 -Optimized calls to `annotatePointByKey` JS function. Now, trace and point indicies are provided directly rather than having the function foreach through all traces based on key name. Annotation text is driven from R rather than an attempt to parse the `text` property of the specific point in the trace. 
 -Moved calls to `annotatePointByKey` to `FeatureAnalysis` module. Added logic to figure out trace and key index to annotate when an analyte is chosen from drop down rather than via click event from Volcano Plot.
 -Update (clear or re-render) analyte plot when new study is chosen and new volcano plot is rendered. 
+- Optimized loading for cell type analysis by implementing future promise to load genes to input widget. 
 
 ***
 ## Bug Fixes 
@@ -31,3 +32,4 @@ Added new `ODBCQueryManager` method to `INSERT` data to target table
 -Resolved "Error in <-: dims [product 1] do not match the length of object [0]" error by adding logic to match selected heatmap point using `AnalyteId` or `Analyte`
 -Resolved bug where the wrong analyte could be chosen and annotated on volcano plot after clicking on heatmap plot from a multi-analyte selection.
 -Resolved bug where correlation volcano plot attempts to render before all required inputs have been chosen
+-Resolved bug where GSEA enrichment plot would fail with error: `Error in r6$getGSEAPathwayData: object 'statsAdj' not found`
