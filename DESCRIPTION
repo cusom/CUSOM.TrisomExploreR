@@ -21,6 +21,7 @@ Imports:
     fgsea,
     forcats,
     formattable,
+    future,
     gargoyle,
     glue,
     heatmaply,
