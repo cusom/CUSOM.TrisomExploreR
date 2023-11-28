@@ -2,10 +2,7 @@
 #' @param id - string - id for this module namespace
 #' @param input_config list - list of default values for various input widgets
 #' @importFrom shinydashboardPlus box
-#' @importFrom shinyWidgets prettyRadioButtons
-#' @importFrom shinyWidgets pickerInput
-#' @importFrom shinyWidgets awesomeCheckboxGroup
-#' @importFrom shinyWidgets numericRangeInput
+#' @importFrom shinyWidgets prettyRadioButtons pickerInput awesomeCheckboxGroup numericRangeInput
 #' @importFrom bsplus bs_embed_tooltip
 #' @return ui module
 #' @export
@@ -14,25 +11,25 @@ cell_type_inputs_ui <- function(id, input_config) {
   shiny::tagList(
     shinydashboardPlus::box(
       title = shiny::HTML(
-        '<div class="dataset-options-title">Dataset Options
+        "<div class=\"dataset-options-title\">Dataset Options
           <span
-            data-toggle="tooltip"
-            data-placement="auto right"
-            title=""
-            class="fas fa-filter"
-            data-original-title="Set options below to generate plot">
+            data-toggle=\"tooltip\"
+            data-placement=\"auto right\"
+            title = \"\"
+            class = \"fas fa-filter\"
+            data-original-title = \"Set options below to generate plot\">
           </span>
-        </div>'
+        </div>"
       ),
       height = "auto",
-      width = 12,
+      width = NULL,
       closable = FALSE,
       solidHeader = FALSE,
       collapsible = FALSE,
       headerBorder = FALSE,
       shiny::tags$div(
         id = ns("scrollableOptions"),
-        style = "height:630px;padding-left:10px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
+        style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
         shinyjs::hidden(
           shinyWidgets::prettyRadioButtons(
             inputId = ns("Platform"),
@@ -42,7 +39,7 @@ cell_type_inputs_ui <- function(id, input_config) {
             width = "90%"
           )
         ),
-        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         tags$b("Cell Type(s)"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("CellType")),
@@ -131,6 +128,8 @@ cell_type_inputs_ui <- function(id, input_config) {
 #' @param r6 - R6 class defining server-side logic for inputs
 #' @import shinyjs
 #' @importFrom gargoyle trigger
+#' @importFrom promises future_promise then %...>% %...!%
+#' @importFrom shinyWidgets pickerInput pickerOptions updatePickerInput
 #' @export
 cell_type_inputs_server <- function(id, r6) {
 
@@ -155,53 +154,42 @@ cell_type_inputs_server <- function(id, r6) {
     )
 
     output$CellType <- shiny::renderUI({
-      cell_types <- r6$getCellTypes()
-      shinyWidgets::pickerInput(
-        inputId = ns("CellType"),
-        label = NULL,
-        choices = cell_types,
-        selected = cell_types,
-        options = list(
-          `actions-box` = TRUE
-        ),
-        multiple = TRUE
-      )
+
+      promises::future_promise(
+        r6$getCellTypes()
+      )  %...!% warning() %...>%
+      {
+        shinyWidgets::pickerInput(
+          inputId = ns("CellType"),
+          label = NULL,
+          choices = .,
+          selected = .,
+          options = list(
+            `actions-box` = TRUE
+          ),
+          multiple = TRUE
+        )
+      }
     })
 
     output$Analyte <- shiny::renderUI({
 
-      analytes <- r6$getAnalytes()
-
-      shiny::selectizeInput(
-        inputId = ns("Analyte"),
-        label = NULL,
-        choices = analytes,
-        options = list(
-          # labelField = "name",
-          # searchField = "name",
-          # valueField = "name",
-          placeholder = "Search for Gene",
-          onInitialize = I('function() { this.setValue(""); }'),
-          closeAfterSelect = TRUE,
-          selectOnTab = TRUE,
-          persist = FALSE,
-          `live-search` = TRUE,
-          onType = I(paste0("
-            function (str) {
-              if(this.currentResults.total == 0) {
-                Shiny.setInputValue(
-                  '", ns("analyteSearchResults"), "',
-                  {
-                    query: this.currentResults.query,
-                    total: this.currentResults.total
-                  },
-                  { priority: 'event' }
-                );
-              };
-            }")),
-          maxOptions = nrow(analytes)
-        )
-      )
+      promises::future_promise(
+        r6$getAnalytes()
+      )  %...!% warning() %...>%
+        {
+          shinyWidgets::pickerInput(
+            inputId = ns("Analyte"),
+            label = NULL,
+            choices = .,
+            selected = character(0),
+            options = shinyWidgets::pickerOptions(
+              liveSearch = TRUE,
+              maxOptions = 1
+            ),
+            multiple = TRUE
+          )
+        }
     })
 
     output$Covariates <- shiny::renderUI({
@@ -236,18 +224,6 @@ cell_type_inputs_server <- function(id, r6) {
         shinyjs::removeClass(id = "Refresh", class = "refresh-btn")
         shinyjs::addClass(id = "Refresh", class = "refresh-ready-btn")
         shinyjs::enable(id = "Refresh")
-        shinyjs::runjs(
-            paste0("
-              Shiny.setInputValue(
-                '", ns("analyteSearchResults"), "',
-                {
-                  query: '", input$Analyte, "',
-                  total: ", length(input$Analyte), "
-                },
-                { priority: 'event' }
-              );"
-            )
-          )
       }
 
     }, ignoreInit = TRUE, domain = session)
@@ -258,28 +234,6 @@ cell_type_inputs_server <- function(id, r6) {
         gargoyle::trigger("render_analyte_plot", session = session)
       }
     }, ignoreInit = TRUE)
-
-    analyte_search_error_text <- shiny::eventReactive(
-      c(input$analyteSearchResults, input$Analyte), {
-
-      search_result_data <- input$analyteSearchResults
-      shiny::req(search_result_data)
-
-      if (length(input$Analyte) > 0 & input$Analyte != "") {
-        shiny::HTML("")
-      } else if (search_result_data$total == 0) {
-        shiny::HTML(paste0('<span style="color:black;font-size:smaller;padding-left:10px;"><b>"',
-        search_result_data$query,
-        '"</b> not found. Please try another value</span>')
-        )
-      } else {
-        shiny::HTML("")
-      }
-    }, domain = session, ignoreInit = TRUE)
-
-    output$AnalyteSearchError <- shiny::renderUI({
-      analyte_search_error_text()
-    })
 
   })
 

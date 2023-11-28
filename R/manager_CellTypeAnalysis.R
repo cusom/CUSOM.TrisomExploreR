@@ -88,7 +88,8 @@ CellTypeAnalysisManager <- R6::R6Class(
     #' helper function to get list of genes for input
     getAnalytes = function() {
       arrow::open_dataset("Remote_Data/genes") |>
-        dplyr::collect()
+        dplyr::collect() |>
+        dplyr::pull(Gene)
     },
 
     #' @description
