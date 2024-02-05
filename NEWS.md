@@ -1,4 +1,4 @@
-# TrisomExploreR 0.2.12.9000
+# TrisomExploreR 0.2.13.9000
 
 ## New Functionality 
 
@@ -22,6 +22,7 @@ Added new `ODBCQueryManager` method to `INSERT` data to target table
 -Moved calls to `annotatePointByKey` to `FeatureAnalysis` module. Added logic to figure out trace and key index to annotate when an analyte is chosen from drop down rather than via click event from Volcano Plot.
 -Update (clear or re-render) analyte plot when new study is chosen and new volcano plot is rendered. 
 - Optimized loading for cell type analysis by implementing future promise to load genes to input widget. 
+- `AzureRemoteDataFileManager` will now download files in order by file size; this ensures that `inputs.json` will be downloaded first and is available to inputs modules when app loads. 
 
 ***
 ## Bug Fixes 
@@ -33,3 +34,4 @@ Added new `ODBCQueryManager` method to `INSERT` data to target table
 -Resolved bug where the wrong analyte could be chosen and annotated on volcano plot after clicking on heatmap plot from a multi-analyte selection.
 -Resolved bug where correlation volcano plot attempts to render before all required inputs have been chosen
 -Resolved bug where GSEA enrichment plot would fail with error: `Error in r6$getGSEAPathwayData: object 'statsAdj' not found`
+-Resolved bug where volcano plot annotation would not update after changing studies. Would only occur if chosen analyte was present in both studies. 
