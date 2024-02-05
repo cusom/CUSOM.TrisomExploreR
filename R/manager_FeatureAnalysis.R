@@ -185,6 +185,18 @@ FeatureAnalysisManager <- R6::R6Class(
     },
 
     #' @description
+    #' helper function to get study label from study value
+    getStudyLabel = function() {
+      return(
+        jsonlite::fromJSON("Remote_Data/inputs.json", flatten = TRUE) |>
+          purrr::pluck("study_choices") |>
+          as.data.frame() |>
+          dplyr::filter(Values == self$Study) |>
+          dplyr::pull(Text)
+      )
+    },
+
+    #' @description
     #' helper function to get Karyotype input options based on namespace
     #' @param karyotypes string vector of karyotypes for input widget
     getKaryotypeChoices = function(karyotypes) {
@@ -1210,7 +1222,8 @@ FeatureAnalysisManager <- R6::R6Class(
 
         return(
           dataframe |>
-            dplyr::select("Study" = ExperimentStudyName, Analyte, LabID, Karyotype, Sex, MeasuredValue) |>
+            dplyr::mutate("Study" = self$getStudyLabel()) |>
+            dplyr::select(Study, Analyte, LabID, Karyotype, Sex, MeasuredValue) |>
             dplyr::rename(`:=`(!!measurement, MeasuredValue)) |>
             dplyr::arrange(Analyte)
         )

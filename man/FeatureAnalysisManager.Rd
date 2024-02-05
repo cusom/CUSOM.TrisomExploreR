@@ -119,6 +119,7 @@ in the active volcano plot (usually between 1 - 3)}
 \item \href{#method-FeatureAnalysisManager-new}{\code{FeatureAnalysisManager$new()}}
 \item \href{#method-FeatureAnalysisManager-getGetDataButtonClass}{\code{FeatureAnalysisManager$getGetDataButtonClass()}}
 \item \href{#method-FeatureAnalysisManager-getStudies}{\code{FeatureAnalysisManager$getStudies()}}
+\item \href{#method-FeatureAnalysisManager-getStudyLabel}{\code{FeatureAnalysisManager$getStudyLabel()}}
 \item \href{#method-FeatureAnalysisManager-getKaryotypeChoices}{\code{FeatureAnalysisManager$getKaryotypeChoices()}}
 \item \href{#method-FeatureAnalysisManager-getConditionTree}{\code{FeatureAnalysisManager$getConditionTree()}}
 \item \href{#method-FeatureAnalysisManager-getSelectedConditionList}{\code{FeatureAnalysisManager$getSelectedConditionList()}}
@@ -198,6 +199,16 @@ enabled / green if namespace is comorb / conditions are chosen, diabled otherwis
 helper function to get formatted study choices based on experiments configured for this instance / namespace
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getStudies()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-FeatureAnalysisManager-getStudyLabel"></a>}}
+\if{latex}{\out{\hypertarget{method-FeatureAnalysisManager-getStudyLabel}{}}}
+\subsection{Method \code{getStudyLabel()}}{
+helper function to get study label from study value
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{FeatureAnalysisManager$getStudyLabel()}\if{html}{\out{</div>}}
 }
 
 }
