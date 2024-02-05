@@ -394,13 +394,15 @@ AzureRemoteDataFileManager <- R6::R6Class(
           uri <- glue::glue("https://{private$account_name}.blob.core.windows.net")
           endpoint <- AzureStor::storage_endpoint(uri, private$key)
           container <- AzureStor::storage_container(endpoint, private$container_name)
-          blobs <- AzureStor::list_blobs(container)
-          sapply(blobs$name, function(x) {
-            src <- x
-            dest <- glue::glue("{self$local_data_directory}/{x}")
-            AzureStor::storage_download(container, src = src, dest = dest)
-            }
-          )
+          AzureStor::list_blobs(container) |>
+            dplyr::arrange(size) |>
+            dplyr::pull(name) |>
+            purrr::map(function(x) {
+              dest <- glue::glue("{self$local_data_directory}/{x}")
+              suppressMessages(
+                AzureStor::storage_download(container, src = x, dest = dest)
+              )
+            })
           print(glue::glue("{length(list.files(self$local_data_directory, recursive = TRUE))} files downloaded"))
           self$files_downloaded <- TRUE
         }, error = function(e) {
