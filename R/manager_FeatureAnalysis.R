@@ -142,7 +142,7 @@ FeatureAnalysisManager <- R6::R6Class(
     #' @param namespace_config list - configurations for this namespace
     #' @param remoteDB R6 class - query manager for remote database queries
     #' @param localDB R6 class - query manager for local database queries
-    initialize = function(applicationName, id, namespace_config, remoteDB, localDB){
+    initialize = function(applicationName, id, namespace_config, remoteDB, localDB) {
 
       self$applicationName <- applicationName
       self$remoteDB <- remoteDB
@@ -621,7 +621,8 @@ FeatureAnalysisManager <- R6::R6Class(
             list("resetScale2d"),
             list("toImage")
           )
-        ) |> htmlwidgets::onRender('
+        ) |>
+        htmlwidgets::onRender('
           function(el) {
             el.scrollIntoView({behavior: "smooth", block: "end", inline: "nearest"});
           }'
@@ -682,35 +683,28 @@ FeatureAnalysisManager <- R6::R6Class(
 
       if (all(self$Analyte != "")) {
         if (length(self$Analyte) == 1) {
-          if (
-            all(
-              self$Analyte != self$volcanoEventData$key |
-              length(self$Analyte) != nrow(self$volcanoEventData)
-              )
-            ) {
-            self$volcanoEventData <- self$volcanoSourceData |>
-              dplyr::arrange(desc(significanceGroup)) |>
-              dplyr::select(
-                significanceGroup,
-                shape,
-                key = Analyte,
-                x = !!self$FoldChangeVar,
-                y = !!self$SignificanceVariable
-              ) |>
-              dplyr::mutate(
-                group = glue::glue("{significanceGroup}-{shape}"),
-                t = dplyr::dense_rank(group),
-                curveNumber = t - 1
-              ) |>
-              dplyr::group_by(group) |>
-              dplyr::mutate(
-                r = dplyr::row_number(),
-                pointNumber = r - 1
-              ) |>
-              dplyr::ungroup() |>
-              dplyr::filter(key == self$Analyte) |>
-              dplyr::select(curveNumber, pointNumber, x, y, key)
-          }
+          self$volcanoEventData <- self$volcanoSourceData |>
+            dplyr::arrange(desc(significanceGroup)) |>
+            dplyr::select(
+              significanceGroup,
+              shape,
+              key = Analyte,
+              x = !!self$FoldChangeVar,
+              y = !!self$SignificanceVariable
+            ) |>
+            dplyr::mutate(
+              group = glue::glue("{significanceGroup}-{shape}"),
+              t = dplyr::dense_rank(group),
+              curveNumber = t - 1
+            ) |>
+            dplyr::group_by(group) |>
+            dplyr::mutate(
+              r = dplyr::row_number(),
+              pointNumber = r - 1
+            ) |>
+            dplyr::ungroup() |>
+            dplyr::filter(key == self$Analyte) |>
+            dplyr::select(curveNumber, pointNumber, x, y, key)
 
           self$volcanoEventData <- self$volcanoEventData |>
             dplyr::filter(key == self$Analyte)
