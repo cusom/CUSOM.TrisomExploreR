@@ -192,9 +192,6 @@ ODBCQueryManager <- R6::R6Class(
 #' Manage SQLite Database connections
 #'
 #' @field connection_open - logical - whether the connection is currently is open or not
-#' @importFrom DBI dbConnect
-#' @importFrom DBI dbDisconnect
-#' @importFrom RSQLite SQLite
 #' @export
 SQLiteConnectionManager <- R6::R6Class(
   "SQLiteConnectionManager",
@@ -210,27 +207,21 @@ SQLiteConnectionManager <- R6::R6Class(
     #' @param filepath string - path to `.sqlite` database file
     #' @return A new `SQLiteConnectionManager` object.
     initialize = function(filepath) {
-      private$filepath <- filepath
+      .Deprecated(new = "N/A", old = "SQLiteConnectionManager")
     },
 
     #' @description
     #' Connect to target database
     #' @return none
     connect = function() {
-      filepath <- private$filepath
-      private$dbhandle <- DBI::dbConnect(
-        RSQLite::SQLite(),
-        filepath
-      )
-      self$connection_open <- TRUE
+      .Deprecated(new = "N/A", old = "SQLiteConnectionManager")
     },
 
     #' @description
     #' Disconnect from target database
     #' @return none
     disconnect = function() {
-      DBI::dbDisconnect(private$dbhandle)
-      self$connection_open <- FALSE
+      .Deprecated(new = "N/A", old = "SQLiteConnectionManager")
     }
   )
 )
@@ -279,8 +270,7 @@ SQLiteQueryManager <- R6::R6Class(
           }
         )
 
-      }
-      else {
+      } else {
         self$parameters <- parameters
       }
     },
@@ -301,7 +291,7 @@ SQLiteQueryManager <- R6::R6Class(
     #' @param filepath string - path to `.sqlite` database file
     #' @return A new `SQLiteQueryManager` object.
     initialize = function(filepath) {
-      super$initialize(filepath)
+      .Deprecated(new = "N/A", old = "SQLiteQueryManager")
     },
 
     #' @description
