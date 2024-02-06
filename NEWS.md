@@ -1,4 +1,4 @@
-# TrisomExploreR 0.2.13.9000
+# TrisomExploreR 0.2.14.9000
 
 ## New Functionality 
 
@@ -35,3 +35,4 @@ Added new `ODBCQueryManager` method to `INSERT` data to target table
 -Resolved bug where correlation volcano plot attempts to render before all required inputs have been chosen
 -Resolved bug where GSEA enrichment plot would fail with error: `Error in r6$getGSEAPathwayData: object 'statsAdj' not found`
 -Resolved bug where volcano plot annotation would not update after changing studies. Would only occur if chosen analyte was present in both studies. 
+-Resolved a bug where the Analyte Sample Level Data Table would error with Column `ExperimentStudyName` doesn't exist.
