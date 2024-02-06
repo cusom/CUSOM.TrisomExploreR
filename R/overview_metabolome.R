@@ -55,40 +55,23 @@ metabolome_overview_ui <- function(id, ...) {
             ),
             shiny::tags$div(
               class = "overviewBodyText",
-              tags$p("This dashboard presents metabolomic data generated from two different sources:"),
-              tags$ul(
-                style = "padding-left:50px;",
-                tags$li(
-                  shiny::tags$p(
-                    htmltools::HTML("Reb blood cells, as described in "),
-                    shiny::tags$a(
-                      href = "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5745140/",
-                      target = "_blank",
-                      "Culp-Hill et al, 2017.",
-                      .noWS = c("outside")
-                    )
-                  )
-                ),
-                tags$li(
-                  shiny::tags$p(
-                    htmltools::HTML("Plasma samples, as described in "),
-                    shiny::tags$a(
-                      href = "https://pubmed.ncbi.nlm.nih.gov/31628327/",
-                      target = "_blank",
-                      "Powers et al, 2019",
-                      .noWS = c("outside")
-                    ),
-                    htmltools::HTML(", and "),
-                    shiny::tags$a(
-                      href = "https://pubmed.ncbi.nlm.nih.gov/37379383/",
-                      target = "_blank",
-                      "Galbraith et al, 2023.",
-                      .noWS = c("outside")
-                    )
-                  )
-                )
+              htmltools::HTML("This dashboard presents metabolomic data generated from
+                Plasma samples, as described in "),
+              shiny::tags$a(
+                href = "https://pubmed.ncbi.nlm.nih.gov/31628327/",
+                target = "_blank",
+                "Powers et al, 2019",
+                .noWS = c("outside")
               ),
-              tags$br(),
+              htmltools::HTML(", and "),
+              shiny::tags$a(
+                href = "https://pubmed.ncbi.nlm.nih.gov/37379383/",
+                target = "_blank",
+                "Galbraith et al, 2023.",
+                .noWS = c("outside")
+              ),
+              shiny::tags$br(),
+              shiny::tags$br(),
               shiny::tags$div(
                 class = "overviewHeader",
                 shiny::tags$h3("Effect of trisomy 21")
@@ -119,23 +102,6 @@ metabolome_overview_ui <- function(id, ...) {
             ),
             shiny::tags$div(
               class = "overviewBodyText",
-              shiny::tags$div(
-                shiny::tags$a(
-                  href = "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5745140/",
-                  target = "_blank",
-                  shiny::tags$b("Red blood cell metabolism in Down syndrome: hints on metabolic derangements in aging"),
-                  .noWS = c("outside")
-                ),
-                shiny::tags$br(),
-                htmltools::HTML(
-                  "Culp-Hill R, Zheng C, Reisz JA, Smith K, Rachubinski A, Nemkov T, Butcher E,
-                  Granrath R, Hansen KC, Espinosa JM, D'Alessandro A."
-                ),
-                shiny::tags$p(
-                  "Blood Advances 2017 Dec 21;1(27):2776-2780. PMID: 29296929."
-                )
-              ),
-              shiny::tags$br(),
               shiny::tags$div(
                 shiny::tags$a(
                   href = "https://www.nature.com/articles/s41467-019-12739-9",
