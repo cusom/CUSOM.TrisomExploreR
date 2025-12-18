@@ -87,6 +87,14 @@ ConditionCorrelatesManager <- R6::R6Class(
     VolcanoPlotTitle = "",
     volcanoTopAnnotationLabel = "",
     volcanoPlotExpectedTraceCount = 3,
+    volcanoSourceData = NULL,
+    volcanoEventData = tibble::tibble(
+      curveNumber = -1,
+      pointNumber = -1,
+      x = -1,
+      y = -1,
+      key = ""
+    ),
     VolcanoSummaryDataFoldChangeFilter = NULL,
     volcanoMultiSelectText = "",
 
@@ -144,6 +152,13 @@ ConditionCorrelatesManager <- R6::R6Class(
         ) |>
           dplyr::arrange(Analyte)
       )
+    },
+
+    #' @description
+    #' validate that all inputs have been chosen to fetch volcano summary data
+    #'
+    validate_volcano_plot = function() {
+      return(self$Study != "")
     },
 
     #' @description
@@ -300,22 +315,37 @@ ConditionCorrelatesManager <- R6::R6Class(
     #' @return tibble
     getComorbidtySummary = function(.data, min_comorbitity_membership) {
 
+      age_censor_exists <- arrow::open_dataset("Remote_Data/participant_conditions") |>
+        dplyr::collect() |>
+        colnames() |>
+        tibble::tibble() |>
+        setNames("attr") |>
+        dplyr::filter(attr == "ConditionCensorshipAgeGroup") |>
+        nrow() |>
+        (\(val) val > 0)()
+
       dataframe <- .data |>
         dplyr::group_by(Condition, HasConditionFlag) |>
         dplyr::summarise(n = dplyr::n_distinct(record_id), .groups = "drop") |>
-        tidyr::pivot_wider(id_cols = Condition, names_from = HasConditionFlag, values_from = n, values_fill = 0) |>
-        dplyr::inner_join(
-          arrow::open_dataset("Remote_Data/participant_conditions") |>
-            dplyr::collect()|>
-            dplyr::select(Condition, ConditionCensorshipAgeGroup) |>
-            dplyr::distinct() |>
-            dplyr::mutate(ConditionCensorshipAgeGroup = ifelse(
-              is.na(ConditionCensorshipAgeGroup),
-              "Age > 0",
-              ConditionCensorshipAgeGroup)
-            ),
-          by = "Condition"
-        ) |>
+        tidyr::pivot_wider(id_cols = Condition, names_from = HasConditionFlag, values_from = n, values_fill = 0)
+
+      if (age_censor_exists) {
+        dataframe <- dataframe |>
+          dplyr::inner_join(
+              arrow::open_dataset("Remote_Data/participant_conditions") |>
+                dplyr::collect()|>
+                dplyr::select(Condition, ConditionCensorshipAgeGroup) |>
+                dplyr::distinct() |>
+                dplyr::mutate(ConditionCensorshipAgeGroup = ifelse(
+                  is.na(ConditionCensorshipAgeGroup),
+                  "Age > 0",
+                  ConditionCensorshipAgeGroup)
+                ),
+              by = "Condition"
+            )
+      }
+
+      dataframe <- dataframe |>
         dplyr::mutate(
           #total = `No` + `Yes`,
           min = ifelse(`No` <= `Yes`, `No`, `Yes`),
@@ -327,8 +357,8 @@ ConditionCorrelatesManager <- R6::R6Class(
         dplyr::filter(
           incompleteFlag == 0,
           min > min_comorbitity_membership
-        ) |>
-        dplyr::select(-c(ConditionCensorshipAgeGroup))
+        )
+        #|> dplyr::select(-c(ConditionCensorshipAgeGroup))
 
       return(dataframe)
 
@@ -341,13 +371,13 @@ ConditionCorrelatesManager <- R6::R6Class(
     #' @return plotly object
     getVolcanoPlot = function(.data, ns) {
 
-      .data <- .data |>
+      self$volcanoSourceData <- .data |>
         dplyr::mutate(
           shape = "circle",
           selectedPoint = 0
         )
 
-      a <- .data |>
+      a <- self$volcanoSourceData |>
         CUSOMShinyHelpers::getVolcanoAnnotations(
           foldChangeVar = log2FoldChange,
           significanceVariable = `-log10pvalue`,
@@ -357,14 +387,20 @@ ConditionCorrelatesManager <- R6::R6Class(
           includeThresholdLabel = FALSE
         )
 
-      p <- .data |>
+      self$volcanoSourceData <- self$volcanoSourceData |>
         CUSOMShinyHelpers::addSignificanceGroup(
           foldChangeVar = log2FoldChange,
           significanceVariable = `-log10pvalue`,
           adjustedInd = a$parameters$adjustedInd,
           significanceThreshold = a$parameters$significanceThresholdTransformed,
           originalSignificanceThreshold = a$parameters$significanceThreshold
-        ) |>
+        )
+
+      self$volcanoPlotExpectedTraceCount <- self$volcanoSourceData |>
+        dplyr::distinct(significanceGroup, shape) |>
+        nrow()
+
+      p <- self$volcanoSourceData |>
         CUSOMShinyHelpers::getVolcanoPlot(
           foldChangeVariable = log2FoldChange,
           significanceVariable = `-log10pvalue`,
@@ -481,6 +517,141 @@ ConditionCorrelatesManager <- R6::R6Class(
 
       return(p)
 
+    },
+
+    #' @description
+    #' helper function to update various attributes for the chosen analyte
+    updateAnalyteAttributes = function() {
+
+      self$AnalyteSearchName <- CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)
+
+      if (length(self$Analyte) == 1) {
+
+        self$AnalytePlotStatAnnotation <- self$VolcanoSummaryData |>
+          dplyr::filter(Analyte == self$Analyte) |>
+          dplyr::ungroup() |>
+          dplyr::select(p.value, p.value.adjustment.method) |>
+          dplyr::mutate(formatted.p.value = CUSOMShinyHelpers::formatPValue(p.value, p.value.adjustment.method)) |>
+          dplyr::select(formatted.p.value)
+
+        self$volcanoMultiSelectText <- ""
+
+      }
+
+      if (length(self$Analyte) > 1) {
+        self$volcanoMultiSelectText <- self$VolcanoSummaryData |>
+          dplyr::filter(Analyte %in% self$Analyte) |>
+          dplyr::summarise(
+            count = dplyr::n(),
+            minFC = round(min(FoldChange), 4),
+            maxFC = round(max(FoldChange), 4),
+            minP = min(p.value),
+            maxP = max(p.value)
+          ) |>
+          dplyr::mutate(
+            text = glue::glue(
+              "<center>{count} points selected. Min Fold Change: {minFC}, Max Fold Change: {maxFC}</center>"
+            )
+          ) |>
+          dplyr::select(text) |>
+          dplyr::pull()
+      }
+    },
+
+    #' @description
+    #' helper function to add annotation to volcano plot based on chosen analyte
+    #' @param plot_name string - name of target volcano plot
+    #' @param ns namespace to properly derive fully-qualified plot name
+    annotate_volcano_point = function(plot_name, ns) {
+
+      plot_name <- ns(plot_name)
+      if (all(self$Analyte != "")) {
+        if (length(self$Analyte) == 1) {
+          self$volcanoEventData <- self$volcanoSourceData |>
+            dplyr::arrange(desc(significanceGroup)) |>
+            dplyr::select(
+              significanceGroup,
+              shape,
+              key = Analyte,
+              x = !!self$FoldChangeVar,
+              y = !!self$SignificanceVariable
+            ) |>
+            dplyr::mutate(
+              group = glue::glue("{significanceGroup}-{shape}"),
+              t = dplyr::dense_rank(group),
+              curveNumber = t - 1
+            ) |>
+            dplyr::group_by(group) |>
+            dplyr::mutate(
+              r = dplyr::row_number(),
+              pointNumber = r - 1
+            ) |>
+            dplyr::ungroup() |>
+            dplyr::filter(key == self$Analyte) |>
+            dplyr::select(curveNumber, pointNumber, x, y, key)
+
+          self$volcanoEventData <- self$volcanoEventData |>
+            dplyr::filter(key == self$Analyte)
+
+          keys <- glue::glue_collapse(self$Analyte, sep = "|")
+          shinyjs::runjs(
+            glue::glue(
+              'annotatePointByKey(
+                "{plot_name}",
+                {self$volcanoEventData$curveNumber},
+                {self$volcanoEventData$pointNumber},
+                "{keys}",
+                5
+              );'
+            )
+          )
+        } else {
+          keys <- ""
+          shinyjs::runjs(
+            glue::glue(
+              'annotatePointByKey(
+                "{plot_name}",
+                -1,
+                -1,
+                "{keys}",
+                5
+              );'
+            )
+          )
+          keys <- glue::glue_collapse(self$Analyte, sep = "|")
+          shinyjs::runjs(glue::glue('updateSelectedKeys("{plot_name}","{keys}");'))
+        }
+
+        shinyjs::runjs(
+          paste0("
+            Shiny.setInputValue(
+              '", ns("analyteSearchResults"), "',
+              {
+                query: '", self$Analyte, "',
+                total: ", self$Analyte, "
+              },
+              { priority: 'event' }
+            );"
+          )
+        )
+
+      } else {
+        keys <- ""
+
+        shinyjs::runjs(glue::glue('annotatePointByKey("{plot_name}","{keys}",5);'))
+      }
+
+    },
+
+    #' @description
+    #' small helper function to get correct value for volcanoMultiSelectText
+    getVolcanoMultiSelectText = function() {
+      if (length(self$Analyte) > 1 & self$volcanoMultiSelectText == "") {
+        self$updateAnalyteAttributes()
+      } else if (length(self$Analyte) == 1)  {
+        self$volcanoMultiSelectText <- ""
+      }
+      return(self$volcanoMultiSelectText)
     },
 
     #' @description
@@ -603,7 +774,7 @@ ConditionCorrelatesManager <- R6::R6Class(
       new_names <- c(
         "Condition", "Without History of Condition", "With History of Condition",
         "Fold Change", "p-value (original)", "adjustment method", "log<sub>2</sub>(Fold Change)",
-        pValueLabel, log10pValueLabel, "Model"
+        p_value_label, log_10_p_value_label, "Model"
       )
 
       return(
