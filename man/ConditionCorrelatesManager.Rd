@@ -71,6 +71,10 @@ Enables analysis of co-occuring conditions by chosen feature
 
 \item{\code{volcanoPlotExpectedTraceCount}}{- numeric - number of base traces present in the active volcano plot (usually between 1 - 3)}
 
+\item{\code{volcanoSourceData}}{- tibble of formatted source data used for volcano plot - includes trace groups}
+
+\item{\code{volcanoEventData}}{- tibble of click and selection data from volcano plot}
+
 \item{\code{VolcanoSummaryDataFoldChangeFilter}}{- depreciated?}
 
 \item{\code{volcanoMultiSelectText}}{- string - text to show below volcano plot when multiple analytes are chosen}
@@ -87,11 +91,15 @@ Enables analysis of co-occuring conditions by chosen feature
 \item \href{#method-ConditionCorrelatesManager-new}{\code{ConditionCorrelatesManager$new()}}
 \item \href{#method-ConditionCorrelatesManager-addGSEAInputClass}{\code{ConditionCorrelatesManager$addGSEAInputClass()}}
 \item \href{#method-ConditionCorrelatesManager-getQueryAnalytes}{\code{ConditionCorrelatesManager$getQueryAnalytes()}}
+\item \href{#method-ConditionCorrelatesManager-validate_volcano_plot}{\code{ConditionCorrelatesManager$validate_volcano_plot()}}
 \item \href{#method-ConditionCorrelatesManager-getVolcanoSummaryData}{\code{ConditionCorrelatesManager$getVolcanoSummaryData()}}
 \item \href{#method-ConditionCorrelatesManager-getFormattedVolcanoSummaryData}{\code{ConditionCorrelatesManager$getFormattedVolcanoSummaryData()}}
 \item \href{#method-ConditionCorrelatesManager-getParticipantComorbiditiesByExperimentAnalyte}{\code{ConditionCorrelatesManager$getParticipantComorbiditiesByExperimentAnalyte()}}
 \item \href{#method-ConditionCorrelatesManager-getComorbidtySummary}{\code{ConditionCorrelatesManager$getComorbidtySummary()}}
 \item \href{#method-ConditionCorrelatesManager-getVolcanoPlot}{\code{ConditionCorrelatesManager$getVolcanoPlot()}}
+\item \href{#method-ConditionCorrelatesManager-updateAnalyteAttributes}{\code{ConditionCorrelatesManager$updateAnalyteAttributes()}}
+\item \href{#method-ConditionCorrelatesManager-annotate_volcano_point}{\code{ConditionCorrelatesManager$annotate_volcano_point()}}
+\item \href{#method-ConditionCorrelatesManager-getVolcanoMultiSelectText}{\code{ConditionCorrelatesManager$getVolcanoMultiSelectText()}}
 \item \href{#method-ConditionCorrelatesManager-getHeatmapPlot}{\code{ConditionCorrelatesManager$getHeatmapPlot()}}
 \item \href{#method-ConditionCorrelatesManager-getFormattedAnalyteSummaryData}{\code{ConditionCorrelatesManager$getFormattedAnalyteSummaryData()}}
 \item \href{#method-ConditionCorrelatesManager-getBoxPlotData}{\code{ConditionCorrelatesManager$getBoxPlotData()}}
@@ -160,6 +168,16 @@ Retrieve list of query analytes for a given platform and experiment
 \subsection{Returns}{
 none
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ConditionCorrelatesManager-validate_volcano_plot"></a>}}
+\if{latex}{\out{\hypertarget{method-ConditionCorrelatesManager-validate_volcano_plot}{}}}
+\subsection{Method \code{validate_volcano_plot()}}{
+validate that all inputs have been chosen to fetch volcano summary data
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ConditionCorrelatesManager$validate_volcano_plot()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ConditionCorrelatesManager-getVolcanoSummaryData"></a>}}
@@ -266,6 +284,45 @@ Get Volcano Plot
 \subsection{Returns}{
 plotly object
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ConditionCorrelatesManager-updateAnalyteAttributes"></a>}}
+\if{latex}{\out{\hypertarget{method-ConditionCorrelatesManager-updateAnalyteAttributes}{}}}
+\subsection{Method \code{updateAnalyteAttributes()}}{
+helper function to update various attributes for the chosen analyte
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ConditionCorrelatesManager$updateAnalyteAttributes()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ConditionCorrelatesManager-annotate_volcano_point"></a>}}
+\if{latex}{\out{\hypertarget{method-ConditionCorrelatesManager-annotate_volcano_point}{}}}
+\subsection{Method \code{annotate_volcano_point()}}{
+helper function to add annotation to volcano plot based on chosen analyte
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ConditionCorrelatesManager$annotate_volcano_point(plot_name, ns)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{plot_name}}{string - name of target volcano plot}
+
+\item{\code{ns}}{namespace to properly derive fully-qualified plot name}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ConditionCorrelatesManager-getVolcanoMultiSelectText"></a>}}
+\if{latex}{\out{\hypertarget{method-ConditionCorrelatesManager-getVolcanoMultiSelectText}{}}}
+\subsection{Method \code{getVolcanoMultiSelectText()}}{
+small helper function to get correct value for volcanoMultiSelectText
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ConditionCorrelatesManager$getVolcanoMultiSelectText()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ConditionCorrelatesManager-getHeatmapPlot"></a>}}
