@@ -66,22 +66,24 @@ volcano_plot_server <- function(id, r6, ...) {
         text = "Calculating data for Volcano Plot..."
       )
 
-
       r6$getVolcanoSummaryData()
 
       gargoyle::trigger("update_volcano_analytes", session = session)
 
       gargoyle::trigger("validate_GSEA", session = session)
 
-      r6$VolcanoSummaryData
+      if (is.null(r6$VolcanoSummaryData)) {
+        shinybusy::remove_modal_spinner()
+      }
 
+      r6$VolcanoSummaryData
 
     }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
     output$VolcanoPlot <- plotly::renderPlotly({
 
       shiny::validate(
-        shiny::need(!is.null(FoldChangeData()), "")
+        shiny::need(!is.null(FoldChangeData()), "No Data Returned - try choosing different parameter options.")
       )
 
       shiny::isolate({
