@@ -29,6 +29,9 @@ condition_correlates_boxplot_server <- function(id, r6) {
 
     shiny::observeEvent(
       c(gargoyle::watch("show_analyte_plot", session = session)), {
+        shiny::validate(
+          shiny::need(r6$Analyte != "", "")
+        )
 
       shiny::showModal(
         shiny::modalDialog(
@@ -70,6 +73,9 @@ condition_correlates_boxplot_server <- function(id, r6) {
 
     AnalyteData <- shiny::eventReactive(
       c(gargoyle::watch("show_analyte_plot", session = session)), {
+        shiny::validate(
+          shiny::need(r6$Analyte != "", "")
+        )
       r6$getBoxPlotData()
       r6$BoxplotData
     })
