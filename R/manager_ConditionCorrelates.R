@@ -33,6 +33,8 @@
 #' @field VolcanoPlotTitle - string - title to show above volcano plot
 #' @field volcanoTopAnnotationLabel - string - text to show above top annotations on volcano plot
 #' @field volcanoPlotExpectedTraceCount - numeric - number of base traces present in the active volcano plot (usually between 1 - 3)
+#' @field volcanoSourceData - tibble of formatted source data used for volcano plot - includes trace groups
+#' @field volcanoEventData - tibble of click and selection data from volcano plot
 #' @field VolcanoSummaryDataFoldChangeFilter - depreciated?
 #' @field volcanoMultiSelectText - string - text to show below volcano plot when multiple analytes are chosen
 #' @field HeatmapData - tibble - data to use for heatmap plot when multiple analytes are chosen
@@ -177,56 +179,61 @@ ConditionCorrelatesManager <- R6::R6Class(
         self$MinComorbitityMembership
       )
 
-      self$Comorbidities <- self$ParticipantComorbidities |>
-        dplyr::inner_join(self$ComorbiditySummary, by = "Condition") |>
-        dplyr::select(-Condition) |>
-        dplyr::rename("Condition" = label)
+      self$Comorbidities <- tibble::tibble()
 
-      self$VolcanoSummaryData <- self$Comorbidities |>
-        dplyr::mutate(
-          HasConditionFlag = factor(HasConditionFlag),
-          HasConditionFlag = forcats::fct_relevel(HasConditionFlag, "No")
-        ) |>
-        dplyr::select(LabID, "Analyte" = Condition, log2MeasuredValue, HasConditionFlag, !!self$Covariates) |>
-        CUSOMShinyHelpers::getStatTestByKeyGroup(
-          id = LabID,
-          key = Analyte,
-          response = log2MeasuredValue,
-          independentVariable = HasConditionFlag,
-          baselineLabel = "No",
-          testMethod = self$StatTest,
-          adjustmentMethod = self$AdjustmentMethod,
-          covariates = self$Covariates
-        ) |>
-        dplyr::mutate(
-          formattedPValue = unlist(
-            purrr::pmap(
-              .l = list(p.value, p.value.adjustment.method),
-              CUSOMShinyHelpers::formatPValue
+      if (nrow(self$ParticipantComorbidities) > 0 & nrow(self$ComorbiditySummary) > 0) {
+
+        self$Comorbidities <- self$ParticipantComorbidities |>
+          dplyr::inner_join(self$ComorbiditySummary, by = "Condition") |>
+          dplyr::select(-Condition) |>
+          dplyr::rename("Condition" = label)
+
+        self$VolcanoSummaryData <- self$Comorbidities |>
+          dplyr::mutate(
+            HasConditionFlag = factor(HasConditionFlag),
+            HasConditionFlag = forcats::fct_relevel(HasConditionFlag, "No")
+          ) |>
+          dplyr::select(LabID, "Analyte" = Condition, log2MeasuredValue, HasConditionFlag, !!self$Covariates) |>
+          CUSOMShinyHelpers::getStatTestByKeyGroup(
+            id = LabID,
+            key = Analyte,
+            response = log2MeasuredValue,
+            independentVariable = HasConditionFlag,
+            baselineLabel = "No",
+            testMethod = self$StatTest,
+            adjustmentMethod = self$AdjustmentMethod,
+            covariates = self$Covariates
+          ) |>
+          dplyr::mutate(
+            formattedPValue = unlist(
+              purrr::pmap(
+                .l = list(p.value, p.value.adjustment.method),
+                CUSOMShinyHelpers::formatPValue
+              )
+            ),
+            text = glue::glue(
+              "Condition: {Analyte}<br />fold change: {round(FoldChange,2)}<br />
+              {formattedPValue}<br /><i>Click to see corresponding Sina Plot</i>"
             )
-          ),
-          text = glue::glue(
-            "Condition: {Analyte}<br />fold change: {round(FoldChange,2)}<br />
-            {formattedPValue}<br /><i>Click to see corresponding Sina Plot</i>"
-          )
-        ) |>
-        dplyr::ungroup()
+          ) |>
+          dplyr::ungroup()
 
-      self$AnalyteData <- self$VolcanoSummaryData |>
-        dplyr::select(Analyte, log2FoldChange, `-log10pvalue`, text) |>
-        dplyr::arrange(-log2FoldChange) |>
-        dplyr::mutate(
-          Analyte = forcats::fct_inorder(Analyte),
-          "Analysis" = "T21 v Comorbidities"
-        ) |>
-        dplyr::top_n(30, wt = abs(log2FoldChange))
+        self$AnalyteData <- self$VolcanoSummaryData |>
+          dplyr::select(Analyte, log2FoldChange, `-log10pvalue`, text) |>
+          dplyr::arrange(-log2FoldChange) |>
+          dplyr::mutate(
+            Analyte = forcats::fct_inorder(Analyte),
+            "Analysis" = "T21 v Comorbidities"
+          ) |>
+          dplyr::top_n(30, wt = abs(log2FoldChange))
 
-      self$VolcanoPlotTitle <- glue::glue("Effect of {self$analysisVariableLabel} on all {self$analytesLabel}")
-      self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$log2FoldChange))
-      self$VolcanoSummaryDataXAxisLabel <- "log<sub>2</sub>(Fold Change)"
-      self$VolcanoSummaryDataYAxisLabel <- glue::glue(
-        "-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})"
-      )
+        self$VolcanoPlotTitle <- glue::glue("Effect of {self$analysisVariableLabel} on all {self$analytesLabel}")
+        self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$log2FoldChange))
+        self$VolcanoSummaryDataXAxisLabel <- "log<sub>2</sub>(Fold Change)"
+        self$VolcanoSummaryDataYAxisLabel <- glue::glue(
+          "-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})"
+        )
+      }
 
     },
 
@@ -344,21 +351,22 @@ ConditionCorrelatesManager <- R6::R6Class(
               by = "Condition"
             )
       }
-
-      dataframe <- dataframe |>
-        dplyr::mutate(
-          #total = `No` + `Yes`,
-          min = ifelse(`No` <= `Yes`, `No`, `Yes`),
-          incompleteFlag = dplyr::case_when(`No` == 0 ~ 1, `Yes` == 0 ~ 1, TRUE ~ 0),
-          ### REMOVING AGE CENSOR FOR NOW...
-          label = glue::glue("{Condition} ({`Yes`}:{`No`})")
-          #label = glue("{Condition} ({`Yes`}:{`No`}) [{ConditionCensorshipAgeGroup}]")
-        ) |>
-        dplyr::filter(
-          incompleteFlag == 0,
-          min > min_comorbitity_membership
-        )
-        #|> dplyr::select(-c(ConditionCensorshipAgeGroup))
+      if (nrow(dataframe) > 0) {
+        dataframe <- dataframe |>
+          dplyr::mutate(
+            #total = `No` + `Yes`,
+            min = ifelse(`No` <= `Yes`, `No`, `Yes`),
+            incompleteFlag = dplyr::case_when(`No` == 0 ~ 1, `Yes` == 0 ~ 1, TRUE ~ 0),
+            ### REMOVING AGE CENSOR FOR NOW...
+            label = glue::glue("{Condition} ({`Yes`}:{`No`})")
+            #label = glue("{Condition} ({`Yes`}:{`No`}) [{ConditionCensorshipAgeGroup}]")
+          ) |>
+          dplyr::filter(
+            incompleteFlag == 0,
+            min > min_comorbitity_membership
+          )
+          #|> dplyr::select(-c(ConditionCensorshipAgeGroup))
+      }
 
       return(dataframe)
 
