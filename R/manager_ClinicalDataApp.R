@@ -94,6 +94,16 @@ ClinicalDataAppManager <- R6::R6Class(
 
       inputs <- jsonlite::fromJSON("Remote_Data/inputs.json")
 
+      self$input_config$statTestschoiceNames <- purrr::pmap(
+        inputs$stat_tests,
+        CUSOMShinyHelpers::createTooltip
+      )
+
+      self$input_config$adjustmentMethodsNames <- purrr::pmap(
+        inputs$adj_methods,
+        CUSOMShinyHelpers::createTooltip
+      )
+
       self$input_config$platforms <- inputs$platforms
 
       self$input_config$PlatformExperiments <- arrow::open_dataset("Remote_Data/platform_experiments") |>
