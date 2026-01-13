@@ -56,14 +56,17 @@ correlates_inputs_ui <- function(id, input_config) {
             selected = "NA"
           )
         ),
-        tags$b("1) Select Query Platform"),
-        shinycustomloader::withLoader(
-          shiny::uiOutput(ns("QueryPlatform")),
-          type = "html",
-          loader = "loader6",
-          proxy.height = "20px"
+        tags$b("1) Select Query Study"),
+        shiny::tags$div(
+          id = ns("QueryStudies"),
+          shinycustomloader::withLoader(
+            shiny::uiOutput(ns("QueryExperiment")),
+            type = "html",
+            loader = "loader6",
+            proxy.height = "20px"
+          )
         ),
-        shiny::tags$br(),
+        shiny::tags$hr(),
         shinyjs::hidden(
           shinyWidgets::prettyRadioButtons(
             inputId = ns("StatTest"),
@@ -107,11 +110,12 @@ correlates_inputs_ui <- function(id, input_config) {
             value = c(min(input_config$ages), max(input_config$ages))
           )
         ),
+        tags$b("2) Select Query Analyte"),
         shiny::tags$div(
           id = ns("QueryAnalyteInput"),
           shiny::selectizeInput(
             inputId = ns("QueryAnalyte"),
-            label = "2) Select Query Analyte",
+            label = "",
             choices = NULL,
             options = list(
               placeholder = "Please select below",
@@ -124,23 +128,16 @@ correlates_inputs_ui <- function(id, input_config) {
             )
           )
         ),
+        shiny::tags$hr(),
         shiny::tags$div(
-          id = ns("ComparisonPlatformInput"),
-          shiny::selectizeInput(
-            inputId = ns("ComparisonPlatform"),
-            label = "3) Choose Comparison Platform",
-            choices = NULL,
-            options = list(
-              placeholder = "Choose Comparison Platform",
-              onInitialize = I('function() { this.setValue(""); }'),
-              closeAfterSelect = TRUE,
-              selectOnTab = TRUE,
-              persist = FALSE,
-              `live-search` = TRUE,
-              maxoptions = 1
-            )
+          id = ns("CompareExperiments"),
+          shinycustomloader::withLoader(
+            shiny::uiOutput(ns("CompareExperiment")),
+            type = "html",
+            loader = "loader6",
+            proxy.height = "20px"
           )
-        )
+        ),
       ),
       footer = shiny::tagList(
         shiny::actionButton(
@@ -169,19 +166,19 @@ correlates_inputs_server <- function(id, r6) {
     ns <- session$ns
 
     rv <- list(
-      QueryPlatform = "",
-      Queryanalyte = "",
-      ComparisonPlatform = "",
+      QueryExperiment = "",
+      QueryAnalyte = "",
+      CompareExperiment = "",
       ComparisonAnalyte = ""
     )
 
     TrisomExploreR::bind_events(
       ids = c(
         "Study",
-        "QueryPlatform",
+        "QueryExperiment",
         "Experiment",
         "QueryAnalyte",
-        "ComparisonPlatform",
+        "CompareExperiment",
         "Sex",
         "Age",
         "StatTest",
@@ -193,26 +190,32 @@ correlates_inputs_server <- function(id, r6) {
       parent_input = input
     )
 
-    output$QueryPlatform <- shiny::renderUI({
+    output$QueryExperiment <- shiny::renderUI({
 
-      platforms <- r6$getQueryPlatforms()
+      choices <- r6$getQueryExperiments()
 
-      shinyWidgets::prettyRadioButtons(
-        inputId = ns("QueryPlatform"),
+      selected <- ifelse(nrow(choices) == 1, choices, character(0))
+
+      CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
+        inputId = ns("QueryExperiment"),
         label = NULL,
-        choiceNames = platforms,
-        choiceValues = platforms,
-        selected = character(0)
-      )
+        fieldSetData = choices,
+        selected = selected
+      ) |>
+        bsplus::bs_embed_tooltip(
+          title = "Select a study below",
+          placement = "top",
+          html = TRUE
+        )
 
     })
 
-    shiny::observeEvent(c(input$QueryPlatform), {
+    shiny::observeEvent(c(input$QueryExperiment), {
 
       shinybusy::show_modal_spinner(
         spin = "atom",
         color = "#3c8dbc",
-        text = glue::glue("Getting {input$QueryPlatform} Query Analytes...")
+        text = glue::glue("Getting Query Analytes...")
       )
 
       analyte_choices <- r6$getQueryAnalytes()
@@ -220,7 +223,7 @@ correlates_inputs_server <- function(id, r6) {
       shiny::updateSelectizeInput(
         session = session,
         inputId = "QueryAnalyte",
-        label = "2) Select Query Analyte",
+        label = "",
         choices = analyte_choices,
         options = list(
           placeholder = "Choose Query Analyte",
@@ -233,40 +236,43 @@ correlates_inputs_server <- function(id, r6) {
         )
       )
 
-      shinybusy::show_modal_spinner(
-        spin = "atom",
-        color = "#3c8dbc",
-        text = glue::glue("Getting {input$QueryPlatform} Comparison Platforms...")
-      )
-
-      comparison_platforms <- r6$getComparisonPlatforms()
-
-      shiny::updateSelectizeInput(
-        session = session,
-        inputId = "ComparisonPlatform",
-        label = "3) Choose Comparison Platform",
-        choices = comparison_platforms,
-        options = list(
-          placeholder = "Choose Comparison Platform",
-          onInitialize = I('function() { this.setValue(""); }'),
-          closeAfterSelect = TRUE,
-          selectOnTab = TRUE,
-          persist = FALSE,
-          `live-search` = TRUE,
-          maxoptions = 1
-        )
-
-      )
-
       shinybusy::remove_modal_spinner()
 
-    }, ignoreInit = TRUE)
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
+
+    ComparisonExperiments <- shiny::reactive({
+        r6$getComparisonExperiments()
+    }) |>
+      shiny::bindEvent(c(input$QueryExperiment), ignoreInit = TRUE, ignoreNULL = TRUE)
+
+    output$CompareExperiment <- shiny::renderUI({
+
+      if (!is.null(ComparisonExperiments())) {
+        shiny::tagList(
+          tags$b("1) Select Comparison Study"),
+          CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
+            inputId = ns("CompareExperiment"),
+            label = NULL,
+            fieldSetData = ComparisonExperiments(),
+            selected = ComparisonExperiments()
+          ) |>
+            bsplus::bs_embed_tooltip(
+              title = "Select a study below",
+              placement = "top",
+              html = TRUE
+            )
+        )
+      } else {
+        shiny::tagList()
+      }
+
+    })
 
     shiny::observeEvent(c(input$QueryAnalyte), {
 
       if (input$QueryAnalyte == "") {
 
-        shinyjs::disable(id = "ComparisonPlatform")
+        shinyjs::disable(id = "CompareExperiment")
 
         purge_plot(session, ns, "VolcanoPlot", r6)
         purge_plot(session, ns, "AnalytePlot", r6)
@@ -279,20 +285,19 @@ correlates_inputs_server <- function(id, r6) {
 
       } else {
 
-        shinyjs::enable(id = "ComparisonPlatform")
+        shinyjs::enable(id = "CompareExperiment")
 
       }
 
-    }, ignoreInit = TRUE)
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
-    shiny::observeEvent(c(input$ComparisonPlatform), {
-
+    shiny::observeEvent(c(input$CompareExperiment), {
       shiny::validate(
-        shiny::need(!is.null(input$ComparisonPlatform), ""),
-        shiny::need(input$ComparisonPlatform != "", "")
+        shiny::need(!is.null(input$CompareExperiment), ""),
+        shiny::need(input$CompareExperiment != "", "")
       )
 
-      if (input$ComparisonPlatform != rv$ComparisonPlatform && rv$ComparisonPlatform != "") {
+      if (input$CompareExperiment != rv$CompareExperiment && rv$CompareExperiment != "") {
 
         # clear plots
         purge_plot(session, ns, "VolcanoPlot", r6)
@@ -306,13 +311,13 @@ correlates_inputs_server <- function(id, r6) {
 
       gargoyle::trigger("validate_GSEA", session = session)
 
-      rv$ComparisonPlatform <<- input$ComparisonPlatform
+      rv$CompareExperiment <<- input$CompareExperiment
 
-    }, ignoreInit = TRUE)
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
-    shiny::observeEvent(c(input$QueryPlatform, input$QueryAnalyte, input$ComparisonPlatform), {
+    shiny::observeEvent(c(input$QueryExperiment, input$QueryAnalyte, input$CompareExperiment), {
 
-      if (length(input$QueryPlatform) != 1 |  input$QueryAnalyte == "" | input$ComparisonPlatform == "") {
+      if (any(length(input$QueryExperiment) != 1 |  input$QueryAnalyte == "" | is.null(input$CompareExperiment))) {
         shinyjs::disable("getData")
         shinyjs::removeClass(id = "getData", class = "refresh-ready-btn")
         shinyjs::addClass(id = "getData", class = "refresh-btn")
@@ -321,15 +326,15 @@ correlates_inputs_server <- function(id, r6) {
         shinyjs::removeClass(id = "getData", class = "refresh-btn")
         shinyjs::addClass(id = "getData", class = "refresh-ready-btn")
       }
-    }, ignoreInit = TRUE)
+    }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
     shiny::observeEvent(c(input$getData), {
 
       shiny::validate(
         shiny::need(input$getData > 0, ""),
-        shiny::need(input$QueryPlatform != "", ""),
+        shiny::need(input$QueryExperiment != "", ""),
         shiny::need(input$QueryAnalyte != "", ""),
-        shiny::need(input$ComparisonPlatform != "", "")
+        shiny::need(input$CompareExperiment != "", "")
       )
 
       gargoyle::trigger("get_volcano_data", session = session)
