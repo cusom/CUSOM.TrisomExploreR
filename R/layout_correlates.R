@@ -74,6 +74,7 @@ correlates_server <- function(id, r6, ...) {
 
     gargoyle::init(
       "get_correlates_data",
+      "get_volcano_data",
       "update_volcano_analytes",
       "sync_analyte_choice",
       "show_analyte_plot",
