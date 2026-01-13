@@ -1,4 +1,4 @@
-# TrisomExploreR 0.2.15.9000
+# TrisomExploreR 0.2.16.9000
 
 ## New Functionality 
 
@@ -9,10 +9,11 @@ Major changes related to an effort to separate data from local application insta
 - Adding new class to download application specific files via Azure BLOB storage
 - Updating old SQLite queries to read local `.parquet` files 
 - Two manager classes are now deprecated due to these changes: 
-1. TranscriptomeAppManager
-2. ImmuneMapAppManager
+    1. TranscriptomeAppManager
+    2. ImmuneMapAppManager
 - Added new `ODBCQueryManager` method to `INSERT` data to target table
 - Major updates to `manager_ConditionCorrelates` class to handle cross-omics conditions analysis for clinical explorer
+- Major updates to `Correlates` Analysis artifacts. 
 
 ***
 ## Minor Changes

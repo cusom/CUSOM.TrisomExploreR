@@ -37,10 +37,6 @@ Enables analysis of cross-omics correlations
 
 \item{\code{Analyte}}{- string - chosen Comparison Analyte}
 
-\item{\code{AnalyteSearchName}}{- string - name of analyte used for external links}
-
-\item{\code{CorrelationMeasureName}}{- string - name of correlation measure used in analysis - `rho` or `Fold Change`}
-
 \item{\code{Sex}}{- string vector - Sex values chosen for analysis}
 
 \item{\code{Age}}{- numeric vector - Age values chosen fo analysis}
@@ -51,39 +47,13 @@ Enables analysis of cross-omics correlations
 
 \item{\code{AdjustmentMethod}}{- string - name of multiple hypothesis correction method to apply to statistical output}
 
-\item{\code{Adjusted}}{- logical - whether the statistical test includes multiple hypothesis correction or not}
-
 \item{\code{SignificanceLabel}}{- string - if adjusted, `q-value`, otherwise `p-value`}
-
-\item{\code{ComparisonAnalytePlotStatAnnotation}}{- string - annotation label to show at top of volcano plot}
 
 \item{\code{AnalyteData}}{- tibble - sample level data for chosen analyte(s)}
 
 \item{\code{AnalyteDataDownload}}{- deprecated?}
 
-\item{\code{AnalytePlotMethod}}{- string - type of plot to show for chosen analyte}
-
-\item{\code{CorrelationAnalytePlotTitle}}{- string - title to show for analyte plot}
-
-\item{\code{QueryMeasurement}}{- string - measurement used for query analyte sample level data}
-
-\item{\code{ComparisonMeasurement}}{- string - measurement used for comparison analyte sample level data}
-
-\item{\code{QueryAnalyteLabel}}{- string - label used for query analyte}
-
-\item{\code{ComparisonAnalyteLabel}}{- string - labe used for comparison analyte}
-
 \item{\code{VolcanoSummaryData}}{- tibble - Fold Change summary data used for volcano plot}
-
-\item{\code{VolcanoSummaryDataXAxisLabel}}{- string - volcano plot x-axis}
-
-\item{\code{VolcanoSummaryDataYAxisLabel}}{- string - volcano plot y-axis}
-
-\item{\code{VolcanoSummaryMaxFoldChange}}{- numeric - maxiumum abs. value of fold change}
-
-\item{\code{VolcanoPlotTitle}}{- string - title to show above volcano plot}
-
-\item{\code{volcanoPlotExpectedTraceCount}}{- numeric - number of base traces present in the active volcano plot (usually between 1 - 3)}
 
 \item{\code{volcanoSourceData}}{- tibble of formatted source data used for volcano plot - includes trace groups}
 
@@ -109,22 +79,57 @@ Enables analysis of cross-omics correlations
 }
 \if{html}{\out{</div>}}
 }
+\section{Active bindings}{
+\if{html}{\out{<div class="r6-active-bindings">}}
+\describe{
+\item{\code{AnalyteSearchName}}{- string - name of analyte used for external links}
+
+\item{\code{CorrelationMeasureName}}{- string - name of correlation measure used in analysis - `rho` or `Fold Change`}
+
+\item{\code{Adjusted}}{- logical - whether the statistical test includes multiple hypothesis correction or not}
+
+\item{\code{ComparisonAnalytePlotStatAnnotation}}{- string - annotation label to show at top of volcano plot}
+
+\item{\code{AnalytePlotMethod}}{- string - type of plot to show for chosen analyte}
+
+\item{\code{CorrelationAnalytePlotTitle}}{- string - title to show for analyte plot}
+
+\item{\code{QueryMeasurement}}{- string - measurement used for query analyte sample level data}
+
+\item{\code{ComparisonMeasurement}}{- string - measurement used for comparison analyte sample level data}
+
+\item{\code{QueryAnalyteLabel}}{- string - label used for query analyte}
+
+\item{\code{ComparisonAnalyteLabel}}{- string - labe used for comparison analyte}
+
+\item{\code{VolcanoSummaryDataXAxisLabel}}{- string - volcano plot x-axis}
+
+\item{\code{VolcanoSummaryDataYAxisLabel}}{- string - volcano plot y-axis}
+
+\item{\code{VolcanoSummaryMaxFoldChange}}{- numeric - maxiumum abs. value of fold change}
+
+\item{\code{VolcanoPlotTitle}}{- string - title to show above volcano plot}
+
+\item{\code{volcanoPlotExpectedTraceCount}}{- numeric - number of base traces present in the active volcano plot (usually between 1 - 3)}
+}
+\if{html}{\out{</div>}}
+}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-CorrelatesManager-new}{\code{CorrelatesManager$new()}}
-\item \href{#method-CorrelatesManager-getQueryPlatforms}{\code{CorrelatesManager$getQueryPlatforms()}}
+\item \href{#method-CorrelatesManager-getQueryExperiments}{\code{CorrelatesManager$getQueryExperiments()}}
 \item \href{#method-CorrelatesManager-addGSEAInputClass}{\code{CorrelatesManager$addGSEAInputClass()}}
 \item \href{#method-CorrelatesManager-getQueryAnalytes}{\code{CorrelatesManager$getQueryAnalytes()}}
-\item \href{#method-CorrelatesManager-getComparisonPlatforms}{\code{CorrelatesManager$getComparisonPlatforms()}}
+\item \href{#method-CorrelatesManager-getComparisonExperiments}{\code{CorrelatesManager$getComparisonExperiments()}}
 \item \href{#method-CorrelatesManager-validate_volcano_plot}{\code{CorrelatesManager$validate_volcano_plot()}}
+\item \href{#method-CorrelatesManager-set_correlation_source_data}{\code{CorrelatesManager$set_correlation_source_data()}}
 \item \href{#method-CorrelatesManager-getVolcanoSummaryData}{\code{CorrelatesManager$getVolcanoSummaryData()}}
 \item \href{#method-CorrelatesManager-getVolcanoPlot}{\code{CorrelatesManager$getVolcanoPlot()}}
 \item \href{#method-CorrelatesManager-getFormattedVolcanoSummaryData}{\code{CorrelatesManager$getFormattedVolcanoSummaryData()}}
 \item \href{#method-CorrelatesManager-updateAnalyteAttributes}{\code{CorrelatesManager$updateAnalyteAttributes()}}
 \item \href{#method-CorrelatesManager-annotate_volcano_point}{\code{CorrelatesManager$annotate_volcano_point()}}
 \item \href{#method-CorrelatesManager-getVolcanoMultiSelectText}{\code{CorrelatesManager$getVolcanoMultiSelectText()}}
-\item \href{#method-CorrelatesManager-get_analyte_plot_method}{\code{CorrelatesManager$get_analyte_plot_method()}}
 \item \href{#method-CorrelatesManager-getAnalyteData}{\code{CorrelatesManager$getAnalyteData()}}
 \item \href{#method-CorrelatesManager-getAnalytePlot}{\code{CorrelatesManager$getAnalytePlot()}}
 \item \href{#method-CorrelatesManager-getFormattedAnalyteSummaryData}{\code{CorrelatesManager$getFormattedAnalyteSummaryData()}}
@@ -164,12 +169,11 @@ A new `CorrelatesManager` object.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-CorrelatesManager-getQueryPlatforms"></a>}}
-\if{latex}{\out{\hypertarget{method-CorrelatesManager-getQueryPlatforms}{}}}
-\subsection{Method \code{getQueryPlatforms()}}{
-gets query platforms for cross-omics analysis
+\if{html}{\out{<a id="method-CorrelatesManager-getQueryExperiments"></a>}}
+\if{latex}{\out{\hypertarget{method-CorrelatesManager-getQueryExperiments}{}}}
+\subsection{Method \code{getQueryExperiments()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$getQueryPlatforms()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$getQueryExperiments()}\if{html}{\out{</div>}}
 }
 
 }
@@ -198,12 +202,11 @@ string vector
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-CorrelatesManager-getComparisonPlatforms"></a>}}
-\if{latex}{\out{\hypertarget{method-CorrelatesManager-getComparisonPlatforms}{}}}
-\subsection{Method \code{getComparisonPlatforms()}}{
-gets comparison platforms for cross-omics analysis
+\if{html}{\out{<a id="method-CorrelatesManager-getComparisonExperiments"></a>}}
+\if{latex}{\out{\hypertarget{method-CorrelatesManager-getComparisonExperiments}{}}}
+\subsection{Method \code{getComparisonExperiments()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$getComparisonPlatforms()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$getComparisonExperiments()}\if{html}{\out{</div>}}
 }
 
 }
@@ -214,6 +217,15 @@ gets comparison platforms for cross-omics analysis
 validate that all inputs have been chosen to fetch volcano summary data
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$validate_volcano_plot()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-CorrelatesManager-set_correlation_source_data"></a>}}
+\if{latex}{\out{\hypertarget{method-CorrelatesManager-set_correlation_source_data}{}}}
+\subsection{Method \code{set_correlation_source_data()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$set_correlation_source_data()}\if{html}{\out{</div>}}
 }
 
 }
@@ -313,25 +325,6 @@ small helper function to get correct value for volcanoMultiSelectText
 \if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$getVolcanoMultiSelectText()}\if{html}{\out{</div>}}
 }
 
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-CorrelatesManager-get_analyte_plot_method"></a>}}
-\if{latex}{\out{\hypertarget{method-CorrelatesManager-get_analyte_plot_method}{}}}
-\subsection{Method \code{get_analyte_plot_method()}}{
-small helper function to determine plot method for instance/namespace
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{CorrelatesManager$get_analyte_plot_method(analysis_type, analyte_count)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{analysis_type}}{- string - analysis type for this instance/namespace}
-
-\item{\code{analyte_count}}{int - number of selected analytes}
-}
-\if{html}{\out{</div>}}
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CorrelatesManager-getAnalyteData"></a>}}
