@@ -65,6 +65,104 @@
 CorrelatesManager <- R6::R6Class(
   "CorrelatesManager",
   private = list(),
+  active = list(
+    Adjusted = function(value) {
+      return(
+        self$AdjustmentMethod != "none"
+      )
+    },
+    CorrelationMeasureName = function(value) {
+      return(unique(self$CorrelationSourceData$CorrelationMeasureName))
+    },
+    VolcanoDataMaxFinite = function(value) {
+      return(
+        self$CorrelationSourceData |>
+          dplyr::filter(p.value > 0) |>
+          dplyr::pull(p.value) |>
+          min() |>
+          (\(x) {
+            -log10(x)
+          })()
+      )
+    },
+    VolcanoPlotTitle = function(value) {
+      return(
+        glue::glue(
+          "Correlation between \\
+            {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte,1)} \\
+            and {self$CompareExperiment}"
+        )
+      )
+    },
+    VolcanoSummaryMaxFoldChange = function(value) {
+      return(max(abs(self$VolcanoSummaryData$CorrelationValue)))
+    },
+    VolcanoSummaryDataXAxisLabel = function(value) {
+      return(self$CorrelationMeasureName)
+    },
+    VolcanoSummaryDataYAxisLabel = function(value) {
+      return(
+        glue::glue(
+          "-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})"
+        )
+      )
+    },
+    volcanoPlotExpectedTraceCount = function(value) {
+      return(
+        self$volcanoSourceData |>
+          dplyr::distinct(significanceGroup, shape) |>
+          nrow()
+      )
+    },
+    AnalyteSearchName = function(value) {
+      return(
+        CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)
+      )
+    },
+    ComparisonAnalytePlotStatAnnotation = function(value) {
+      if (length(self$Analyte) == 1) {
+        return(
+          self$VolcanoSummaryData |>
+            dplyr::filter(Analyte == self$Analyte) |>
+            dplyr::ungroup() |>
+            dplyr::select(p.value, p.value.adjustment.method) |>
+            dplyr::mutate(formatted.p.value = CUSOMShinyHelpers::formatPValue(p.value, p.value.adjustment.method)) |>
+            dplyr::select(formatted.p.value)
+        )
+      }
+    },
+    AnalytePlotMethod = function(value) {
+      if (length(self$Analyte) > 1) {
+        return("heatmap")
+      } else if (self$analysisType == "Categorical") {
+        return("boxplot")
+      } else if (self$analysisType == "Continuous") {
+        return("scatterplot")
+      } else {
+        return("unknown")
+      }
+    },
+    CorrelationAnalytePlotTitle = function(value) {
+      return(
+        glue::glue(
+          "{CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)} \\
+          vs. {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte, 1)}"
+        )
+      )
+    },
+    ComparisonMeasurement = function(value) {
+      return(self$AnalyteData[1, "Measurement.y"])
+    },
+    ComparisonAnalyteLabel = function(value) {
+      return(self$AnalyteData[1, "yLabel"])
+    },
+    QueryMeasurement = function(value) {
+      return(self$AnalyteData[1, "Measurement.x"])
+    },
+    QueryAnalyteLabel = function(value) {
+      return(self$AnalyteData[1, "xLabel"])
+    }
+  ),
   public = list(
     applicationName = NULL,
     ApplicationId = NULL,
@@ -78,28 +176,20 @@ CorrelatesManager <- R6::R6Class(
 
     Study = "",
     QueryPlatform = "",
+    QueryExperiment = "",
     ComparisonPlatform = "",
+    CompareExperiment = "",
     Experiment = "",
     QueryAnalyte = "",
     Analyte = "",
-    AnalyteSearchName = "",
-    CorrelationMeasureName = "",
     Sex = NULL,
     Age = NULL,
     StatTest = NULL,
     Covariates = NULL,
     AdjustmentMethod = NULL,
-    Adjusted = FALSE,
     SignificanceLabel = "p-value",
-
-    ComparisonAnalytePlotStatAnnotation = NULL,
-
+    CorrelationSourceData = NULL,
     VolcanoSummaryData = NULL,
-    VolcanoSummaryDataXAxisLabel = "",
-    VolcanoSummaryDataYAxisLabel = "",
-    VolcanoSummaryMaxFoldChange = 0,
-    VolcanoPlotTitle = "",
-    volcanoPlotExpectedTraceCount = 3,
     volcanoSourceData = NULL,
     volcanoEventData = tibble::tibble(
       curveNumber = -1,
@@ -112,12 +202,6 @@ CorrelatesManager <- R6::R6Class(
 
     AnalyteData = NULL,
     AnalyteDataDownload = NULL,
-    AnalytePlotMethod = "boxplot",
-    CorrelationAnalytePlotTitle = "",
-    QueryMeasurement = "",
-    ComparisonMeasurement ="",
-    QueryAnalyteLabel = "",
-    ComparisonAnalyteLabel = "",
 
     HeatmapData = NULL,
     HeatmapText = NULL,
@@ -145,20 +229,16 @@ CorrelatesManager <- R6::R6Class(
 
       namespace_config <- namespace_config |>
         dplyr::filter(Namespace == id)
+
       self$namespace <- namespace_config$Namespace
       self$ApplicationId <- namespace_config$ApplicationId
     },
 
-    #' @description
-    #' gets query platforms for cross-omics analysis
-    getQueryPlatforms = function() {
-
+    getQueryExperiments = function() {
       self$remoteDB$getQuery(
-        "[shiny].[GetQueryPlatforms] ?",
+        "[shiny].[GetQueryExperiments] ?",
         tibble::tibble("ApplicationID" = self$ApplicationId)
-      ) |>
-        dplyr::arrange(QueryPlatform) |>
-        dplyr::pull()
+      )
     },
 
     #' @description
@@ -187,38 +267,45 @@ CorrelatesManager <- R6::R6Class(
     getQueryAnalytes = function() {
       return(
         self$remoteDB$getQuery(
-          "EXEC [shiny].[GetQueryAnalytes] ?",
-          tibble::tibble("QueryPlatform" = self$QueryPlatform)
+          "EXEC [shiny].[GetQueryAnalytesByExperimentID] ?",
+          tibble::tibble("ExperimentID" = self$QueryExperiment)
           ) |>
           dplyr::arrange(QueryAnalyte) |>
           dplyr::pull()
       )
     },
 
-    #' @description
-    #' gets comparison platforms for cross-omics analysis
-    getComparisonPlatforms = function() {
+    getComparisonExperiments = function() {
       self$remoteDB$getQuery(
-        "[shiny].[GetComparisonPlatforms] ?",
-        tibble::tibble("ApplicationID" = self$ApplicationId)
-      ) |>
-        dplyr::arrange(ComparisonPlatform) |>
-        dplyr::pull()
+        "[shiny].[GetComparisonExperiments] ?",
+        tibble::tibble("QueryExperimentID" = self$QueryExperiment)
+      )
     },
 
     #' @description
     #' validate that all inputs have been chosen to fetch volcano summary data
     #'
     validate_volcano_plot = function() {
-      if (
-        self$QueryPlatform != ""
-        & self$QueryAnalyte != ""
-        & self$ComparisonPlatform != ""
-        ) {
-        return(TRUE)
-      } else {
-        return(FALSE)
-      }
+      return(
+        all(self$QueryExperiment != "", self$QueryAnalyte != "", self$ComparisonExperiment != "")
+      )
+    },
+
+    set_correlation_source_data = function() {
+      self$CorrelationSourceData <- self$remoteDB$getQuery(
+        "[shiny].[GetCorrelationDatasetByExperiments] ?, ?, ?",
+        tibble::tibble(
+          "QueryExperiment" = self$QueryExperiment,
+          "QueryAnalyte" = self$QueryAnalyte,
+          "ComparisonExperiment" = self$CompareExperiment
+        )
+      ) |>
+      dplyr::rename(
+        "Analyte" = ComparisonAnalyte,
+        "AnalyteID" = ComparisonAnalyteID
+      )
+
+      return(invisible(self$CorrelationSourceData))
     },
 
     #' @description
@@ -227,35 +314,12 @@ CorrelatesManager <- R6::R6Class(
     #' @return none
     getVolcanoSummaryData = function() {
 
-      self$Adjusted <- self$AdjustmentMethod != "none"
+      self$set_correlation_source_data()
 
-      correlation_data <- self$remoteDB$getQuery(
-        "[shiny].[GetCorrelationDataset] ?, ?, ?",
-        tibble::tibble(
-          "QueryPlatform" = self$QueryPlatform,
-          "QueryAnalyte" = self$QueryAnalyte,
-          "ComparisonPlatform" = self$ComparisonPlatform
-        )
-      ) |>
-      dplyr::rename(
-        "Analyte" = ComparisonAnalyte,
-        "AnalyteID" = ComparisonAnalyteID
-      )
-
-      self$CorrelationMeasureName <- unique(correlation_data$CorrelationMeasureName)
-
-      max_finite <- correlation_data |>
-        dplyr::filter(p.value > 0) |>
-        dplyr::pull(p.value) |>
-        min() |>
-        (\(x) {
-          -log10(x)
-        })()
-
-      self$VolcanoSummaryData <- correlation_data |>
+      self$VolcanoSummaryData <- self$CorrelationSourceData |>
         dplyr::mutate(
           shape = ifelse(p.value == 0, "triangle-up", "circle"),
-          p.value = ifelse(p.value == 0, 10^-(max_finite * 1.05), p.value),
+          p.value = ifelse(p.value == 0, 10^-(self$VolcanoDataMaxFinite * 1.05), p.value),
           `-log10pvalue` = -log10(p.value)
         ) |>
         dplyr::group_by(Analyte) |>
@@ -276,16 +340,7 @@ CorrelatesManager <- R6::R6Class(
         ) |>
         dplyr::ungroup()
 
-      self$VolcanoPlotTitle <- glue::glue(
-        "Correlation between \\
-         {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte,1)} \\
-         and {self$ComparisonPlatform}"
-      )
-      self$VolcanoSummaryMaxFoldChange <- max(abs(self$VolcanoSummaryData$CorrelationValue))
-      self$VolcanoSummaryDataXAxisLabel <- self$CorrelationMeasureName
-      self$VolcanoSummaryDataYAxisLabel <- glue::glue(
-        "-log<sub>10</sub>({ifelse(self$Adjusted,\"q-value \",\"p-value \")})"
-      )
+      return(invisible(self$VolcanoSummaryData))
 
     },
 
@@ -320,11 +375,7 @@ CorrelatesManager <- R6::R6Class(
           significanceThreshold = a$parameters$significanceThresholdTransformed,
           originalSignificanceThreshold = a$parameters$significanceThreshold
         )
-
-      self$volcanoPlotExpectedTraceCount <- self$volcanoSourceData |>
-        dplyr::distinct(significanceGroup, shape) |>
-        nrow()
-
+  
       p <- self$volcanoSourceData |>
         CUSOMShinyHelpers::getVolcanoPlot(
           foldChangeVariable = CorrelationValue,
@@ -471,17 +522,6 @@ CorrelatesManager <- R6::R6Class(
     #' @return none
     updateAnalyteAttributes = function() {
 
-      self$AnalyteSearchName <- CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)
-
-      if (length(self$Analyte) == 1) {
-
-        self$ComparisonAnalytePlotStatAnnotation <- self$VolcanoSummaryData |>
-          dplyr::filter(Analyte == self$Analyte) |>
-          dplyr::ungroup() |>
-          dplyr::select(p.value, p.value.adjustment.method) |>
-          dplyr::mutate(formatted.p.value = CUSOMShinyHelpers::formatPValue(p.value, p.value.adjustment.method)) |>
-          dplyr::select(formatted.p.value)
-      }
     },
 
     #' @description
@@ -591,39 +631,17 @@ CorrelatesManager <- R6::R6Class(
     },
 
     #' @description
-    #' small helper function to determine plot method for instance/namespace
-    #' @param analysis_type - string - analysis type for this instance/namespace
-    #' @param analyte_count int - number of selected analytes
-    get_analyte_plot_method = function(analysis_type, analyte_count) {
-      if (analyte_count > 1) {
-        return("heatmap")
-      } else if (analysis_type == "Categorical") {
-        return("boxplot")
-      } else if (analysis_type == "Continuous") {
-        return("scatterplot")
-      } else {
-        return("unknown")
-      }
-    },
-
-    #' @description
     #' set analyte sample level data
     #'
     #' @return none
     getAnalyteData = function() {
 
-      self$AnalytePlotMethod <- self$get_analyte_plot_method(self$analysisType, length(self$Analyte))
-      self$CorrelationAnalytePlotTitle <- glue::glue(
-        "{CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)} \\
-        vs. {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte, 1)}"
-        )
-
       if (length(self$Analyte) == 1) {
         # Query on X-axis, Comparison on y-axis
         self$AnalyteData <- self$remoteDB$getQuery(
-            "[shiny].[GetAnalyteDataByPlatform] ?, ?",
+            "[shiny].[GetAnalyteDataByExperiment] ?, ?",
             tibble::tibble(
-              "Platform" =  self$ComparisonPlatform,
+              "ExperimentID" =  self$CompareExperiment,
               "Analyte" = self$Analyte
             )
           )   |>
@@ -632,9 +650,9 @@ CorrelatesManager <- R6::R6Class(
           dplyr::rename(y = MeasuredValue) |>
           dplyr::inner_join(
             self$remoteDB$getQuery(
-              "[shiny].[GetAnalyteDataByPlatform] ?, ?",
+              "[shiny].[GetAnalyteDataByExperiment] ?, ?",
               tibble::tibble(
-                "Platform" =  self$QueryPlatform,
+                "ExperimentID" =  self$QueryExperiment,
                 "Analyte" = self$QueryAnalyte
               )
             ) |>
@@ -646,17 +664,9 @@ CorrelatesManager <- R6::R6Class(
           dplyr::mutate(
             log2x = log2(x),
             log2y = log2(y),
-            "ComparisonPlatform" = self$ComparisonPlatform,
-            "QueryPlatform" = self$QueryPlatform,
             xLabel = CUSOMShinyHelpers::parseDelimitedString(QueryAnalyte, 1),
             yLabel = CUSOMShinyHelpers::parseDelimitedString(ComparisonAnalyte, 1)
           )
-
-        self$ComparisonMeasurement <- self$AnalyteData[1, "Measurement.y"]
-        self$ComparisonAnalyteLabel <- self$AnalyteData[1, "yLabel"]
-
-        self$QueryMeasurement <- self$AnalyteData[1, "Measurement.x"]
-        self$QueryAnalyteLabel <- self$AnalyteData[1, "xLabel"]
 
       } else {
 
@@ -684,7 +694,6 @@ CorrelatesManager <- R6::R6Class(
           dplyr::select(Analyte, AnalyteID, "z" = CorrelationValue) |>
           dplyr::arrange(z) |>
           dplyr::mutate(r = dplyr::row_number())
-
       }
 
     },
