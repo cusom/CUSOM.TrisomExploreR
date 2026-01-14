@@ -71,6 +71,13 @@ CorrelatesManager <- R6::R6Class(
         self$AdjustmentMethod != "none"
       )
     },
+    QueryAnalyteLabel = function(value) {
+      return(
+        self$QueryAnalytes |>
+          dplyr::filter(QueryAnalyteKey == self$QueryAnalyte) |>
+          dplyr::pull(QueryAnalyte)
+      )
+    },
     CorrelationMeasureName = function(value) {
       return(unique(self$CorrelationSourceData$CorrelationMeasureName))
     },
@@ -89,7 +96,7 @@ CorrelatesManager <- R6::R6Class(
       return(
         glue::glue(
           "Correlation between \\
-            {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte,1)} \\
+            {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyteLabel,1)} \\
             and {self$CompareExperiment}"
         )
       )
@@ -146,7 +153,7 @@ CorrelatesManager <- R6::R6Class(
       return(
         glue::glue(
           "{CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)} \\
-          vs. {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyte, 1)}"
+          vs. {CUSOMShinyHelpers::parseDelimitedString(self$QueryAnalyteLabel, 1)}"
         )
       )
     },
@@ -158,9 +165,6 @@ CorrelatesManager <- R6::R6Class(
     },
     QueryMeasurement = function(value) {
       return(self$AnalyteData[1, "Measurement.x"])
-    },
-    QueryAnalyteLabel = function(value) {
-      return(self$AnalyteData[1, "xLabel"])
     }
   ),
   public = list(
@@ -180,6 +184,7 @@ CorrelatesManager <- R6::R6Class(
     ComparisonPlatform = "",
     CompareExperiment = "",
     Experiment = "",
+    QueryAnalytes = tibble::tibble(),
     QueryAnalyte = "",
     Analyte = "",
     Sex = NULL,
@@ -265,16 +270,17 @@ CorrelatesManager <- R6::R6Class(
     #'
     #' @return string vector
     getQueryAnalytes = function() {
-      return(
-        self$remoteDB$getQuery(
+      self$QueryAnalytes <- self$remoteDB$getQuery(
           "EXEC [shiny].[GetQueryAnalytesByExperimentID] ?",
           tibble::tibble("ExperimentID" = self$QueryExperiment)
-          ) |>
+        )
+      return(
+        self$QueryAnalytes|>
           dplyr::arrange(QueryAnalyte) |>
-          dplyr::pull()
+          dplyr::select(QueryAnalyte, QueryAnalyteKey) |>
+          tibble::deframe()
       )
     },
-
     getComparisonExperiments = function() {
       self$remoteDB$getQuery(
         "[shiny].[GetComparisonExperiments] ?",
@@ -363,7 +369,7 @@ CorrelatesManager <- R6::R6Class(
           significanceVariable = `-log10pvalue`,
           selected = selectedPoint,
           arrowLabelTextVar = Analyte,
-          titleText = glue::glue("Correlation with {self$QueryAnalyte}:"),
+          titleText = glue::glue("Correlation with {self$QueryAnalyteLabel}:"),
           includeThresholdLabel = FALSE
         )
 
@@ -644,7 +650,7 @@ CorrelatesManager <- R6::R6Class(
               "ExperimentID" =  self$CompareExperiment,
               "Analyte" = self$Analyte
             )
-          )   |>
+          ) |>
           dplyr::filter(outlier == FALSE) |>
           dplyr::select(LabID, "ComparisonAnalyte" = Analyte,  MeasuredValue, Measurement) |>
           dplyr::rename(y = MeasuredValue) |>
@@ -885,7 +891,7 @@ CorrelatesManager <- R6::R6Class(
         ) |>
         plotly::layout(
           title = list(
-            text = glue::glue("{self$QueryAnalyte} vs. selected {self$ComparisonPlatform} Analytes"),
+            text = glue::glue("{self$QueryAnalyteLabel} vs. selected {self$ComparisonPlatform} Analytes"),
             font = list(
               family = "Arial",
               color = "rgb(58, 62, 65)",
