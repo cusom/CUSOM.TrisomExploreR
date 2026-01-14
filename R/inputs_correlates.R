@@ -56,7 +56,7 @@ correlates_inputs_ui <- function(id, input_config) {
             selected = "NA"
           )
         ),
-        tags$b("1) Select Query Study"),
+        tags$b("1) Select Query Dataset"),
         shiny::tags$div(
           id = ns("QueryStudies"),
           shinycustomloader::withLoader(
@@ -249,7 +249,7 @@ correlates_inputs_server <- function(id, r6) {
 
       if (!is.null(ComparisonExperiments())) {
         shiny::tagList(
-          tags$b("1) Select Comparison Study"),
+          tags$b("3) Select Comparison Dataset"),
           CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
             inputId = ns("CompareExperiment"),
             label = NULL,
