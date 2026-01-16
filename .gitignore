@@ -5,6 +5,20 @@ PrivateSettings.config
 
 config.yml
 
+app/logic/legacy_logic/*
+
+#package artifacts
+data/*
+data-raw/*
+inst/*
+man/*
+DESCRIPTION
+LICENSE
+NAMESPACE
+NEWS.md
+
+Remote_Data/*
+
 # History files
 .Rhistory
 .Rproj.user
