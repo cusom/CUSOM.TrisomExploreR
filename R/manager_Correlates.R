@@ -126,6 +126,14 @@ CorrelatesManager <- R6::R6Class(
         CUSOMShinyHelpers::parseDelimitedString(self$Analyte, 1)
       )
     },
+    ComparisonAnalyteKey = function(value) {
+      return(
+        self$CorrelationSourceData |>
+          dplyr::filter(Analyte == self$Analyte) |>
+          dplyr::pull(ComparisonAnalyteKey) |>
+          as.integer()
+      )
+    },
     ComparisonAnalytePlotStatAnnotation = function(value) {
       if (length(self$Analyte) == 1) {
         return(
@@ -648,7 +656,7 @@ CorrelatesManager <- R6::R6Class(
             "[shiny].[GetAnalyteDataByExperiment] ?, ?",
             tibble::tibble(
               "ExperimentID" =  self$CompareExperiment,
-              "Analyte" = self$Analyte
+              "Analyte" = self$ComparisonAnalyteKey
             )
           ) |>
           dplyr::filter(outlier == FALSE) |>
