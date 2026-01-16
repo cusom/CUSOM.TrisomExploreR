@@ -1,0 +1,15 @@
+default:
+  application_name: "TrisomExplorer"
+  entry_point_path: "app/"
+  entry_point: ""
+  parent_namespace: ""
+ADB63399-7C34-49A5-A75C-2CDBB9EC5EB0:
+  application_name: "TrisomExplorer | Proteome - INTERNAL ONLY"
+  entry_point_path: "app/view/apps"
+  entry_point: "Proteome_Internal"
+  parent_namespace: "Proteome"
+C5F2F4A5-9407-4A4B-9D81-33C04FFC80F3:
+  application_name: "TrisomExplorer V2 | Metabolome"
+  entry_point_path: "app/view/apps"
+  entry_point: "Metabolome"
+  parent_namespace: "Metabolome"
