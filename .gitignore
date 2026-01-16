@@ -5,6 +5,21 @@ PrivateSettings.config
 
 config.yml
 
+## rhino app artifacts
+app/*
+app.R
+Remote_Data/*
+tests/*
+.rscignore
+rhino.yml
+.renvignore
+renv/*
+renv.lock
+dependencies.R
+settings.json
+
+Remote_Data/*
+
 # History files
 .Rhistory
 .Rproj.user
