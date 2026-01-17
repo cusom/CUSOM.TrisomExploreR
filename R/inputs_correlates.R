@@ -66,7 +66,6 @@ correlates_inputs_ui <- function(id, input_config) {
             proxy.height = "20px"
           )
         ),
-        shiny::tags$hr(),
         shinyjs::hidden(
           shinyWidgets::prettyRadioButtons(
             inputId = ns("StatTest"),
@@ -110,7 +109,18 @@ correlates_inputs_ui <- function(id, input_config) {
             value = c(min(input_config$ages), max(input_config$ages))
           )
         ),
-        tags$b("2) Select Query Analyte"),
+        shiny::tags$hr(),
+        shiny::tags$div(
+          id = ns("CompareExperiments"),
+          shinycustomloader::withLoader(
+            shiny::uiOutput(ns("CompareExperiment")),
+            type = "html",
+            loader = "loader6",
+            proxy.height = "20px"
+          )
+        ),
+        shiny::tags$hr(),
+        tags$b("3) Select Query Analyte"),
         shiny::tags$div(
           id = ns("QueryAnalyteInput"),
           shiny::selectizeInput(
@@ -127,17 +137,7 @@ correlates_inputs_ui <- function(id, input_config) {
               maxoptions = 1
             )
           )
-        ),
-        shiny::tags$hr(),
-        shiny::tags$div(
-          id = ns("CompareExperiments"),
-          shinycustomloader::withLoader(
-            shiny::uiOutput(ns("CompareExperiment")),
-            type = "html",
-            loader = "loader6",
-            proxy.height = "20px"
-          )
-        ),
+        )      
       ),
       footer = shiny::tagList(
         shiny::actionButton(
@@ -210,7 +210,47 @@ correlates_inputs_server <- function(id, r6) {
 
     })
 
-    shiny::observeEvent(c(input$QueryExperiment), {
+    ComparisonExperiments <- shiny::reactive({
+      
+      shinybusy::show_modal_spinner(
+        spin = "atom",
+        color = "#3c8dbc",
+        text = glue::glue("Getting Comparison Experiments...")
+      )
+
+      comparison_experiments <- r6$getComparisonExperiments()
+
+      shinybusy::remove_modal_spinner()
+
+      comparison_experiments
+
+    }) |>
+      shiny::bindEvent(c(input$QueryExperiment), ignoreInit = TRUE, ignoreNULL = TRUE)
+
+    output$CompareExperiment <- shiny::renderUI({
+
+      if (!is.null(ComparisonExperiments())) {
+        shiny::tagList(
+          tags$b("2) Select Comparison Dataset"),
+          CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
+            inputId = ns("CompareExperiment"),
+            label = NULL,
+            fieldSetData = ComparisonExperiments(),
+            selected = ComparisonExperiments()
+          ) |>
+            bsplus::bs_embed_tooltip(
+              title = "Select a study below",
+              placement = "top",
+              html = TRUE
+            )
+        )
+      } else {
+        shiny::tagList()
+      }
+
+    })
+
+    shiny::observeEvent(c(input$CompareExperiment), {
 
       shinybusy::show_modal_spinner(
         spin = "atom",
@@ -239,34 +279,6 @@ correlates_inputs_server <- function(id, r6) {
       shinybusy::remove_modal_spinner()
 
     }, ignoreInit = TRUE, ignoreNULL = TRUE)
-
-    ComparisonExperiments <- shiny::reactive({
-        r6$getComparisonExperiments()
-    }) |>
-      shiny::bindEvent(c(input$QueryExperiment), ignoreInit = TRUE, ignoreNULL = TRUE)
-
-    output$CompareExperiment <- shiny::renderUI({
-
-      if (!is.null(ComparisonExperiments())) {
-        shiny::tagList(
-          tags$b("3) Select Comparison Dataset"),
-          CUSOMShinyHelpers::prettyRadioButtonsFieldSet(
-            inputId = ns("CompareExperiment"),
-            label = NULL,
-            fieldSetData = ComparisonExperiments(),
-            selected = ComparisonExperiments()
-          ) |>
-            bsplus::bs_embed_tooltip(
-              title = "Select a study below",
-              placement = "top",
-              html = TRUE
-            )
-        )
-      } else {
-        shiny::tagList()
-      }
-
-    })
 
     shiny::observeEvent(c(input$QueryAnalyte), {
 
