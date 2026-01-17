@@ -273,26 +273,30 @@ CorrelatesManager <- R6::R6Class(
       )
     },
 
+    getComparisonExperiments = function() {
+      self$remoteDB$getQuery(
+        "[shiny].[GetComparisonExperiments] ?",
+        tibble::tibble("QueryExperimentID" = self$QueryExperiment)
+      )
+    },
+
     #' @description
     #' Get query analyte choices for the chosen QueryPlatform
     #'
     #' @return string vector
     getQueryAnalytes = function() {
       self$QueryAnalytes <- self$remoteDB$getQuery(
-          "EXEC [shiny].[GetQueryAnalytesByExperimentID] ?",
-          tibble::tibble("ExperimentID" = self$QueryExperiment)
+          "EXEC [shiny].[GetQueryAnalytesByQueryExperimentComparisonExperiment] ?, ?",
+          tibble::tibble(
+            "QueryExperiment" = self$QueryExperiment,
+            "ComparisonExperiment" = self$CompareExperiment
+          )
         )
       return(
         self$QueryAnalytes|>
           dplyr::arrange(QueryAnalyte) |>
           dplyr::select(QueryAnalyte, QueryAnalyteKey) |>
           tibble::deframe()
-      )
-    },
-    getComparisonExperiments = function() {
-      self$remoteDB$getQuery(
-        "[shiny].[GetComparisonExperiments] ?",
-        tibble::tibble("QueryExperimentID" = self$QueryExperiment)
       )
     },
 
