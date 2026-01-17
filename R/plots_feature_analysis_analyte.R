@@ -111,7 +111,8 @@ feature_analysis_analyte_plot_server <- function(id, r6) {
 
     output$AnalytePlot <- plotly::renderPlotly({
       shiny::validate(
-        shiny::need(!is.null(AnalyteData()), "")
+        shiny::need(!is.null(AnalyteData()), ""),
+        shiny::need(nrow(AnalyteData()) > 0, "No Data Returned for Plot - Reach Out to Data Contact for Clarification")
       )
       AnalyteData() |>
         r6$getAnalytePlot(ns)
