@@ -28,6 +28,15 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
         return(self$AdjustmentMethod() != "none")
       }
     },
+    volcanoPlotExpectedTraceCount = function(value) {
+      if (missing(value)) {
+        return(
+          self$volcanoSourceData |>
+            distinct(significanceGroup, shape) |>
+            nrow()
+        )
+      }
+    },
     VolcanoPlotTitle = function(value) {
       if (missing(value)) {
         return(glue("Effect of {self$analysisVariableLabel} on all {self$analytesLabel}"))
@@ -75,7 +84,7 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
           )
         }
       }
-    }   
+    }
   ),
   public = list(
     applicationName = NULL,
@@ -110,7 +119,7 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
     VolcanoSummaryData = NULL,
 
     volcanoTopAnnotationLabel = "",
-    volcanoPlotExpectedTraceCount = 3,
+
     volcanoSourceData = NULL,
     volcanoEventData = tibble(
       curveNumber = -1,
@@ -120,15 +129,15 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
       key = ""
     ),
     VolcanoSummaryDataFoldChangeFilter = NULL,
-    #volcanoMultiSelectText = "",
+
 
     Analyte = "",
     initialize = function(analysis_config, StatTest, Covariates, AdjustmentMethod) {
-  
+
       namespace_config <- analysis_config
-    
+
       self$applicationName <- namespace_config$ApplicationName
-    
+
       self$StatTest <- StatTest
       self$Covariates <- Covariates
       self$AdjustmentMethod <- AdjustmentMethod
@@ -137,7 +146,7 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
       self$analysisVariable <- namespace_config$AnalysisVariableName
       self$analysisVariableLabel <- namespace_config$AnalysisVariableLabel
       self$analysisType <- namespace_config$AnalysisType
-  
+
       self$experimentIDs <- str_split_1(namespace_config$ExperimentIDs, "\\|")
       self$groupBaselineLabel <- namespace_config$AnalysisVariableBaselineLabel
       self$volcanoTopAnnotationLabel <- namespace_config$AnalysisVolcanoPlotTopAnnotation
@@ -217,30 +226,31 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
 
     },
 
-    #' @description
-    #' Get volcano plot
-    #' @param .data tibble - data for volcano plot
-    #' @param ns - namespace to apply to plot object
-    #'
-    getVolcanoPlot = function(.data, ns) {
-
+    set_volcano_source_data = function(.data) {
       self$volcanoSourceData <- .data |>
-        mutate(
+        dplyr::mutate(
           shape = "circle",
           selectedPoint = 0
         )
+      return(invisible(self$volcanoSourceData))
+    },
 
-      a <- self$volcanoSourceData |>
-        getVolcanoAnnotations(
-          foldChangeVar = !!sym(self$FoldChangeVar),
-          significanceVariable = !!sym(self$SignificanceVariable),
-          selected = selectedPoint,
-          arrowLabelTextVar = self$Analyte,
-          upRegulatedText = self$volcanoTopAnnotationLabel,
-          includeThresholdLabel = FALSE
-        )
+    get_volcano_annotations = function(.data) {
+      return(
+        .data |>
+          getVolcanoAnnotations(
+            foldChangeVar = !!sym(self$FoldChangeVar),
+            significanceVariable = !!sym(self$SignificanceVariable),
+            selected = selectedPoint,
+            arrowLabelTextVar = self$Analyte,
+            upRegulatedText = self$volcanoTopAnnotationLabel,
+            includeThresholdLabel = FALSE
+          )
+      )
+    },
 
-      self$volcanoSourceData <- self$volcanoSourceData |>
+    add_significance_group = function(.data, a) {
+      self$volcanoSourceData <- .data |>
         addSignificanceGroup(
           foldChangeVar = !!sym(self$FoldChangeVar),
           significanceVariable = !!sym(self$SignificanceVariable),
@@ -248,12 +258,16 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
           significanceThreshold = a$parameters$significanceThresholdTransformed,
           originalSignificanceThreshold = a$parameters$significanceThreshold
         )
+      return(invisible(self$volcanoSourceData))
+    },
 
-      self$volcanoPlotExpectedTraceCount <- self$volcanoSourceData |>
-        distinct(significanceGroup, shape) |>
-        nrow()
+    getVolcanoPlot = function(.data, ns) {
+  
+      self$set_volcano_source_data(.data)
 
-      p <- self$volcanoSourceData |>
+      a <- self$get_volcano_annotations(self$volcanoSourceData)
+
+      p <- self$add_significance_group(self$volcanoSourceData, a) |>
         getVolcanoPlot(
           foldChangeVariable = !!sym(self$FoldChangeVar),
           significanceVariable = !!sym(self$SignificanceVariable),
@@ -324,42 +338,6 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
       p
 
     },
-
-    # #' @description
-    # #' helper function to update various attributes for the chosen analyte
-    # updateAnalyteAttributes = function() {
-      
-
-    #   if (length(self$Analyte) == 1) {
-        
-        
-
-    #     self$volcanoMultiSelectText <- ""
-
-    #   }
-
-    #   if (length(self$Analyte) > 1) {
-    #     self$volcanoMultiSelectText <- self$VolcanoSummaryData |>
-    #       dplyr::filter(Analyte %in% self$Analyte) |>
-    #       summarise(
-    #         count = n(),
-    #         minFC = round(min(FoldChange), 4),
-    #         maxFC = round(max(FoldChange), 4),
-    #         minP = min(p.value),
-    #         maxP = max(p.value)
-    #       ) |>
-    #       mutate(
-    #         text = glue(
-    #           "<center>{count} points selected. Min Fold Change: {minFC}, Max Fold Change: {maxFC}</center>"
-    #         )
-    #       ) |>
-    #       select(text) |>
-    #       pull()
-    #   }
-
-    #   return(invisible(self))
-
-    # },
 
     #' @description
     #' helper function to add annotation to volcano plot based on chosen analyte
@@ -447,17 +425,6 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
       }
 
     }
-
-    # # #' @description
-    # # #' small helper function to get correct value for volcanoMultiSelectText
-    # getVolcanoMultiSelectText = function() {
-    #   if (length(self$Analyte) > 1 & self$volcanoMultiSelectText == "") {
-    #     self$updateAnalyteAttributes()
-    #   } else if (length(self$Analyte) == 1)  {
-    #     self$volcanoMultiSelectText <- ""
-    #   }
-    #   return(self$volcanoMultiSelectText)
-    # }
 
   )
 )
