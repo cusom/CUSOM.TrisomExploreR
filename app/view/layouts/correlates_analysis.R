@@ -4,8 +4,9 @@ box::use(
 
 box::use(
     app/logic/feature_analysis/InputsCorrelatesManager[CorrelatesAnalysisInputsManager],
-    app/view/inputs/inputs_correlates,
     app/logic/feature_analysis/CorrelatesSummaryDataManager[CorrelatesSummaryDataManager],
+    app/logic/feature_analysis/CorrelatesFeatureDataManager[CorrelatesFeatureAnalysis_FeatureDataManager],
+    app/view/inputs/inputs_correlates,
     app/view/inputs/inputs_volcano_plot_analyte,
     app/view/plots/plots_volcano,
     app/view/plots/plots_feature_analysis_analyte,
@@ -33,7 +34,7 @@ ui <- function(id) {
                         title = "Volcano Plot",
                         shiny::tags$div(
                             id = ns("VolcanoContent"),
-                            plots_volcano$ui(ns("volcano-plot"))
+                            plots_volcano$ui(ns("volcano"))
                         )
                     ),
                     shiny::tabPanel(
@@ -53,7 +54,7 @@ ui <- function(id) {
                     shiny::tabPanel(
                         title = "Correlation Plot",
                         value = "Correlation Plot",
-                        #plots_feature_analysis_analyte$ui(ns("analyte-plot"))
+                        plots_feature_analysis_analyte$ui(ns("analyte"))
                     ),
                     shiny::tabPanel(
                         title = "Correlation Sample Level Data",
@@ -86,13 +87,27 @@ server <- function(id, analysis_config, input_config) {
 
         # volcano plot
         feature <- plots_volcano$server(
-            id = "volcano-plot",
+            id = "volcano",
             r6 = CorrelatesSummaryDataManager$new(
                 analysis_config = analysis_config
             ),
             Study = inputs$Study,
             StudyData = inputs$StudyData,
             parent = session
+        )
+
+        # analyte plot
+        plots_feature_analysis_analyte$server(
+            id = "analyte",
+            r6 = CorrelatesFeatureAnalysis_FeatureDataManager$new(
+                analysis_config = analysis_config,
+                study_data = inputs$StudyData,
+                feature = feature$Feature,
+                summary_data = feature$SummaryData
+            ),
+            feature = feature$Feature,
+            feature_input_name = feature$feature_input_name,
+            feature_session = feature$feature_session
         )
 
     })
