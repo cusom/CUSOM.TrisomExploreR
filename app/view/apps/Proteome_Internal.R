@@ -1,9 +1,11 @@
 box::use(
-    shiny[bootstrapPage, div, moduleServer, NS, renderUI, tags, uiOutput, icon] 
+    shiny[bootstrapPage, div, moduleServer, NS, renderUI, tags, uiOutput, icon]
 )
 box::use(
     app/view/overviews/overview_proteome,
-    app/view/layouts/feature_analysis
+    app/view/layouts/feature_analysis,
+    app/view/layouts/correlates_analysis
+
 )
 
 
@@ -139,7 +141,7 @@ ui <- function(id) {
                 shinydashboard::tabItem(
                     tabName = ns("correlates"),
                     tags$div(
-                        tags$p("TBD")
+                        correlates_analysis$ui(ns("correlates"))
                     )
                 )
             )
@@ -171,6 +173,12 @@ server <- function(id, app_config) {
                 )
             )
         })
+
+        correlates_analysis$server(
+            "correlates",
+            app_config$get_analysis_config("correlates"),
+            app_config$get_input_config("correlates")
+        )
 
     })
 }
