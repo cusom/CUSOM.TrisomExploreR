@@ -747,3 +747,54 @@ getScatterPlotByGroup <- function(
   }
 
 }
+
+#' @export
+
+getScatterPlotWithSmoothing <- function(
+  .data,
+  xVar,
+  yVar,
+  colorVar,
+  textVar,
+  smoothingMethod = "lm"
+) {
+
+  match.arg(smoothingMethod)
+
+  xVar <- rlang::enquo(xVar)
+  yVar <- rlang::enquo(yVar)
+  colorVar <- rlang::enquo(colorVar)
+  textVar <- rlang::enquo(textVar)
+
+  return(
+    .data |>
+      ggplot2::ggplot(
+        ggplot2::aes(
+          x = !!xVar,
+          y = !!yVar,
+          color = !!colorVar
+        )
+      ) +
+      ggplot2::geom_point(
+        ggplot2::aes(
+          color = !!colorVar
+        )
+      ) +
+      ggplot2::geom_smooth(
+        inherit.aes = FALSE,
+        mapping = ggplot2::aes(x = !!xVar, y = !!yVar),
+        formula = "y ~ x",
+        method = smoothingMethod
+      ) +
+      ggplot2::scale_color_viridis_c() +
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        axis.line = ggplot2::element_line(colour = "black"),
+        panel.grid.major = ggplot2::element_blank(),
+        panel.grid.minor = ggplot2::element_blank(),
+        panel.border = ggplot2::element_blank(),
+        panel.background = ggplot2::element_blank()
+      )
+  )
+
+}
