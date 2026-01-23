@@ -81,7 +81,7 @@ getVolcanoPlot <- function(
 
   p <- plotly::plot_ly()
 
-  for(i in 1:nrow(groups)) {
+  for (i in seq_len(nrow(groups))) {
 
     i_group <- as.character(groups[i, 1])
     i_shape <- as.character(groups[i, 2])
