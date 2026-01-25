@@ -61,7 +61,7 @@ ui <- function(id) {
 #' @import glue
 #' @importFrom shinyjs runjs
 #' @export
-server <- function(id, r6, VolcanoSummaryData, parent) {
+server <- function(id, r6, VolcanoSummaryData, plot_click_data, plot_selected_data, parent) {
 
   shiny::moduleServer(id, function(input, output, session) {
 
@@ -89,7 +89,7 @@ server <- function(id, r6, VolcanoSummaryData, parent) {
       )
 
       shiny::isolate({
-    
+
         analytes <- VolcanoSummaryData() |>
           dplyr::select(Analyte) |>
           dplyr::distinct() |>
@@ -116,88 +116,33 @@ server <- function(id, r6, VolcanoSummaryData, parent) {
 
     }, domain = session)
 
-    volcano_click_data <- shiny::reactive({
-      shiny::req(plotly::event_data(
-        "plotly_click",
-        source = parent$ns("VolcanoPlot")
-      ))
-      plotly::event_data(
-        "plotly_click",
-        priority = "event",
-        source = parent$ns("VolcanoPlot"),
-        session = parent
+    shiny::observeEvent(
+      c(plot_click_data()), {
+    
+      r6$volcanoEventData <- plot_click_data()
+
+      shiny::updateSelectizeInput(
+        session = session,
+        inputId = "Analyte",
+        selected = plot_click_data()$key
       )
-    })
+
+    }, domain = session)
 
     shiny::observeEvent(
-      volcano_click_data(), {
-      # plotly::event_data(
-      #   "plotly_click",
-      #   priority = "event",
-      #   source = parent$ns("VolcanoPlot"),
-      #   session = parent
-      # ), {
-
-      
-
-      e <- plotly::event_data(
-        "plotly_click",
-        source = parent$ns("VolcanoPlot"),
-        session = parent
-      )
-
-      r6$volcanoEventData <- e
+      c(plot_selected_data()), {
+  
+      r6$volcanoEventData <- plot_selected_data()
 
       shiny::updateSelectizeInput(
         session = session,
         inputId = "Analyte",
-        selected = e$key
+        selected = plot_selected_data()$key
       )
 
     }, domain = session)
 
-    volcano_selected_data <- shiny::reactive({
-      shiny::req(plotly::event_data(
-        "plotly_selected",
-        source = parent$ns("VolcanoPlot")
-      ))
-      plotly::event_data(
-        "plotly_selected",
-        priority = "event",
-        source = parent$ns("VolcanoPlot"),
-        session = parent
-      )
-    })  
-
-    shiny::observeEvent(volcano_selected_data(), {
-      # plotly::event_data(
-      #   "plotly_selected",
-      #   priority = "event",
-      #   source = parent$ns("VolcanoPlot"),
-      #   session = parent
-      # ), {
-
-      # req(plotly::event_data(
-      #   "plotly_selected",
-      #   source = parent$ns("VolcanoPlot")
-      # ))
-
-      e <- plotly::event_data(
-        "plotly_selected",
-        source = parent$ns("VolcanoPlot"),
-        session = parent
-      )
-
-      r6$volcanoEventData <- e
-
-      shiny::updateSelectizeInput(
-        session = session,
-        inputId = "Analyte",
-        selected = e$key
-      )
-    }, domain = session)
-
-    volcano_multi_select_text <- shiny::reactive({#shiny::eventReactive(c(input$Analyte), {
+    volcano_multi_select_text <- shiny::reactive({
 
       r6$volcanoMultiSelectText
 
@@ -207,15 +152,6 @@ server <- function(id, r6, VolcanoSummaryData, parent) {
     output$volcanoMultiSelectText <- shiny::renderText({
       shiny::HTML(volcano_multi_select_text())
     })
-
-    # shiny::observeEvent(
-    #   c(gargoyle::watch("sync_analyte_choice", session = session)), {
-    #       shiny::updateSelectizeInput(
-    #         session = session,
-    #         inputId = "Analyte",
-    #         selected = r6$Analyte
-    #       )
-    # }, ignoreInit = TRUE,  domain = session)
 
     shiny::observeEvent(c(input$Analyte), {
 

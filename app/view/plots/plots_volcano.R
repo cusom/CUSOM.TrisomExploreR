@@ -105,10 +105,34 @@ server <- function(id, r6, Study, StudyData, ...) {
 
     })
 
+    plot_click_data <- shiny::reactive({
+      shiny::validate(
+        shiny::need(!is.null(VolcanoSummaryData()), "")
+      )
+      plotly::event_data(
+        "plotly_click",
+        priority = "event",
+        source = ns("VolcanoPlot")
+      )
+    }) 
+
+    plot_selected_data <- shiny::reactive({
+      shiny::validate(
+        shiny::need(!is.null(VolcanoSummaryData()), "")
+      )
+      plotly::event_data(
+        "plotly_selected",
+        priority = "event",
+        source = ns("VolcanoPlot")
+      )
+    }) 
+
     feature <- inputs_volcano_plot_analyte$server(
       id = "volcano-analyte",
       r6 = r6,
       VolcanoSummaryData = VolcanoSummaryData,
+      plot_click_data = plot_click_data,
+      plot_selected_data = plot_selected_data,
       parent = session
     )
 
