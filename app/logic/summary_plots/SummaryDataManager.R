@@ -1,8 +1,8 @@
 
 
 box::use(
-  app/logic/statistics/statistical_analysis[formatPValue, addGroupCount],
-  app/logic/plots/volcano_plot_helpers[getVolcanoPlot, getVolcanoAnnotations, addSignificanceGroup]
+  app/logic/shared/statistical_analysis[formatPValue, addGroupCount],
+  app/logic/summary_plots/volcano_plot_helpers[getVolcanoPlot, getVolcanoAnnotations, addSignificanceGroup]
 )
 
 box::use(
@@ -332,7 +332,7 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
             el.scrollIntoView({behavior: "smooth", block: "end", inline: "nearest"});
           }'
         )
-
+  
       p$x$source <- ns("VolcanoPlot")
 
       p

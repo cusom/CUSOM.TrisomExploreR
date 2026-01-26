@@ -63,7 +63,7 @@ ui <- function(id) {
                     href = NULL,
                     newtab = TRUE,
                     selected = FALSE
-                ),  
+                ), 
                 shinydashboard::menuItem(
                     text = "Effects of age",
                     icon = icon("chart-line"),
@@ -164,6 +164,7 @@ server <- function(id, app_config) {
         overview_proteome$server(ns("overview"))
 
         sapply(c("karyotype", "age", "sex", "comorbidity"), function(x) {
+        #sapply(c("karyotype"), function(x) {
             do.call(
                 what = eval(parse(text = "feature_analysis$server")),
                 args = list(

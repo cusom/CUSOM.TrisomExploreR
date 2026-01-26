@@ -1,10 +1,10 @@
 
 
 box::use(
-  app/logic/feature_analysis/SummaryDataManager[FeatureAnalysis_SummaryDataManager],
-  app/logic/statistics/statistical_analysis[formatPValue, addGroupCount],
-  app/logic/plots/volcano_plot_helpers[getVolcanoPlot, getCorrelationVolcanoAnnotations, addSignificanceGroup],
-  app/logic/helpers/string_helper_functions[parse_delimited_string]
+  app/logic/summary_plots/SummaryDataManager[FeatureAnalysis_SummaryDataManager],
+  app/logic/shared/statistical_analysis[formatPValue, addGroupCount],
+  app/logic/summary_plots/volcano_plot_helpers[getVolcanoPlot, getCorrelationVolcanoAnnotations, addSignificanceGroup],
+  app/logic/shared/string_helper_functions[parse_delimited_string]
 )
 
 box::use(
@@ -89,7 +89,6 @@ CorrelatesSummaryDataManager <- R6Class(
       )
 
     },
-
 
     setStudyData = function(.data) {
 

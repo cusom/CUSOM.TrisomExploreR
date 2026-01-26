@@ -1,7 +1,7 @@
 box::use(
-    app/logic/feature_analysis/SummaryDataManager[FeatureAnalysis_SummaryDataManager],
-    app/logic/feature_analysis/CategoricalSummaryDataManager[FeatureAnalysis_CategoricalSummaryDataManager],
-    app/logic/feature_analysis/ContinuousSummaryDataManager[FeatureAnalysis_ContinuousSummaryDataManager]
+    app/logic/summary_plots/SummaryDataManager[FeatureAnalysis_SummaryDataManager],
+    app/logic/summary_plots/CategoricalSummaryDataManager[FeatureAnalysis_CategoricalSummaryDataManager],
+    app/logic/summary_plots/ContinuousSummaryDataManager[FeatureAnalysis_ContinuousSummaryDataManager]
 )
 
 #' @export

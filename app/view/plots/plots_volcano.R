@@ -127,7 +127,7 @@ server <- function(id, r6, Study, StudyData, ...) {
       )
     }) 
 
-    feature <- inputs_volcano_plot_analyte$server(
+    analyte <- inputs_volcano_plot_analyte$server(
       id = "volcano-analyte",
       r6 = r6,
       VolcanoSummaryData = VolcanoSummaryData,
@@ -146,9 +146,9 @@ server <- function(id, r6, Study, StudyData, ...) {
     return(
       list(
         SummaryData = VolcanoSummaryData,
-        Feature = feature$feature,
-        feature_input_name = feature$feature_input_name,
-        feature_session = feature$feature_session
+        analyte = analyte$analyte,
+        analyte_input_name = analyte$analyte_input_name,
+        analyte_session = analyte$analyte_session
       )
     )
 

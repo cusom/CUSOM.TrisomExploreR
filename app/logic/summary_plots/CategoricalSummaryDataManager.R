@@ -1,6 +1,6 @@
 box::use(
-  app/logic/feature_analysis/SummaryDataManager[FeatureAnalysis_SummaryDataManager],
-  app/logic/statistics/statistical_analysis[getStatTestByKeyGroup, formatPValue, addGroupCount],
+  app/logic/summary_plots/SummaryDataManager[FeatureAnalysis_SummaryDataManager],
+  app/logic/shared/statistical_analysis[getStatTestByKeyGroup, formatPValue, addGroupCount],
 )
 
 

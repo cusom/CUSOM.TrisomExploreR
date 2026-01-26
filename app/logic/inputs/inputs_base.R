@@ -1,6 +1,6 @@
 #' @export
-FeatureAnalysisInputsManager <- R6::R6Class(
-  "FeatureAnalysisInputsManager",
+InputsManagerBase <- R6::R6Class(
+  "InputsManagerBase",
   private = list(),
   active = list(
     Studies = function(value) {
@@ -107,20 +107,17 @@ FeatureAnalysisInputsManager <- R6::R6Class(
         self$input_config$sexes
       )
     },
-
     Ages = function() {
       return(
         c(min(self$input_config$ages), max(self$input_config$ages))
       )
     },
-
     ConditionChoices = function(value) {
       return(
         self$input_config$ConditionChoices |>
           dplyr::select(ConditionClass, Condition)
       )
     },
-
     SelectedConditionList = function(value) {
       return(
         shinyTree::get_selected(self$Conditions, "classid") |>
@@ -133,25 +130,21 @@ FeatureAnalysisInputsManager <- R6::R6Class(
           dplyr::pull()
       )
     },
-
     CovariateChoices = function(value) {
       return(
         setdiff(c("Age", "Sex"), self$analysisVariable)
       )
     },
-
     StatTestNames = function(value) {
       return(
         self$input_config$statTestschoiceNames
       )
     },
-
     StatTestValues = function(value) {
       return(
         self$input_config$statTests
       )
     }, 
-
     AdjustmentMethodNames = function(value) {
       return(
         self$input_config$adjustmentMethodsNames
@@ -194,15 +187,6 @@ FeatureAnalysisInputsManager <- R6::R6Class(
     SignificanceLabel = "p-value",
 
     FeatureData = NULL,
-
-
-    #' @description
-    #' Create a new instance of a FeatureAnalysisManager
-    #' @param applicationName string - name of application
-    #' @param id string - namespace for this instance
-    #' @param namespace_config list - configurations for this namespace
-    #' @param remoteDB R6 class - query manager for remote database queries
-    #' @param localDB R6 class - query manager for local database queries
     initialize = function(analysis_config, input_config) {
     
       self$input_config <- input_config
@@ -220,116 +204,32 @@ FeatureAnalysisInputsManager <- R6::R6Class(
     
     },
 
-    #' @description
-    #' helper function to toggle "Get Data" button class based on conditions
-    #' enabled / green if study is chosen, organge / disabled otherwise
-    #' enabled / green if namespace is comorb / conditions are chosen, diabled otherwise
     getGetDataButtonClass = function() {
-      if (is.null(self$Study)) {
-        return("refresh-btn shinyjs-disabled")
-      } else {
-        if (self$namespace == "Comorbidity" & is.null(self$Conditions)) {
-          return("refresh-btn shinyjs-disabled")
-        } else {
-          return("refresh-ready-btn shinyjs-enabled")
-        }
-      }
+      stop("implement getGetDataButtonClass")
     },
 
-    #' @description
-    #' helper function to get hierarchical condition input values
-    #' @param conditions - tibble of condition hierarchy choices
     setConditionTreeAttributes = function(tree) {
-
-      # tree <- conditions |>
-      #   CUSOMShinyHelpers::dfToTree()
-
-      if (!is.null(self$Conditions)) {
-        selected_nodes <- shinyTree::get_selected(self$Conditions, format = "classid") |>
-          unlist() |>
-          tibble::as_tibble() |>
-          dplyr::pull()
-
-        if (length(selected_nodes) > 0) {
-          for (i in seq_along(tree)) {
-            if (is.list(tree[i])) {
-              for (node in names(tree[i][[1]])) {
-                if (node %in% selected_nodes) {
-                  attr(tree[[i]][[node]], "stselected") <- TRUE
-                  attr(tree[[i]][[node]], "stopened") <- TRUE
-                }
-              }
-            }
-          }
-        }
-      }
-      return(
-        tree
-      )
+      stop("implement setConditionTreeAttributes")
     },
 
-    #' @description
-    #' helper function to disable an input if it matches the name of the namespace
-    #' @param input_name name of input widget
     getDisabledInputClass = function(input_name) {
-      if (self$analysisVariable == input_name) {
-        return(
-          "shinyjs-disabled"
-        )
-      }
+      stop("implement getDisabledInputClass")
     },
-
-    #' @description
-    #' helper function to hide an input if it matches the name of the namespace
-    #' @param input_name name of input widget
+  
     getHiddenInputClass = function(input_name) {
-      if (self$analysisVariable == input_name) {
-        return(
-          "shinyjs-hide"
-        )
-      }
+      stop("implement getHiddenInputClass")
     },
 
-    #' @description
-    #' helper function to add a diabled or hidden class to an input if it matches the name of the namespace
-    #' @param input_name name of input widget
-    #' @param class string - one of `disabled` or `hide`
     addInputSpecialClass = function(input_name, class = c("disabled", "hide")) {
-      class <- match.arg(class)
-      if (self$analysisVariable == input_name) {
-        return(
-          glue::glue("shinyjs-{class}")
-        )
-      }
+      stop("implement addInputSpecialClass")
     },
 
     validate_study_data = function() {
-      return(self$Study != "")
+      stop("implement validate_study_data")
     },
-
-    #' @description
-    #' Get / set sample level data with filers applied
+    
     get_study_data = function() {
-  
-      self$FeatureData <- arrow::open_dataset("Remote_Data/feature_data") |>
-        dplyr::filter(
-          ExperimentID == self$Study
-        ) |>
-        dplyr::collect() |>
-        dplyr::select(LabID, Karyotype, Sex, Age, BMI, Analyte, MeasuredValue, Measurement) |>
-        dplyr::filter(
-          Age >= min(self$Age),
-          Age <= max(self$Age),
-          Sex %in% self$Sex,
-          Karyotype %in% unlist(stringr::str_split(self$Karyotype, pattern = ";"))
-        ) |>
-        dplyr::filter(!is.na(!!rlang::sym(self$analysisVariable))) |>
-        dplyr::mutate(
-          log2MeasuredValue = ifelse(MeasuredValue == 0, 0, log2(MeasuredValue)),
-          log2Measurement = glue::glue("log<sub>2</sub>({Measurement})")
-        )
-
-      return(invisible(self$FeatureData))
+      stop("implement get_study_data")
     }
   )
 )

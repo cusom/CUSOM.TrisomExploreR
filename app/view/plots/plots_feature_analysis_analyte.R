@@ -1,10 +1,4 @@
-#' Create analyte plot for TrisomExploreR feature analysis
-#' @param id - string - id for this module namespace
-#' @importFrom shinydashboardPlus box
-#' @importFrom bsplus bs_embed_tooltip
-#' @importFrom shinydashboardPlus boxSidebar
-#' @importFrom shinycustomloader withLoader
-#' @importFrom plotly plotlyOutput
+
 #' @export
 ui <- function(id) {
   ns <- shiny::NS(id)
@@ -58,39 +52,24 @@ ui <- function(id) {
   )
 }
 
-#' Server logic / processing for TrisomExploreR feature analysis analyte plot
-#' @param id - string - id for this module namespace
-#' @param r6 - R6 class defining server-side logic
-#' @import dplyr
-#' @import glue
-#' @importFrom gargoyle watch
-#' @importFrom gargoyle trigger
-#' @importFrom shinybusy show_modal_spinner
-#' @importFrom shinybusy remove_modal_spinner
-#' @importFrom plotly renderPlotly
-#' @importFrom plotly event_data
-#' @importFrom shinyjs hidden
-#' @importFrom CUSOMShinyHelpers getExternalLinkTooltip
-#' @importFrom CUSOMShinyHelpers getExternalLinkActionLinks
-#' @importFrom shinydashboardPlus updateBoxSidebar
 #' @export
-server <- function(id, r6, feature, feature_input_name, feature_session) {
+server <- function(id, r6, analyte, analyte_input_name, analyte_session) {
 
   shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    feature_data <- shiny::reactive({
+    analyte_data <- shiny::reactive({
       shiny::validate(
-        shiny::need(feature() != "", "")
+        shiny::need(analyte() != "", "")
       )
       # Get Analyte Data
       shinybusy::show_modal_spinner(
         spin = "half-circle",
         color = "#3c8dbc",
         text = ifelse(
-          length(feature()) == 1,
-          glue::glue("Fetching {feature()} Data..."),
+          length(analyte()) == 1,
+          glue::glue("Fetching {analyte()} Data..."),
           "Fetching Data..."
         )
       )
@@ -102,59 +81,59 @@ server <- function(id, r6, feature, feature_input_name, feature_session) {
       r6$AnalyteData
 
     }) |>
-      shiny::bindEvent(feature())
+      shiny::bindEvent(analyte())
 
     output$AnalytePlot <- plotly::renderPlotly({
       shiny::validate(
-        shiny::need(!is.null(feature_data()), "")
+        shiny::need(!is.null(analyte_data()), "")
       )
-      feature_data() |>
+      analyte_data() |>
         r6$getAnalytePlot(ns)
     })
 
-    shiny::observeEvent(
-      plotly::event_data(
-        "plotly_click",
-        priority = "event",
-        source = ns("HeatmapPlot"),
-        session = session
-      ), {
+    # shiny::observeEvent(
+    #   plotly::event_data(
+    #     "plotly_click",
+    #     priority = "event",
+    #     source = ns("HeatmapPlot"),
+    #     session = session
+    #   ), {
+    #   shiny::validate(
+    #     shiny::need(!is.null(analyte_data()), ""),
+    #     shiny::need(!is.null(r6$HeatmapData), "")
+    #   )
 
-      shiny::validate(
-        shiny::need(!is.null(r6$HeatmapData), "")
-      )
+    #   e <- plotly::event_data(
+    #     "plotly_click",
+    #     priority = "event",
+    #     source = ns("HeatmapPlot"),
+    #     session = session
+    #   )
 
-      e <- plotly::event_data(
-        "plotly_click",
-        priority = "event",
-        source = ns("HeatmapPlot"),
-        session = session
-      )
-
-      key <- r6$HeatmapData |>
-        dplyr::mutate(z = round(z, 6)) |>
-        dplyr::filter(
-          r == e$y,
-          z == round(e$z, 6)
-        ) |>
-        dplyr::select(Analyte) |>
-        dplyr::pull() |>
-        as.character()
+    #   key <- r6$HeatmapData |>
+    #     dplyr::mutate(z = round(z, 6)) |>
+    #     dplyr::filter(
+    #       r == e$y,
+    #       z == round(e$z, 6)
+    #     ) |>
+    #     dplyr::select(Analyte) |>
+    #     dplyr::pull() |>
+    #     as.character()
   
-      # update feature source input
-      shiny::updateSelectizeInput(
-        session = feature_session,
-        inputId = feature_input_name,
-        selected = key
-      )
+    #   # update analyte source input
+    #   shiny::updateSelectizeInput(
+    #     session = analyte_session,
+    #     inputId = analyte_input_name,
+    #     selected = key
+    #   )
 
-    }, domain = session)
+    # }, domain = session)
 
     analyteSearchName <- shiny::reactive({#shiny::eventReactive(
       #c(gargoyle::watch("show_analyte_plot", session = session)), {
         r6$AnalyteSearchName
     }) |>
-      shiny::bindEvent(feature(), ignoreInit = FALSE)
+      shiny::bindEvent(analyte(), ignoreInit = FALSE)
 
     output$toggleSidebarLinks <- shiny::renderUI({
       shiny::validate(

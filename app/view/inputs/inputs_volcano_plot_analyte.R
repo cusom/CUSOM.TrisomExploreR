@@ -1,5 +1,5 @@
 box::use(
-  app/logic/helpers/server_utils
+  app/logic/shared/server_utils
 )
 
 #' Create analyte inputs for volcano plot
@@ -193,9 +193,9 @@ server <- function(id, r6, VolcanoSummaryData, plot_click_data, plot_selected_da
 
     return(
       list(
-        feature = Analyte,
-        feature_input_name ="Analyte",
-        feature_session = session
+        analyte = Analyte,
+        analyte_input_name ="Analyte",
+        analyte_session = session
       )
     )
 

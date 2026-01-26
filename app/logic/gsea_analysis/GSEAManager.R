@@ -1,7 +1,7 @@
 box::use(
-  app/logic/statistics/statistical_analysis[getStatTestByKeyGroup, formatPValue, runfGSEA, calculate_GSEA_scores],
-  app/logic/plots/volcano_plot_helpers[getVolcanoPlot, getVolcanoAnnotations, addSignificanceGroup],
-  app/logic/helpers/string_helper_functions[parse_delimited_string],
+  app/logic/shared/statistical_analysis[getStatTestByKeyGroup, formatPValue, runfGSEA, calculate_GSEA_scores],
+  app/logic/summary_plots/volcano_plot_helpers[getVolcanoPlot, getVolcanoAnnotations, addSignificanceGroup],
+  app/logic/shared/string_helper_functions[parse_delimited_string],
 )
 
 
@@ -127,8 +127,7 @@ GSEAManager <- R6::R6Class(
   
       self$Study <- Study
       self$VolcanoSummaryData <- VolcanoSummaryData
-      self$GSEA_hallmarks <- readRDS("app/logic/data/GSEA_hallmarks.rds")
-
+      self$GSEA_hallmarks <- readRDS("app/logic/app_resources/data/GSEA_hallmarks.rds")
 
     },
 

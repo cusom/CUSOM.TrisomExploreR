@@ -106,7 +106,7 @@ getBoxPlotWithHighlightGroup <- function(
         marker = list(
           color = baselineColor,
           size = 8
-        ), 
+        ),
         showlegend = FALSE,
         legendgroup = "baseline"
       )
@@ -133,7 +133,7 @@ getBoxPlotWithHighlightGroup <- function(
         plotly::add_markers(
           y = highlight_B_baseline$value,
           text = highlight_B_baseline$text,
-          hoverinfo = "text", 
+          hoverinfo = "text",
           x = highlight_B_baseline$x,
           marker = list(
             color = highlightColors[2],
@@ -194,7 +194,7 @@ getBoxPlotWithHighlightGroup <- function(
       )
 
     p2 <- plotly::plot_ly(
-      type = "box", 
+      type = "box",
       colors = comparisonColor
       ) |>
       plotly::add_boxplot(
@@ -459,7 +459,7 @@ getScatterPlotByGroup <- function(
             ~stats::lm(lmformula, data = .x)$fit
           )
         ) |>
-        tidyr::unnest()
+        tidyr::unnest(cols = c(data, fit))
 
       fit1CI <- .data |>
         dplyr::select(!!x, !!y) |>
@@ -473,7 +473,7 @@ getScatterPlotByGroup <- function(
             )
           )
         ) |>
-        tidyr::unnest(fit) |>
+        tidyr::unnest(cols = fit) |>
         dplyr::mutate(
             ymin = .fitted - 1.96 * .se.fit,
             ymax = .fitted + 1.96 * .se.fit
@@ -492,7 +492,7 @@ getScatterPlotByGroup <- function(
                 ~stats::lm(lmformula, data = .x)$fit
               )
             ) |>
-            tidyr::unnest() |>
+            tidyr::unnest(cols = c(data, fit)) |>
             dplyr::mutate(
               `:=`(name, groupBaselineLabel),
               color = "rgb(81, 81, 81)"
@@ -511,7 +511,7 @@ getScatterPlotByGroup <- function(
                 )
               )
             ) |>
-            tidyr::unnest(fit) |>
+            tidyr::unnest(cols = fit) |>
             dplyr::mutate(
               ymin = .fitted - 1.96 * .se.fit,
               ymax = .fitted + 1.96 * .se.fit
@@ -528,7 +528,7 @@ getScatterPlotByGroup <- function(
                 ~stats::lm(lmformula, data = .x)$fit
               )
             ) |>
-            tidyr::unnest() |>
+            tidyr::unnest(cols = c(data, fit)) |>
             dplyr::mutate(
               `:=`(name, groups[which(groups !=  groupBaselineLabel)]),
               color = "rgb(48, 128, 255)"
@@ -547,7 +547,7 @@ getScatterPlotByGroup <- function(
                 )
               )
             ) |>
-            tidyr::unnest(fitted) |>
+            tidyr::unnest(cols = fitted) |>
             dplyr::mutate(
               ymin = .fitted - 1.96 * .se.fit,
               ymax = .fitted + 1.96 * .se.fit
@@ -637,13 +637,13 @@ getScatterPlotByGroup <- function(
               line = list(
                 color = ifelse(
                   groups == groupBaselineLabel,
-                  "rgb(81, 81, 81)", 
+                  "rgb(81, 81, 81)",
                   "rgb(48, 128, 255)"
                 )
               ),
               fillcolor = ifelse(
                 groups == groupBaselineLabel,
-                "rgb(81, 81, 81)", 
+                "rgb(81, 81, 81)",
                 "rgb(48, 128, 255)"
               ),
               name = "",

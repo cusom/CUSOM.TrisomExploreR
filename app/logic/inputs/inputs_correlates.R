@@ -1,12 +1,12 @@
 box::use(
-  app/logic/feature_analysis/InputsManager[FeatureAnalysisInputsManager],
+  app/logic/inputs/inputs_base[InputsManagerBase],
   app/logic/app_resources/data_services[ODBCQueryManager]
 )
 
 #' @export
 CorrelatesAnalysisInputsManager <- R6::R6Class(
   "CorrelatesAnalysisInputsManager",
-  inherit = FeatureAnalysisInputsManager,
+  inherit = InputsManagerBase,
   private = list(),
   active = list(),
   public = list(

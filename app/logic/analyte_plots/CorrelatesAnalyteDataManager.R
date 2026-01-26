@@ -1,17 +1,15 @@
 box::use(
-  app/logic/feature_analysis/FeatureDataManager[FeatureAnalysis_FeatureDataManager],
+  app/logic/analyte_plots/AnalyteDataManager[FeatureAnalysisAnalyteDataManager],
   app/logic/app_resources/data_services[ODBCQueryManager],
-  app/logic/helpers/string_helper_functions[parse_delimited_string],
-  #app/logic/statistics/statistical_analysis[getStatTestByKeyGroup, getLinearModelWithInteraction, formatPValue, addGroupCount],
-  #app/logic/plots/feature_plots[getBoxPlotWithHighlightGroup, getScatterPlotByGroup],
-  app/logic/plots/feature_plot_helpers[getDensityColors],
-  app/logic/plots/feature_plots[getScatterPlotWithSmoothing]
+  app/logic/shared/string_helper_functions[parse_delimited_string],
+  app/logic/analyte_plots/analyte_plot_helpers[getDensityColors],
+  app/logic/analyte_plots/analyte_plots[getScatterPlotWithSmoothing]
 )
 
 #' @export
-CorrelatesFeatureAnalysis_FeatureDataManager <- R6::R6Class(
-  "CorrelatesFeatureAnalysis_FeatureDataManager",
-  inherit = FeatureAnalysis_FeatureDataManager,
+CorrelatesAnalyteDataManager <- R6::R6Class(
+  "CorrelatesAnalyteDataManager",
+  inherit = FeatureAnalysisAnalyteDataManager,
   private = list(),
   active = list(
     AnalytePlotMethod = function(value) {
@@ -73,9 +71,9 @@ CorrelatesFeatureAnalysis_FeatureDataManager <- R6::R6Class(
   ),
   public = list(
     remoteDB = NULL,
-    initialize = function(analysis_config, study_data, feature, summary_data, config_file_name = "config.yml") {
+    initialize = function(analysis_config, study_data, analyte, summary_data, config_file_name = "config.yml") {
 
-      super$initialize(analysis_config, study_data, feature, summary_data)
+      super$initialize(analysis_config, study_data, analyte, summary_data)
 
       self$remoteDB <- ODBCQueryManager$new(
         conn_args = config::get(file = config_file_name, "database")

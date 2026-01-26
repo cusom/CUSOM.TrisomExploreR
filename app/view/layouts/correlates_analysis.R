@@ -3,9 +3,10 @@ box::use(
 )
 
 box::use(
-    app/logic/feature_analysis/InputsCorrelatesManager[CorrelatesAnalysisInputsManager],
-    app/logic/feature_analysis/CorrelatesSummaryDataManager[CorrelatesSummaryDataManager],
-    app/logic/feature_analysis/CorrelatesFeatureDataManager[CorrelatesFeatureAnalysis_FeatureDataManager],
+    #app/logic/feature_analysis/InputsCorrelatesManager[CorrelatesAnalysisInputsManager],
+    app/logic/inputs/inputs_correlates[CorrelatesAnalysisInputsManager],
+    app/logic/summary_plots/CorrelatesSummaryDataManager[CorrelatesSummaryDataManager],
+    app/logic/analyte_plots/CorrelatesAnalyteDataManager[CorrelatesAnalyteDataManager],
     app/view/inputs/inputs_correlates,
     app/view/inputs/inputs_volcano_plot_analyte,
     app/view/plots/plots_volcano,
@@ -86,7 +87,7 @@ server <- function(id, analysis_config, input_config) {
         )
 
         # volcano plot
-        feature <- plots_volcano$server(
+        analyte <- plots_volcano$server(
             id = "volcano",
             r6 = CorrelatesSummaryDataManager$new(
                 analysis_config = analysis_config
@@ -99,15 +100,15 @@ server <- function(id, analysis_config, input_config) {
         # analyte plot
         plots_feature_analysis_analyte$server(
             id = "analyte",
-            r6 = CorrelatesFeatureAnalysis_FeatureDataManager$new(
+            r6 = CorrelatesAnalyteDataManager$new(
                 analysis_config = analysis_config,
                 study_data = inputs$StudyData,
-                feature = feature$Feature,
-                summary_data = feature$SummaryData
+                analyte = analyte$analyte,
+                summary_data = analyte$SummaryData
             ),
-            feature = feature$Feature,
-            feature_input_name = feature$feature_input_name,
-            feature_session = feature$feature_session
+            analyte = analyte$analyte,
+            analyte_input_name = analyte$analyte_input_name,
+            analyte_session = analyte$analyte_session
         )
 
     })

@@ -1,11 +1,11 @@
 box::use(
-  app/logic/statistics/statistical_analysis[getStatTestByKeyGroup, getLinearModelWithInteraction, formatPValue, addGroupCount],
-  app/logic/plots/feature_plots[getBoxPlotWithHighlightGroup, getScatterPlotByGroup],
+  app/logic/shared/statistical_analysis[getStatTestByKeyGroup, getLinearModelWithInteraction, formatPValue, addGroupCount],
+  app/logic/analyte_plots/analyte_plots[getBoxPlotWithHighlightGroup, getScatterPlotByGroup],
 )
 
 #' @export
-FeatureAnalysis_FeatureDataManager <- R6::R6Class(
-  "FeatureAnalysis_FeatureDataManager",
+FeatureAnalysisAnalyteDataManager <- R6::R6Class(
+  "FeatureAnalysisAnalyteDataManager",
   private = list(),
   active = list(
     AnalytePlotMethod = function(value) {
@@ -23,15 +23,24 @@ FeatureAnalysis_FeatureDataManager <- R6::R6Class(
     },
     GroupVariableCount = function(value) {
       if (missing(value)) {
-        return(length(stringr::str_split(self$analysisVariableLabel, pattern = ";", simplify = TRUE)))
+        return(
+          length(stringr::str_split(self$analysisVariableLabel, pattern = ";", simplify = TRUE))
+        )
       }
+    },
+    Karyotype = function(value) {
+      return(
+        self$AnalyteData |>
+          dplyr::distinct(Karyotype) |>
+          dplyr::pull()
+      )
     },
     AnalytePlotTitle =  function(value) {
       if (missing(value)) {
         if (self$AnalytePlotMethod == "boxplot") {
           return(glue::glue("Effect of {self$analysisVariableLabel} on {self$Analyte()}"))
         } else if (self$AnalytePlotMethod == "scatterplot" && self$GroupVariableCount == 1) {
-          return(glue::glue("Effect of {self$analysisVariableLabel} in {group_variable} on {self$Analyte()}"))
+          return(glue::glue("Effect of {self$analysisVariableLabel} in {self$Karyotype} on {self$Analyte()}"))
         } else if (self$AnalytePlotMethod == "scatterplot" && self$GroupVariableCount > 1) {
           glue::glue("Comparison of {self$analysisVariableLabel} trajectories between karyotype for {self$Analyte()}")
         }
@@ -102,10 +111,10 @@ FeatureAnalysis_FeatureDataManager <- R6::R6Class(
     Study = NULL,
     Platform = NULL,
     CellType = NULL,
-    Karyotype = NULL,
-    Conditions = NULL,
-    Sex = NULL,
-    Age = NULL,
+    # Karyotype = NULL,
+    # Conditions = NULL,
+    # Sex = NULL,
+    # Age = NULL,
     FilterLowCount = NULL,
     StatTest = NULL,
     Covariates = NULL,
@@ -135,11 +144,11 @@ FeatureAnalysis_FeatureDataManager <- R6::R6Class(
     #' @param namespace_config list - configurations for this namespace
 
     #' @param localDB R6 class - query manager for local database queries
-    initialize = function(analysis_config, study_data, feature, summary_data) {
+    initialize = function(analysis_config, study_data, analyte, summary_data) {
   
       #self$input_config <- input_config()
       self$StudyData <- study_data
-      self$Analyte <- feature
+      self$Analyte <- analyte
       self$SummaryData <- summary_data
     
       namespace_config <- analysis_config #|>
@@ -413,7 +422,7 @@ FeatureAnalysis_FeatureDataManager <- R6::R6Class(
       }
 
       if (self$AnalytePlotMethod == "heatmap") {
-     
+    
         limit <- .data |>
           dplyr::pull(log2FoldChange) |>
           abs() |>
