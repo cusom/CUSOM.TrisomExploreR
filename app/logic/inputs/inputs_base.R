@@ -5,18 +5,20 @@ InputsManagerBase <- R6::R6Class(
   active = list(
     Studies = function(value) {
       return(
-        jsonlite::fromJSON("Remote_Data/inputs.json")$study_choices |>
-          as.data.frame() |>
+        self$input_config$studies |>
           dplyr::filter(Values %in% self$experimentIDs)
       )
     },
     StudyLabel = function(value) {
       return(
-        jsonlite::fromJSON("Remote_Data/inputs.json", flatten = TRUE) |>
-          purrr::pluck("study_choices") |>
-          as.data.frame() |>
+        self$Studies |>
           dplyr::filter(Values == self$Study) |>
           dplyr::pull(Text)
+      )
+    },
+    StudyData = function(value) {
+      return(
+        self$remote_files$get_experiment_data(self$Study)
       )
     },
     Karyotypes = function(value) {
@@ -46,10 +48,7 @@ InputsManagerBase <- R6::R6Class(
           )
         )
       } else {
-  
-        karyotype_input_counts <- arrow::open_dataset("Remote_Data/feature_data") |>
-          dplyr::filter(ExperimentID == self$Study) |>
-          dplyr::collect() |>
+        karyotype_input_counts <- self$StudyData |>
           dplyr::group_by(Analyte, Karyotype) |>
           dplyr::summarise(
             n = dplyr::n_distinct(LabID), .groups = "drop"
@@ -158,9 +157,12 @@ InputsManagerBase <- R6::R6Class(
 
   ),
   public = list(
+    application_id = NULL,
     applicationName = NULL,
+    app_config = NULL,
     namespace = NULL,
     remoteDB = NULL,
+    remote_files = NULL,
     localDB = NULL,
     input_config = NULL,
     analysisVariable = "",
@@ -187,21 +189,20 @@ InputsManagerBase <- R6::R6Class(
     SignificanceLabel = "p-value",
 
     FeatureData = NULL,
-    initialize = function(analysis_config, input_config) {
-    
+    initialize = function(app_config, analysis_config, input_config) {
+
+      self$remote_files <- app_config$remote_files
+      self$remoteDB <- app_config$remote_db
       self$input_config <- input_config
-        
       namespace_config <- analysis_config
-
+      self$application_id <- app_config$application_id
       self$applicationName <- namespace_config$ApplicationName
-
       self$namespace <- namespace_config$Namespace
       self$analysisVariable <- namespace_config$AnalysisVariableName
       self$analysisVariableLabel <- namespace_config$AnalysisVariableLabel
       self$analysisType <- namespace_config$AnalysisType
-  
       self$experimentIDs <- stringr::str_split_1(namespace_config$ExperimentIDs, "\\|")
-    
+
     },
 
     getGetDataButtonClass = function() {
@@ -215,7 +216,7 @@ InputsManagerBase <- R6::R6Class(
     getDisabledInputClass = function(input_name) {
       stop("implement getDisabledInputClass")
     },
-  
+
     getHiddenInputClass = function(input_name) {
       stop("implement getHiddenInputClass")
     },
@@ -227,7 +228,7 @@ InputsManagerBase <- R6::R6Class(
     validate_study_data = function() {
       stop("implement validate_study_data")
     },
-    
+
     get_study_data = function() {
       stop("implement get_study_data")
     }

@@ -7,7 +7,8 @@ box::use(
   #app/logic/feature_analysis/InputsManager[FeatureAnalysisInputsManager],
   app/logic/inputs/inputs_feature_analysis[FeatureAnalysisInputsManager],
   app/logic/summary_plots/SummaryDataManagerFactory[getFeatureAnalysisSummaryDataManager],
-  app/logic/analyte_plots/AnalyteDataManager[FeatureAnalysisAnalyteDataManager],
+  app/logic/analyte_plots/AnalyteDataManagerFactory[getFeatureAnalysisAnalyteDataManager],
+  #app/logic/analyte_plots/AnalyteDataManager[FeatureAnalysisAnalyteDataManager],
   app/view/inputs/inputs_feature_analysis,
   app/view/inputs/inputs_volcano_plot_analyte,
   app/view/plots/plots_volcano,
@@ -77,7 +78,7 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, analysis_config, input_config) {
+server <- function(id, app_config, analysis_config, input_config) {
 
   shiny::moduleServer(id, function(input, output, session) {
 
@@ -94,16 +95,11 @@ server <- function(id, analysis_config, input_config) {
       session = session
     )
 
-    # r6 <- FeatureAnalysisManager$new(
-    #   id = id,
-    #   analysis_config = analysis_config,
-    #   input_config = input_config
-    # )
-
     #base inputs
     inputs <- inputs_feature_analysis$server(
       id = "inputs",
       r6 = FeatureAnalysisInputsManager$new(
+        app_config = app_config,
         analysis_config = analysis_config,
         input_config = input_config
       )
@@ -118,12 +114,6 @@ server <- function(id, analysis_config, input_config) {
         Covariates = inputs$Covariates,
         AdjustmentMethod = inputs$AdjustmentMethod
       ),
-      # r6 = FeatureAnalysis_SummaryDataManager$new(
-      #   analysis_config = analysis_config,
-      #   StatTest = inputs$StatTest, 
-      #   Covariates = inputs$Covariates, 
-      #   AdjustmentMethod = inputs$AdjustmentMethod
-      # ),
       Study = inputs$Study,
       StudyData = inputs$StudyData,
       parent = session
@@ -134,7 +124,7 @@ server <- function(id, analysis_config, input_config) {
     # analyte plot
     plots_feature_analysis_analyte$server(
       id = "analyte",
-      r6 = FeatureAnalysisAnalyteDataManager$new(
+      r6 = getFeatureAnalysisAnalyteDataManager(#FeatureAnalysisAnalyteDataManager$new(
         analysis_config = analysis_config,
         study_data = inputs$StudyData,
         analyte = analyte$analyte,

@@ -72,7 +72,7 @@ ui <- function(id) {
 
 }
 #' @export
-server <- function(id, analysis_config, input_config) {
+server <- function(id, app_config, analysis_config, input_config) {
 
     shiny::moduleServer(id, function(input, output, session) {
 
@@ -81,6 +81,7 @@ server <- function(id, analysis_config, input_config) {
         inputs <- inputs_correlates$server(
             id = "inputs",
             r6 = CorrelatesAnalysisInputsManager$new(
+                app_config = app_config,
                 analysis_config = analysis_config,
                 input_config = input_config
             )

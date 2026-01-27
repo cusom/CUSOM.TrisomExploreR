@@ -169,6 +169,7 @@ server <- function(id, app_config) {
                 what = eval(parse(text = "feature_analysis$server")),
                 args = list(
                     id = x,
+                    app_config = app_config,
                     analysis_config = app_config$get_analysis_config(x),
                     input_config = app_config$get_input_config(x)
                 )
@@ -177,6 +178,7 @@ server <- function(id, app_config) {
 
         correlates_analysis$server(
             "correlates",
+            app_config = app_config,
             app_config$get_analysis_config("correlates"),
             app_config$get_input_config("correlates")
         )

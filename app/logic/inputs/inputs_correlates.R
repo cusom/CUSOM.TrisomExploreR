@@ -10,34 +10,18 @@ CorrelatesAnalysisInputsManager <- R6::R6Class(
   private = list(),
   active = list(),
   public = list(
-    ApplicationId = NULL,
-    remoteDB = NULL,
-    input_config = NULL,
     QueryExperiment = NULL,
     CompareExperiment = NULL,
     QueryAnalytes = NULL,
     QueryAnalyte = NULL,
     CorrelationSourceData = NULL,
-
-    initialize = function(analysis_config, input_config, config_file_name = "config.yml") {
-
-      super$initialize(analysis_config, input_config)
-
-      self$input_config <- input_config
-
-      namespace_config <- analysis_config
-
-      self$remoteDB <- ODBCQueryManager$new(
-        conn_args = config::get(file = config_file_name, "database")
-      )
-
-      self$ApplicationId <- namespace_config$ApplicationId
-
+    initialize = function(app_config, analysis_config, input_config) {
+      super$initialize(app_config, analysis_config, input_config)
     },
     getQueryExperiments = function() {
       self$remoteDB$getQuery(
         "[shiny].[GetQueryExperiments] ?",
-        tibble::tibble("ApplicationID" = self$ApplicationId)
+        tibble::tibble("ApplicationID" = self$application_id)
       )
     },
     getComparisonExperiments = function() {

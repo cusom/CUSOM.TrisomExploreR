@@ -9,8 +9,8 @@ FeatureAnalysisInputsManager <- R6::R6Class(
   private = list(),
   active = list(),
   public = list(
-    initialize = function(analysis_config, input_config) {
-      super$initialize(analysis_config, input_config)
+    initialize = function(app_config, analysis_config, input_config) {
+      super$initialize(app_config, analysis_config, input_config)
     },
 
     getGetDataButtonClass = function() {
@@ -84,12 +84,8 @@ FeatureAnalysisInputsManager <- R6::R6Class(
     },
 
     get_study_data = function() {
-  
-      self$FeatureData <- arrow::open_dataset("Remote_Data/feature_data") |>
-        dplyr::filter(
-          ExperimentID == self$Study
-        ) |>
-        dplyr::collect() |>
+
+      self$FeatureData <- self$StudyData |>
         dplyr::select(LabID, Karyotype, Sex, Age, BMI, Analyte, MeasuredValue, Measurement) |>
         dplyr::filter(
           Age >= min(self$Age),
