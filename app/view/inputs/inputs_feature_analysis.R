@@ -189,14 +189,14 @@ server <- function(id, r6) {
 
     }, ignoreInit = TRUE)
 
+    karyotypes <- shiny::reactive({
+      r6$Karyotypes
+    }) |>
+      shiny::bindEvent(c(input$Study), ignoreNULL = TRUE)
+
     output$Karyotype <- shiny::renderUI({
 
-      shiny::validate(
-        shiny::need(!is.null(input$Study), ""),
-        shiny::need(input$Study != "", "")
-      )
-      
-      karyotype_choices <- r6$Karyotypes #r6$getKaryotypeChoices()
+      karyotype_choices <- karyotypes()
 
       input <- shinyWidgets::prettyRadioButtons(
         inputId = ns("Karyotype"),
