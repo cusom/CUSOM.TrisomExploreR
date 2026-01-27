@@ -348,43 +348,146 @@ AzureRemoteDataFileManager <- R6::R6Class(
   private = list(
     account_name = "",
     key = "",
-    container_name = ""
+    container_name = "",
+    endpoint = NULL,
+    container = NULL
+  ),
+  active = list(
+    uri = function(value) {
+      return(
+        glue::glue("https://{private$account_name}.blob.core.windows.net")
+      )
+    },
+    file_type = function(value) {
+      return(
+        self$blobs |>
+          dplyr::filter(name == self$targeted_file) |>
+          dplyr::pull(file_type)
+      )
+    },
+    local_file_exists = function(value) {
+      return(
+        any(
+          grepl(
+            self$targeted_file,
+            list.files(self$local_data_directory, recursive = TRUE)
+          )
+        )
+      )
+    },
+    local_file_path = function(value) {
+      return(
+        glue::glue("{self$local_data_directory}/{self$targeted_file}")
+      )
+    },
+    file_read_method = function(value) {
+      if (self$file_type == "json") {
+        return(
+          "jsonlite::fromJSON"
+        )
+      } else if (self$file_type == "parquet") {
+        return(
+          "arrow::read_parquet"
+        )
+      } else {
+        return(
+          "unknown"
+        )
+      }
+    }
   ),
   public = list(
-
-    local_data_directory = "Remote_Data",
+    local_data_directory = NULL,
+    download_mode = NULL,
     files_downloaded = FALSE,
-    #' @description
-    #' Create a new instance of AzureRemoteDataFileManager object
-    #' @param account_name - string - Azure Storage Account name
-    #' @param key - string - authentication key for Azure storage account
-    #' @param container_name - string - name of target BLOB container
-
-    #' @return A new `AzureRemoteDataFileManager` object.
-    initialize = function(account_name, key, container_name) {
-
+    targeted_file = NULL,
+    blobs = NULL,
+    initialize = function(account_name, key, container_name, 
+      download_mode = c("on demand", "all"), local_data_directory = "Remote_Data") {
+      match.arg(download_mode)
       private$account_name <- account_name
       private$key <- key
       private$container_name <- container_name
-      self$local_data_directory <- "Remote_Data"
-
+      self$download_mode <- download_mode
+      self$local_data_directory <- local_data_directory
+      private$endpoint <- AzureStor::storage_endpoint(self$uri, private$key)
+      private$container <- AzureStor::storage_container(private$endpoint, private$container_name)
+      self$set_blob_metadata()
+      if (self$download_mode == "all") {
+        self$download_files()
+      }
     },
-    #' @description
-    #' download all remote files locally
-    #' @param reload_files - logical - whether to clear out existing file directory before downloading data
+    set_blob_metadata = function() {
+      self$blobs <- AzureStor::list_blobs(private$container) |>
+        tidyr::separate(
+          col = name,
+          into = c("data_group", "sub_folder"),
+          sep = "\\/",
+          remove = FALSE,
+          extra = "drop"
+        ) |>
+        dplyr::mutate(
+            sub_folder = dplyr::case_when(
+                grepl(".parquet", sub_folder) ~ NA,
+                TRUE ~ sub_folder
+            ),
+            file_type = ifelse(grepl("json", name), "json", "parquet")
+        ) |>
+        tidyr::separate(
+          col = sub_folder,
+          into = c("Remove", "ExperimentID"),
+          sep = "\\=",
+          remove = FALSE
+        ) |>
+        dplyr::select(data_group, sub_folder, ExperimentID, name, file_type, size)
+      return(invisible(self$blobs))
+    },
+    get_remote_file_data = function(file_name) {
+      self$targeted_file <- self$blobs |>
+        dplyr::filter(grepl(file_name, name)) |>
+        dplyr::pull(name)
+
+      self$read_file_data()
+    },
+    download_remote_file = function(file_name) {
+      return(
+        invisible(
+          AzureStor::storage_download(
+            private$container,
+            src = file_name,
+            dest = self$local_file_path
+          )
+        )
+      )
+    },
+    read_file_data = function() {
+      if (self$download_mode == "on demand" && !self$local_file_exists) {
+        self$download_remote_file(self$targeted_file)
+      }
+      return(
+        do.call(
+          eval(parse(text = self$file_read_method)),
+          list(self$local_file_path)
+        )
+      )
+    },
+    get_experiment_data = function(experiment_id) {
+      self$targeted_file <- self$blobs |>
+        dplyr::filter(
+          ExperimentID == experiment_id
+        ) |>
+        dplyr::pull(name)
+      return(
+        self$read_file_data()
+      )
+    },
+
     download_files = function(reload_files = TRUE) {
-
       self$files_downloaded <- FALSE
-
       if (reload_files) {
-
         unlink(self$local_data_directory, recursive = TRUE)
-
         tryCatch({
-          uri <- glue::glue("https://{private$account_name}.blob.core.windows.net")
-          endpoint <- AzureStor::storage_endpoint(uri, private$key)
-          container <- AzureStor::storage_container(endpoint, private$container_name)
-          AzureStor::list_blobs(container) |>
+          self$blobs |>
             dplyr::arrange(size) |>
             dplyr::pull(name) |>
             purrr::map(function(x) {
@@ -399,24 +502,17 @@ AzureRemoteDataFileManager <- R6::R6Class(
             print(glue::glue("an error occured while downloading files: {e}"))
             self$files_downloaded <- TRUE
         })
-
       } else {
         print(glue::glue("{length(list.files(self$local_data_directory, recursive = TRUE))} existing files found"))
       }
-
     },
-    #' @description
-    #' Helper function to get fully qualified directory name by file_group
-    #' @param file_group - string - name of target file group
+
     get_file_group_directory = function(file_group) {
-
       dirs <- list.dirs(self$local_data_directory)
-
       fqdn <- dirs[intersect(which(grepl(file_group, dirs)), which(!grepl("=", dirs)))]
-
       return(fqdn)
-
     }
 
   )
+
 )
