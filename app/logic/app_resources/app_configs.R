@@ -80,24 +80,18 @@ TrisomExplorerAppManager <- R6::R6Class(
 
       self$application_id <- application_id
 
-      self$remote_db = ODBCQueryManager$new(
+      self$remote_db <- ODBCQueryManager$new(
         conn_args = config::get(file = config_file_name, "database")
       )
 
-      self$remote_files = AzureRemoteDataFileManager$new(
+      self$remote_files <- AzureRemoteDataFileManager$new(
         account_name = config::get(file = config_file_name, "remote_storage")$storage_account_name,
         key = config::get(file = config_file_name, "remote_storage")$storage_key,
-        container_name = glue::glue("htp-{tolower(application_id)}")
+        container_name = glue::glue("htp-{tolower(application_id)}"),
+        download_mode = "on demand"
       )
 
       self$app_config$application_id <- application_id
-
-      download_files <- self$remote_db$getQuery(
-          "SELECT [downloadRemoteFiles] FROM [te].[Application] WHERE ApplicationID = ?",
-          tibble::tibble("ApplicationId" = application_id)
-        ) |> dplyr::pull()
-
-      self$remote_files$download_files(download_files)
 
       self$namespace_config <- self$remote_db$getQuery(
         "SELECT * FROM [te].[vw_ApplicationNamespaceConfig]
@@ -137,7 +131,10 @@ TrisomExplorerAppManager <- R6::R6Class(
             AnalysisVariableName, AnalysisVariableLabel, AnalysisType,
             AnalysisVariableBaselineLabel, AnalysisVolcanoPlotTopAnnotation)
 
-      inputs <- jsonlite::fromJSON("Remote_Data/inputs.json")
+      inputs <- self$remote_files$get_remote_file_data("inputs.json")
+
+      self$input_config$studies <- inputs$study_choices |>
+          as.data.frame()
 
       self$input_config$statTestschoiceNames <- purrr::pmap(
         inputs$stat_tests,
@@ -153,17 +150,21 @@ TrisomExplorerAppManager <- R6::R6Class(
 
       self$input_config$experimentIDs <- inputs$experiment_ids
 
-      self$input_config$karyotypes <- arrow::open_dataset("Remote_Data/participants") |>
+      participant_data <- self$remote_files$get_remote_file_data("participants")
+
+      self$input_config$karyotypes <- participant_data |>
         dplyr::collect() |>
         dplyr::distinct(Karyotype) |>
         dplyr::pull()
 
-      self$input_config$sexes <- arrow::open_dataset("Remote_Data/participants") |>
+      self$input_config$sexes <- participant_data |>
         dplyr::collect() |>
         dplyr::distinct(Sex) |>
         dplyr::pull()
 
-      self$input_config$ages <- arrow::open_dataset("Remote_Data/participant_encounter") |>
+      encounter_data <- self$remote_files$get_remote_file_data("encounter")
+
+      self$input_config$ages <- encounter_data |>
         dplyr::collect() |>
         tidyr::drop_na() |>
         dplyr::summarise(
@@ -175,12 +176,14 @@ TrisomExplorerAppManager <- R6::R6Class(
         ) |>
         dplyr::pull()
 
-      self$input_config$Conditions <- arrow::open_dataset("Remote_Data/participant_conditions") |>
+      condition_data <- self$remote_files$get_remote_file_data("conditions")
+
+      self$input_config$Conditions <- condition_data |>
         dplyr::collect() |>
         dplyr::distinct(Condition) |>
         dplyr::pull()
 
-      self$input_config$ConditionClasses <- arrow::open_dataset("Remote_Data/participant_conditions") |>
+      self$input_config$ConditionClasses <- condition_data |>
         dplyr::collect() |>
         dplyr::distinct(ConditionClass) |>
         tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
@@ -189,7 +192,7 @@ TrisomExplorerAppManager <- R6::R6Class(
         dplyr::distinct() |>
         dplyr::pull()
 
-      self$input_config$ConditionChoices <- arrow::open_dataset("Remote_Data/participant_conditions") |>
+      self$input_config$ConditionChoices <- condition_data |>
         dplyr::collect() |>
         dplyr::filter(HasCondition == "True") |>
         dplyr::select(LabID, ConditionClass, Condition) |>
@@ -198,7 +201,7 @@ TrisomExplorerAppManager <- R6::R6Class(
         dplyr::summarize(n = dplyr::n_distinct(LabID), .groups = "drop")  |>
         dplyr::filter(n >= 5) |>
         dplyr::left_join(
-          arrow::open_dataset("Remote_Data/participant_conditions") |>
+          condition_data |>
             dplyr::collect() |>
             dplyr::filter(!is.na(ConditionCensorshipAgeGroup)) |>
             dplyr::distinct(Condition, ConditionCensorshipAgeGroup)
