@@ -396,7 +396,24 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
         runjs(glue('App.annotatePointByKey("{plot_name}","{keys}",5);'))
       }
 
-    }
+    },
 
+    get_table_data = function() {
+
+      p_val_label <- ifelse(self$Adjusted, "q-value", "p-value")
+      log_10_p_val_label <- ifelse(self$Adjusted, "-log<sub>10</sub>(q-value)", "-log<sub>10</sub>(p-value)")
+
+      old_names <- c("log2FoldChange", "p.value.adjustment.method", "p.value.original",
+                    "FoldChange", "p.value", "-log10pvalue", "lmFormula"
+      )
+      new_names <- c("log<sub>2</sub>(Fold Change)", "adjustment method", "p-value (original)",
+                    "Fold Change", p_val_label, log_10_p_val_label, "model"
+      )
+      return(
+        self$volcanoSourceData |>
+          dplyr::rename_with(~ new_names, all_of(old_names)) |>
+          select(-c("formattedPValue", "text", "ivs", "shape", "selectedPoint", "significanceGroup", "color"))
+      )
+    }
   )
 )
