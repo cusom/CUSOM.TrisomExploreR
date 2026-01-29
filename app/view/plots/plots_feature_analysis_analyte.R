@@ -178,5 +178,17 @@ server <- function(id, r6, analyte, analyte_input_name, analyte_session) {
     # output$ExternalLinks <- shiny::renderUI({
     #   CUSOMShinyHelpers::getExternalLinkActionLinks(analyteSearchName(), ns)
     # })
+
+    table_data <- shiny::reactive({
+      r6$get_table_data()
+    })
+
+    return(
+      list(
+        "analyte_data" = analyte_data,
+        "table_data" = table_data
+      )
+    )
+
   })
 }
