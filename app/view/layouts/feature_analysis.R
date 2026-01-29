@@ -4,14 +4,13 @@ box::use(
 
 
 box::use(
-  #app/logic/feature_analysis/InputsManager[FeatureAnalysisInputsManager],
   app/logic/inputs/inputs_feature_analysis[FeatureAnalysisInputsManager],
   app/logic/summary_plots/SummaryDataManagerFactory[getFeatureAnalysisSummaryDataManager],
   app/logic/analyte_plots/AnalyteDataManagerFactory[getFeatureAnalysisAnalyteDataManager],
-  #app/logic/analyte_plots/AnalyteDataManager[FeatureAnalysisAnalyteDataManager],
   app/view/inputs/inputs_feature_analysis,
   app/view/inputs/inputs_volcano_plot_analyte,
   app/view/plots/plots_volcano,
+  app/view/tables/table_volcano,
   #app/logic/table_volcano_datatable[volcano_data_table_ui, volcano_data_table_server],
   app/view/plots/plots_feature_analysis_analyte,
   #app/logic/table_feature_analysis_analyte[feature_analysis_analyte_summary_data_ui,feature_analysis_analyte_summary_data_server]
@@ -45,8 +44,8 @@ ui <- function(id) {
           ),
           shiny::tabPanel(
             title = "Volcano Plot Summary Data",
-            tags$p("holder")
-            #volcano_data_table_ui(ns("volcano-summary"))
+            #tags$p("holder")
+            table_volcano$ui(ns("summary-data"))
           )
         )
       ),
@@ -105,6 +104,8 @@ server <- function(id, app_config, analysis_config, input_config) {
       )
     )
 
+
+
     # volcano plot
     analyte <- plots_volcano$server(
       id = "volcano",
@@ -119,19 +120,26 @@ server <- function(id, app_config, analysis_config, input_config) {
       parent = session
     )
 
-    # volcano_data_table_server(id = "volcano-summary", r6 = r6)
+    table_volcano$server(
+      id = "summary-data",
+      summary_data = analyte$SummaryData,
+      fold_change_variable = analyte$fold_change_var,
+      adjusted = analyte$adjusted,
+      stat_test = inputs$StatTest,
+      study = inputs$Study,
+    )
 
     # analyte plot
     plots_feature_analysis_analyte$server(
       id = "analyte",
-      r6 = getFeatureAnalysisAnalyteDataManager(#FeatureAnalysisAnalyteDataManager$new(
+      r6 = getFeatureAnalysisAnalyteDataManager(
         analysis_config = analysis_config,
         study_data = inputs$StudyData,
         analyte = analyte$analyte,
         summary_data = analyte$SummaryData
       ),
       analyte = analyte$analyte,
-      analyte_input_name = analyte$fanalyte_input_name,
+      analyte_input_name = analyte$analyte_input_name,
       analyte_session = analyte$analyte_session
     )
 
