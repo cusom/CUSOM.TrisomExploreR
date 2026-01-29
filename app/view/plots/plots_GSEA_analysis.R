@@ -4,7 +4,7 @@ box::use(
 )
 
 box::use(
-  app/logic/shared/plot_utils[toggle_GSEA_volcano_plot_trace],
+  app/logic/shared/plot_utils[toggle_GSEA_volcano_plot_trace, object_is_rendered],
 )
 
 
@@ -63,37 +63,32 @@ server <- function(id, r6, GSEAData, parent) {
 
       GSEAData() |>
         r6$getGSEAPlot(ns)
+
     })
 
-    # shiny::observeEvent(
-    #   plotly::event_data(
-    #     "plotly_click",
-    #     priority = "event",
-    #     source = ns("GSEAPlot"),
-    #     session = session
-    #     ), {
+    plot_click_data <- shiny::reactive({
+      shiny::validate(
+        shiny::need(object_is_rendered(session, ns("GSEAPlot")), "")
+      )
+      plotly::event_data(
+        "plotly_click",
+        priority = "event",
+        source = ns("GSEAPlot")
+      )
+    })
 
-    #   shiny::validate(
-    #     shiny::need(!is.null(GSEAData()), "")
-    #   )
+    shiny::observeEvent(c(plot_click_data()), {
 
-    #   e <- plotly::event_data(
-    #     "plotly_click",
-    #     priority = "event",
-    #     source = ns("GSEAPlot"),
-    #     session = session
-    #   )
+      r6$event_data <- plot_click_data()
 
-    #   r6$getSelectedGSEAPathwayData(e)
-      
-    #   shiny::updateSelectizeInput(
-    #     session = session,
-    #     inputId = "GSEASelectedAnalytes",
-    #     choices = e$customdata,
-    #     selected = e$customdata
-    #   )
+      shiny::updateSelectizeInput(
+        session = session,
+        inputId = "GSEASelectedAnalytes",
+        choices = plot_click_data()$customdata,
+        selected = plot_click_data()$customdata
+      )
 
-    # })
+    }, domain = session)
 
     shiny::observeEvent(c(input$GSEASelectedAnalytes), {
       shiny::validate(
