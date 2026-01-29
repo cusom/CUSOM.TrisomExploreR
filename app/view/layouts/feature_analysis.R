@@ -13,6 +13,7 @@ box::use(
   app/view/tables/table_volcano,
   #app/logic/table_volcano_datatable[volcano_data_table_ui, volcano_data_table_server],
   app/view/plots/plots_feature_analysis_analyte,
+  app/view/tables/table_analyte,
   #app/logic/table_feature_analysis_analyte[feature_analysis_analyte_summary_data_ui,feature_analysis_analyte_summary_data_server]
 )
 
@@ -64,8 +65,7 @@ ui <- function(id) {
           shiny::tabPanel(
             title = "Analyte Sample Level Data",
             value = "AnalyteTable",
-            tags$p("Test")
-            #feature_analysis_analyte_summary_data_ui(ns("analyte-summary-data"))
+            table_analyte$ui(ns("analyte-data"))
           )
         )
       )
@@ -104,8 +104,6 @@ server <- function(id, app_config, analysis_config, input_config) {
       )
     )
 
-
-
     # volcano plot
     analyte <- plots_volcano$server(
       id = "volcano",
@@ -122,7 +120,7 @@ server <- function(id, app_config, analysis_config, input_config) {
 
     table_volcano$server(
       id = "summary-data",
-      summary_data = analyte$SummaryData,
+      summary_data = analyte$table_data,
       fold_change_variable = analyte$fold_change_var,
       adjusted = analyte$adjusted,
       stat_test = inputs$StatTest,
@@ -130,10 +128,11 @@ server <- function(id, app_config, analysis_config, input_config) {
     )
 
     # analyte plot
-    plots_feature_analysis_analyte$server(
+    analyte_data <- plots_feature_analysis_analyte$server(
       id = "analyte",
       r6 = getFeatureAnalysisAnalyteDataManager(
         analysis_config = analysis_config,
+        study = inputs$Study,
         study_data = inputs$StudyData,
         analyte = analyte$analyte,
         summary_data = analyte$SummaryData
@@ -143,7 +142,11 @@ server <- function(id, app_config, analysis_config, input_config) {
       analyte_session = analyte$analyte_session
     )
 
-    # feature_analysis_analyte_summary_data_server(id = "analyte-summary-data", r6 = r6)
+    table_analyte$server(
+      id = "analyte-data",
+      analyte = analyte$analyte,
+      table_data = analyte_data$table_data
+    )
 
   })
 
