@@ -1,5 +1,4 @@
 box::use(
-    app/logic/shared/table_utils[format_summary_data],
     app/logic/shared/file_utils[download_file]
 )
 
@@ -42,12 +41,20 @@ server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, 
         ns <- session$ns
 
         output$fold_change <- shiny::renderUI({
+            shiny::validate(
+                shiny::need(!is.null(summary_data()), "")
+            )
 
-            lim <- ceiling(max(summary_data()$FoldChange))
+            lim <- summary_data() |>
+                dplyr::select(`Fold Change`) |>
+                dplyr::filter(`Fold Change` != Inf) |>
+                dplyr::summarise(m = max(`Fold Change`)) |>
+                ceiling() |>
+                as.integer()
 
             shiny::sliderInput(
                 inputId = ns("fold_change"),
-                label = "", #shiny::HTML(glue::glue("Filter by {r6$VolcanoSummaryDataXAxisLabel}")),
+                label = "Fold Change",
                 min = -lim,
                 max = lim,
                 step = round(1 / (lim * 2), 1),
@@ -56,6 +63,10 @@ server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, 
         })
 
         output$significance_level <- shiny::renderUI({
+            shiny::validate(
+                shiny::need(!is.null(summary_data()), "")
+            )
+
             label <- "Filter by p-value significance level"
             choices <- c("all", " * p &le; 0.05", " ** p &le; 0.01", " *** p &le; 0.001")
 
@@ -77,22 +88,25 @@ server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, 
             shiny::validate(
                 shiny::need(!is.null(summary_data()), "")
             )
+
+            sig_col <- ifelse(adjusted(), "q-value", "p.value")
+
             summary_data() |>
                 dplyr::mutate(
-                    pvalueCutoff = dplyr::case_when(
+                    p_cut = dplyr::case_when(
                         input$significance_level == "all" ~ 1,
                         grepl("&le; 0.05", input$significance_level) ~ 0.05,
                         grepl("&le; 0.01", input$significance_level) ~ 0.01,
                         grepl("&le; 0.001", input$significance_level) ~ 0.001
-                    ),
-                    "Statistical Test" = stat_test()
+                    )
                 ) |>
                 dplyr::filter(
-                    !!rlang::sym(fold_change_variable()) >= min(input$fold_change),
-                    !!rlang::sym(fold_change_variable()) <= max(input$fold_change),
-                    p.value <= pvalueCutoff
+                    `Fold Change` >= min(input$fold_change),
+                    `Fold Change` <= max(input$fold_change),
+                    !!rlang::sym(sig_col) <= p_cut
                 ) |>
-                format_summary_data(adjusted(), cols_to_drop = c("pvalueCutoff", "formattedPValue", "text", "ivs"))
+                dplyr::select(-c("p_cut"))
+
         }) |>
             shiny::bindEvent(c(summary_data(), input$significance_level, input$fold_change),
                 ignoreInit = TRUE,
