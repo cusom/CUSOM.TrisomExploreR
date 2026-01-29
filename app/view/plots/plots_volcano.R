@@ -143,9 +143,14 @@ server <- function(id, r6, Study, StudyData, ...) {
       ...
     )
 
+    table_data <- shiny::reactive({
+      r6$get_table_data()
+    })
+
     return(
       list(
         SummaryData = VolcanoSummaryData,
+        table_data = table_data,
         fold_change_var = shiny::reactive({r6$FoldChangeVar}),
         adjusted = shiny::reactive({r6$Adjusted}),
         stat_test = shiny::reactive({r6$StatTest}),
