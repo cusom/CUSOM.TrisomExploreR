@@ -202,30 +202,6 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
         )
     },
 
-    #' @description
-    #' get user-friendly formatted VolcanoSummaryData
-    #' @param .data tibble of volcano summary data to format
-    getFormattedVolcanoSummaryData =  function(.data) {
-
-      adjusted <- self$AdjustmentMethod != "none"
-      p_val_label <- ifelse(adjusted, "q-value", "p-value")
-      log_10_p_val_label <- ifelse(adjusted, "-log<sub>10</sub>(q-value)", "-log<sub>10</sub>(p-value)")
-
-      old_names <- c("log2FoldChange", "p.value.adjustment.method", "p.value.original",
-        "FoldChange", "p.value", "-log10pvalue", "lmFormula"
-      )
-      new_names <- c("log<sub>2</sub>(Fold Change)", "adjustment method", "p-value (original)",
-        "Fold Change", p_val_label, log_10_p_val_label, "model"
-      )
-
-      return(
-        .data |>
-          rename_with(~ new_names, all_of(old_names)) |>
-          select(-c(pvalueCutoff, formattedPValue, text, ivs))
-      )
-
-    },
-
     set_volcano_source_data = function(.data) {
       self$volcanoSourceData <- .data |>
         dplyr::mutate(
@@ -339,10 +315,6 @@ FeatureAnalysis_SummaryDataManager <- R6Class(
 
     },
 
-    #' @description
-    #' helper function to add annotation to volcano plot based on chosen analyte
-    #' @param plot_name string - name of target volcano plot
-    #' @param ns namespace to properly derive fully-qualified plot name
     annotate_volcano_point = function(plot_name, ns) {
 
       plot_name <- ns(plot_name)
