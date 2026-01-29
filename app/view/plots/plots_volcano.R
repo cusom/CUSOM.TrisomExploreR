@@ -125,7 +125,7 @@ server <- function(id, r6, Study, StudyData, ...) {
         priority = "event",
         source = ns("VolcanoPlot")
       )
-    }) 
+    })
 
     analyte <- inputs_volcano_plot_analyte$server(
       id = "volcano-analyte",
@@ -146,6 +146,9 @@ server <- function(id, r6, Study, StudyData, ...) {
     return(
       list(
         SummaryData = VolcanoSummaryData,
+        fold_change_var = shiny::reactive({r6$FoldChangeVar}),
+        adjusted = shiny::reactive({r6$Adjusted}),
+        stat_test = shiny::reactive({r6$StatTest}),
         analyte = analyte$analyte,
         analyte_input_name = analyte$analyte_input_name,
         analyte_session = analyte$analyte_session
