@@ -61,6 +61,23 @@ purge_plot <- function(session, ns, plot_name, r6) {
 
 }
 
+object_is_rendered <- function(session, target_obj_name) {
+  return(
+    tibble::tibble(
+      "obj_name"  = names(session$clientData)
+    ) |>
+    tidyr::separate(
+      obj_name,
+      into = c("type", "object", "property", "value"),
+      sep = "_", extra = "drop", fill = "right"
+    ) |>
+    dplyr::filter(tolower(object) == tolower(target_obj_name)) |>
+    dplyr::distinct(object) |>
+    dplyr::pull() |>
+    length() |>
+    as.logical()
+  )
+}
 
 #' Helper function to find and return fully-qualified / namespaced object name
 #' @param session - shiny session object
