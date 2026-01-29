@@ -4,81 +4,51 @@ box::use(
   app/logic/shared/string_helper_functions[parse_delimited_string],
 )
 
-
-
-#' R6 Class to  manage Feature Analysis
-#' @description
-#' R6 Class to  manage Feature Analysis - Karyotype, Sex, Age, BMI, etc.
-#' @field applicationName - string - application name
-#' @field namespace - string - namespace for this class instance
-#' @field remoteDB - R6 Class - class to manage remote database queries
-#' @field localDB - R6 Class - class to manage local database queries
-#' @field analysisVariable - string - feature to be analyzed
-#' @field analysisVariableLabel - string - friendly label for analysis variable
-#' @field analysisType - string - type of analysis - continuous or categorical
-#' @field experimentIDs - string vector - vector of experiments for this instance
-#' @field analytesLabel - string - label to be used for all analytes (Metabolites, Proteins, etc. )
-#' @field groupBaselineLabel - string
-#' @field FoldChangeVar - string - name of variable indicating fold change or difference (log2FoldChange)
-#' @field SignificanceVariable - string - name of variable indiciating significance value (p-value)
-#' @field Study - string - selected study
-#' @field Platform - string vector - Platform values chosen for analysis
-#' @field CellType - string vector - Cell Type values chosen for analysis
-#' @field Karyotype - string vector - Karyotype(s) chosen for analysis
-#' @field Conditions - string vector - Conditions chosen for analysis
-#' @field Sex - string vector - Sex values chosen for analysis
-#' @field Age - numeric vector - Age values chosen fo analysis
-#' @field FilterLowCount - deprecated?
-#' @field StatTest - string - name of statistical test to apply for analysis (Linear Model, etc.)
-#' @field Covariates - string vector - names of features to include as covariates in Linear Model analysis
-#' @field AdjustmentMethod - string - name of multiple hypothesis correction method to apply to statistical output
-#' @field Adjusted - logical - whether the statistical test includes multiple hypothesis correction or not
-#' @field SignificanceLabel - string - if adjusted, `q-value`, otherwise `p-value`
-#' @field BaseData - sample level data with filters applied
-#' @field VolcanoSummaryData - tibble - Fold Change summary data used for volcano plot
-#' @field VolcanoSummaryDataXAxisLabel - string - volcano plot x-axis
-#' @field VolcanoSummaryDataYAxisLabel - string - volcano plot y-axis
-#' @field VolcanoSummaryMaxFoldChange - numeric - maxiumum abs. value of fold change
-#' @field VolcanoPlotTitle - string - title to show above volcano plot
-#' @field volcanoTopAnnotationLabel - string - label to be shown above top-level
-#' volcano plot (Up in X, Increasing with X, etc. )
-#' @field volcanoPlotExpectedTraceCount - numeric - number of base traces present
-#' in the active volcano plot (usually between 1 - 3)
-#' @field volcanoSourceData - tibble of formatted source data used for volcano plot - includes trace groups
-#' @field volcanoEventData - tibble of click and selection data from volcano plot
-#' @field VolcanoSummaryDataFoldChangeFilter - deprecated?
-#' @field volcanoMultiSelectText - string - text shown below volcano plot when multiple analytes are chosen
-#' @field Analyte - string vector - analyte(s) chosen for analysis
-#' @field AnalyteSearchName - string - cleaned analyte name for external links
-#' @field AnalyteData - tibble - sample level data for chosen analyte(s)
-#' @field AnalytePlotMethod - string - one of boxplot, scatterplot, heatmap
-#' @field AnalytePlotTitle - string - title for analyte plot
-#' @field AnalytePlotStatAnnotation - string - formatted stat annotation to be shown above analyte plot
-#' @field AnalytePlotXAxisLabel - string - x-axis label for analyte plot
-#' @field HeatmapData - tibble - data to use for heatmap plot when multiple analytes are chosen
-#' @field GSEAData - list of ranks, hallmarks, and gsea results
-#' @field GSEAAnalytes - character vector - matching analytes for for chosen GSEA pathway
-#' @field GSEATraceName - string - name of chosen GSEA pathway
-#' @field GSEAGenesetName - string - formatted version of GSEA Trace Name
-#' @field GSEAPathwayData - pathway specific data for chosen GSEA pathway
-#' @import dplyr
-#' @import tidyr
-#' @import tibble
-#' @import purrr
-#' @import glue
-#' @import plotly
-#' @importFrom htmlwidgets onRender
-#' @importFrom shinyTree get_selected
-#' @importFrom stringr str_c
-#' @importFrom stringr str_split
-#' @importFrom heatmaply heatmaply
-#' @importFrom fgsea calcGseaStat
-#' @importFrom arrow open_dataset
 #' @export
 GSEAManager <- R6::R6Class(
   "GSEAManager",
-  private = list(),
+  private = list(
+    ..event_data = tibble::tibble()
+  ),
   active = list(
+    event_data = function(value) {
+      if (missing(value)) {
+        return(private$..event_data)
+      } else {
+        private$..event_data <- value
+      }
+    },
+    event_data_keys = function(value) {
+      return(
+        tibble::tibble("Gene" = self$event_data$customdata) |>
+          tidyr::separate_rows(Gene, sep = ",") |>
+          dplyr::inner_join(
+            self$VolcanoSummaryData() |>
+              dplyr::select(Analyte) |>
+              dplyr::mutate(
+                "Gene" = purrr::pmap_chr(
+                  list(Analyte, 1),
+                  parse_delimited_string
+                )
+              ),
+            by = "Gene"
+          ) |>
+          dplyr::select(Analyte) |>
+          dplyr::summarise(text = toString(Analyte)) |>
+          dplyr::mutate(text = gsub(", ", "|", text)) |>
+          dplyr::pull()
+      )
+    },
+    Analyte = function(value) {
+      return(
+        stringr::str_split(self$event_data_keys, "\\|", simplify = TRUE)
+      )
+    },
+    GSEATraceName = function(value) {
+      return(
+        self$event_data$y
+      )
+    },
     GSEAAnalytes = function(value) {
       if (missing(value)) {
         return (
@@ -92,7 +62,6 @@ GSEAManager <- R6::R6Class(
         stop("GSEAAnalytes is a read-only active binding")
       }
     },
-
     GSEAGenesetName = function(value) {
       if (missing(value)) {
         return(glue::glue("HALLMARK_{gsub(' ','_',stringr::str_to_upper(self$GSEATraceName))}"))
@@ -108,12 +77,8 @@ GSEAManager <- R6::R6Class(
     VolcanoSummaryData = NULL,
     GSEA_hallmarks = NULL,
 
-    Analyte = NULL,
 
     GSEAData = NULL,
-    # GSEAAnalytes = "",
-    GSEATraceName = "",
-    #GSEAGenesetName = "",
     GSEAPathwayData = NULL,
 
     #' @description
@@ -123,8 +88,8 @@ GSEAManager <- R6::R6Class(
     #' @param namespace_config list - configurations for this namespace
     #' @param remoteDB R6 class - query manager for remote database queries
     #' @param localDB R6 class - query manager for local database queries
-    initialize = function( Study, VolcanoSummaryData) {
-  
+    initialize = function(Study, VolcanoSummaryData) {
+
       self$Study <- Study
       self$VolcanoSummaryData <- VolcanoSummaryData
       self$GSEA_hallmarks <- readRDS("app/logic/app_resources/data/GSEA_hallmarks.rds")
