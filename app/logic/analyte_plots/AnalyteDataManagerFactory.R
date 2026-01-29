@@ -6,7 +6,8 @@ box::use(
 #' @export
 getFeatureAnalysisAnalyteDataManager <- function(
     analysis_config,
-    study_data, 
+    study,
+    study_data,
     analyte,
     summary_data
     ) {
@@ -14,6 +15,7 @@ getFeatureAnalysisAnalyteDataManager <- function(
         return(
             CategoricalFeatureAnalysisAnalyteDataManager$new(
                 analysis_config = analysis_config,
+                study = study,
                 study_data = study_data,
                 analyte = analyte,
                 summary_data = summary_data
@@ -24,6 +26,7 @@ getFeatureAnalysisAnalyteDataManager <- function(
         return(
             ContinuousFeatureAnalysisAnalyteDataManager$new(
                 analysis_config = analysis_config,
+                study = study,
                 study_data = study_data,
                 analyte = analyte,
                 summary_data = summary_data
