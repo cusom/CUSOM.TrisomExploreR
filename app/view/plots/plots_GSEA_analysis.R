@@ -1,122 +1,89 @@
 box::use(
-  shiny[moduleServer, NS, tagList, tags, uiOutput, renderUI, actionButton, icon, selectizeInput, updateSelectizeInput, validate, need],
+  shiny[moduleServer, NS, tagList, tags, uiOutput, renderUI, actionButton, 
+      icon, selectizeInput, updateSelectizeInput, validate, need],
   plotly[renderPlotly, event_data],
+  promises[future_promise, `%...>%`],
 )
 
 box::use(
   app/logic/shared/plot_utils[toggle_GSEA_volcano_plot_trace, object_is_rendered],
 )
 
-
-#' Create GSEA plot for TrisomExploreR GSEA pathway analysis
-#' @param id - string - id for this module namespace
-#' @importFrom shinydashboardPlus box
-#' @importFrom shinyjs hidden
-#' @importFrom plotly plotlyOutput
 #' @export
 ui <- function(id) {
   ns <- shiny::NS(id)
   shiny::tagList(
-    shinyjs::hidden(
-      shiny::selectizeInput(
-        inputId = ns("GSEASelectedAnalytes"),
-        label = "",
-        choices = NULL,
-        selected = NULL,
-        multiple = TRUE
-      )
-    ),
     plotly::plotlyOutput(
-      ns("GSEAPlot"),
+      ns("plot"),
       height = "650px",
       width = "99%"
     )
   )
 }
 
-#' Server logic / processing for TrisomExploreR GSEA plot
-#' @param id - string - id for this module namespace
-#' @param r6 - R6 class defining server-side logic
-#' @param parent shiny session - parent shiny session
-#' @importFrom gargoyle watch
-#' @importFrom gargoyle trigger
-#' @importFrom plotly renderPlotly
-#' @importFrom plotly event_data
-#' @import dplyr
-#' @import tidyr
-#' @import tibble
-#' @importFrom CUSOMShinyHelpers parseDelimitedString
-#' @importFrom stringr str_split
-#' @importFrom shinybusy show_modal_spinner
-#' @importFrom shinybusy remove_modal_spinner
 #' @export
-server <- function(id, r6, GSEAData, parent) {
+server <- function(id, r6, gsea_data, parent) {
 
   shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    output$GSEAPlot <- plotly::renderPlotly({
+    output$plot <- plotly::renderPlotly({
       shiny::validate(
-        shiny::need(!is.null(GSEAData()), "")
+        shiny::need(!is.null(gsea_data()), "")
       )
-
-      GSEAData() |>
-        r6$getGSEAPlot(ns)
-
+      gsea_data() |>
+        r6$getGSEAPlot(ns("plot"))
     })
 
     plot_click_data <- shiny::reactive({
       shiny::validate(
-        shiny::need(object_is_rendered(session, ns("GSEAPlot")), "")
+        shiny::need(object_is_rendered(session, ns("plot")), "")
       )
       plotly::event_data(
         "plotly_click",
         priority = "event",
-        source = ns("GSEAPlot")
+        source = ns("plot")
       )
     })
 
     shiny::observeEvent(c(plot_click_data()), {
+      shiny::validate(
+        shiny::need(nrow(plot_click_data()) > 0, "")
+      )
 
       r6$event_data <- plot_click_data()
-
-      shiny::updateSelectizeInput(
-        session = session,
-        inputId = "GSEASelectedAnalytes",
-        choices = plot_click_data()$customdata,
-        selected = plot_click_data()$customdata
-      )
-
-    }, domain = session)
-
-    shiny::observeEvent(c(input$GSEASelectedAnalytes), {
-      shiny::validate(
-        shiny::need(!is.null(input$GSEASelectedAnalytes), "")
-      )
 
       shinybusy::show_modal_spinner(
         spin = "half-circle",
         color = "#3c8dbc",
         text = glue::glue("Fetching {r6$GSEATraceName} data...")
       )
-    
-      r6$getGSEAPathwayData(r6$GSEATraceName)
 
-      toggle_GSEA_volcano_plot_trace(
-        session = session,
-        ns = ns,
-        namespace = ns(id),
-        plot_name = "VolcanoPlot",
-        expected_trace_count = 3,
-        analytes = r6$GSEAAnalytes,
-        trace_name = r6$GSEATraceName,
-        action = "add"
-      )
+      future_promise({
+        r6$set_GSEA_pathway_data(r6$GSEATraceName)
+      }) %...>% {
+        toggle_GSEA_volcano_plot_trace(
+          session = session,
+          ns = ns,
+          namespace = ns(id),
+          plot_name = "VolcanoPlot",
+          expected_trace_count = 3,
+          analytes = r6$GSEAAnalytes,
+          trace_name = r6$GSEATraceName,
+          action = "add"
+        )
+      }
 
       shinybusy::remove_modal_spinner()
 
     }, ignoreNULL = TRUE, ignoreInit = TRUE, domain = session)
+
+    return(
+      list(
+        "plot_click_data" = plot_click_data
+      )
+    )
 
   })
 }
