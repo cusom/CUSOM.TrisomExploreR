@@ -167,7 +167,7 @@ GSEAManager <- R6::R6Class(
     #' Get GSEA plot - top 25
     #' @param .data - data for plot
     #' @param ns - namespace to apply to plot object
-    getGSEAPlot = function(.data, ns, top_n = 25) {
+    getGSEAPlot = function(.data, plot_name, top_n = 25) {
 
       data <- .data$gsea |>
         dplyr::mutate(
@@ -265,7 +265,7 @@ GSEAManager <- R6::R6Class(
           )
         )
 
-      p$x$source <- ns("GSEAPlot")
+      p$x$source <- plot_name
 
       return(p)
 
@@ -299,10 +299,7 @@ GSEAManager <- R6::R6Class(
 
     },
 
-    #' @description
-    #' Set selected GSEA pathway data
-    #' @param path_name - string - selected pathway name
-    getGSEAPathwayData = function(path_name) {
+    set_GSEA_pathway_data = function(path_name) {
 
       pathway_data <- self$GSEAData$gsea |>
         dplyr::filter(Gene.set == path_name)
@@ -338,7 +335,7 @@ GSEAManager <- R6::R6Class(
         dplyr::relocate(Gene) |>
         dplyr::rename("log<sub>2</sub>(Fold Change)" = log2FoldChange, "-log<sub>10</sub>(q-value)" = `-log10pvalue`) |>
         dplyr::arrange(Rank)
-  
+
       return(invisible(self$GSEAPathwayData))
 
     },
@@ -347,12 +344,16 @@ GSEAManager <- R6::R6Class(
     #' Get selected GSEA pathway enrichment plot
     #' @param .data - data used for plot
     #' @param ns - namespace to apply to plot object
-    getGSEAEnrichmentPlot = function(.data, ns) {
+    getGSEAEnrichmentPlot = function(path_name, ns) {
+
+      if (is.null(self$GSEATraceName)) {
+        self$GSEATraceName <- path_name$y
+      }
 
       p <- GSEA_enrichment_plot(
         path_name = self$GSEATraceName,
-        stats = .data$ranks,
-        res = .data$gsea,
+        stats = self$GSEAData$ranks,
+        res = self$GSEAData$gsea,
         title = glue::glue("T21 vs. Control:\n{self$GSEATraceName}")
       ) |>
       plotly::layout(
