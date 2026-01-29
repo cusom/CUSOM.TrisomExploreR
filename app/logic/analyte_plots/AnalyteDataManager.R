@@ -90,6 +90,13 @@ FeatureAnalysisAnalyteDataManager <- R6::R6Class(
         }
       }
     },
+    measurement_label = function(value) {
+      return(
+        as.character(
+          self$AnalyteData[1, "Measurement"]
+        )
+      )
+    },
     formattedGroupBaselineLabel = function(value) {
       if (missing(value)) {
         return(
@@ -105,7 +112,7 @@ FeatureAnalysisAnalyteDataManager <- R6::R6Class(
   public = list(
     applicationName = NULL,
     namespace = NULL,
-    input_config = NULL,
+
     analysisVariable = "",
     analysisVariableLabel = "",
     analysisType = "",
@@ -114,23 +121,23 @@ FeatureAnalysisAnalyteDataManager <- R6::R6Class(
     groupBaselineLabel = "",
     FoldChangeVar = "log2FoldChange",
     SignificanceVariable = "-log10pvalue",
-    Study = NULL,
-    Platform = NULL,
-    CellType = NULL,
+
     FilterLowCount = NULL,
     StatTest = NULL,
     Covariates = NULL,
     AdjustmentMethod = NULL,
     Adjusted = FALSE,
     SignificanceLabel = "p-value",
+    study = NULL,
     StudyData = NULL,
     SummaryData = NULL,
     Analyte = "",
     AnalyteSearchName = "",
     AnalyteData = NULL,
     HeatmapData = NULL,
-    initialize = function(analysis_config, study_data, analyte, summary_data) {
+    initialize = function(analysis_config, study, study_data, analyte, summary_data) {
 
+      self$study <- study
       self$StudyData <- study_data
       self$Analyte <- analyte
       self$SummaryData <- summary_data
@@ -279,7 +286,44 @@ FeatureAnalysisAnalyteDataManager <- R6::R6Class(
 
       return(p)
 
-    }
+    },
 
+    get_table_data = function() {
+      if (self$AnalysisMode == "single") {
+        self$table_single()
+      } else {
+        self$table_multi()
+      }
+    },
+
+    table_single = function() {
+      return(
+        self$AnalyteData |>
+          dplyr::mutate("Study" = self$study()) |>
+          dplyr::select(Study, Analyte, LabID, !!rlang::sym(self$analysisVariable), MeasuredValue) |>
+          dplyr::rename(`:=`(!!self$measurement_label, MeasuredValue)) |>
+          dplyr::arrange(Analyte)
+      )
+    },
+
+    table_multi = function() {
+
+      p_val_label <- ifelse(self$Adjusted, "q-value", "p-value")
+      log_10_p_val_label <- ifelse(self$Adjusted, "-log<sub>10</sub>(q-value)", "-log<sub>10</sub>(p-value)")
+
+      old_names <- c("FoldChange", "p.value.original", "p.value.adjustment.method",
+                    "log2FoldChange", "p.value", "-log10pvalue", "lmFormula"
+      )
+      new_names <- c("Fold Change", "p-value (original)", "adjustment method",
+                    "log<sub>2</sub>(Fold Change)", p_val_label, log_10_p_val_label, "Model"
+      )
+      return(
+        self$AnalyteData |>
+          dplyr::select(Analyte) |>
+          dplyr::inner_join(self$SummaryData(), by = "Analyte") |>
+          dplyr::rename_with(~ new_names, all_of(old_names)) |>
+          dplyr::select(-c(formattedPValue, text, ivs))
+      )
+    }
   )
 )
