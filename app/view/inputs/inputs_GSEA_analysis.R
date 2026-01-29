@@ -21,7 +21,7 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
 
     ns <- session$ns
 
-    gsea_r6 <- GSEAManager$new(
+    r6 <- GSEAManager$new(
       Study = Study,
       VolcanoSummaryData = VolcanoSummaryData
     )
@@ -39,13 +39,13 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
           body = list(
             shiny::tags$div(
               shiny::actionButton(
-                inputId = ns("RunGSEA"),
+                inputId = ns("run"),
                 label = "Run New GSEA Analysis",
                 style = "float:left;",
                 icon = shiny::icon("play")
               ),
               shiny::actionButton(
-                inputId = ns("ClearGSEA"),
+                inputId = ns("clear"),
                 label = "Clear All GSEA Analysis",
                 style = "float:right;",
                 icon = shiny::icon("eraser")
@@ -57,43 +57,43 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
           footer = bsplus::bs_modal_closebutton(label = "Cancel")
         ),
         shiny::actionButton(
-          inputId = ns("ConfigureGSEA"),
+          inputId = ns("configure"),
           label = "Pathways",
           icon = shiny::icon("network-wired")
         ) |>
-          shiny::tagAppendAttributes(class = gsea_r6$addGSEAInputClass()) |>
+          shiny::tagAppendAttributes(class = r6$addGSEAInputClass()) |>
           bsplus::bs_attach_modal(id_modal = ns("configure-GSEA"))
       )
 
     })
 
-    shiny::observeEvent(c(input$RunGSEA), {
+    shiny::observeEvent(c(input$run), {
 
       shiny::validate(
-        shiny::need(input$RunGSEA > 0, "")
+        shiny::need(input$run > 0, "")
       )
       shiny::insertTab(
         session = parent,
         inputId = "AnalytePlotBox",
         shiny::tabPanel(
-          title = "GSEA Plot",
-          plots_GSEA_analysis$ui(ns("GSEA-plot"))
+          title = "GSEA Hallmarks",
+          plots_GSEA_analysis$ui(ns("hallmarks"))
         ),
         target = NULL,
         select = TRUE
       )
 
-      # shiny::insertTab(
-      #   session = parent,
-      #   inputId = "AnalytePlotBox",
-      #   shiny::tabPanel(
-      #     title = "GSEA Enrichment Plot",
-      #     plots_GSEA_analysis_enrichment$ui(ns("GSEA-enrichment-plot"))
-      #   ),
-      #   target = NULL,
-      #   select = FALSE
-      # )
-
+      shiny::insertTab(
+        session = parent,
+        inputId = "AnalytePlotBox",
+        tab = shiny::tabPanel(
+          title = "GSEA Enrichment",
+          plots_GSEA_analysis_enrichment$ui(ns("enrichment"))
+        ),
+        target = NULL,
+        select = FALSE
+      )
+      
       # shiny::insertUI(
       #   session = parent,
       #   selector = paste0("#", parent$ns("GSEA-Placeholder")),
@@ -114,14 +114,14 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
       # )
 
 
-      shinyjs::click("configure-GSEA")
+      shinyjs::click("configure")
 
     }, ignoreInit = TRUE)
 
-    shiny::observeEvent(c(input$ClearGSEA), {
+    shiny::observeEvent(c(input$clear), {
 
       shiny::validate(
-        shiny::need(input$ClearGSEA > 0, "")
+        shiny::need(input$clear > 0, "")
       )
 
       shiny::removeUI(
@@ -132,48 +132,64 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
       shiny::removeTab(
         session = parent,
         inputId = "AnalytePlotBox",
-        target = "GSEA Plot"
+        target = "GSEA Hallmarks"
       )
 
       # toggle_GSEA_volcano_plot_trace(
       #   session = session,
       #   ns = ns,
       #   plot_name = "VolcanoPlot",
-      #   r6 = gsea_r6,
+      #   r6 = r6,
       #   action = "remove"
       # )
 
-      shinyjs::click("configure-GSEA")
+      shinyjs::click("configure")
 
     }, ignoreInit = TRUE)
 
-
-    GSEAData <- shiny::reactive({
+    gsea_data <- shiny::reactive({
       shinybusy::show_modal_spinner(
         spin = "atom",
         color = "#3c8dbc",
         text = "Calculating GSEA Data..."
       )
-      gsea_r6$getGSEAData()
-      data <- gsea_r6$GSEAData
+      r6$getGSEAData()
+      data <- r6$GSEAData
       shinybusy::remove_modal_spinner()
       return(data)
     }) |>
-      shiny::bindEvent(input$RunGSEA)
+      shiny::bindEvent(input$run)
 
-    plots_GSEA_analysis$server(
-      id = "GSEA-plot",
-      r6 = gsea_r6,
-      GSEAData = GSEAData,
+    gsea_plot_output <- plots_GSEA_analysis$server(
+      id = "hallmarks",
+      r6 = r6,
+      gsea_data = gsea_data,
       parent = parent
     )
 
-    # plots_GSEA_analysis_enrichment$server(
-    #   id = "GSEA-enrichment-plot",
-    #   r6 = gsea_r6,
-    #   GSEAEnrichmentData = GSEAData,
-    #   parent = parent
-    # )
+    shiny::observeEvent(gsea_plot_output$plot_click_data(), {
+      # sub-plot had click:
+      if (nrow(gsea_plot_output$plot_click_data()) > 0) {
+        shiny::updateTabsetPanel(
+          session = parent,
+          inputId = "AnalytePlotBox",
+          selected = "GSEA Enrichment"
+        )
+      } else {
+        shiny::updateTabsetPanel(
+          session = parent,
+          inputId = "AnalytePlotBox",
+          selected = "GSEA Hallmarks"
+        )
+      }
+    }, ignoreInit = TRUE)
+
+    plots_GSEA_analysis_enrichment$server(
+      id = "enrichment",
+      r6 = r6,
+      pathway_data = gsea_plot_output$plot_click_data,
+      parent = parent
+    )
 
     # feature_analysis_GSEA_summary_data_server(
     #   id = "GSEA-summary-data",
