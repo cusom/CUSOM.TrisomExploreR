@@ -6,10 +6,6 @@ box::use(
   # app/logic/plots_GSEA_analysis_enrichment[feature_analysis_GSEA_enrichment_plot_ui, feature_analysis_GSEA_enrichment_plot_server]
 )
 
-
-#' Create input widgets for TrisomExploreR GSEA pathway analysis
-#' @param id - string - id for this module namespace
-#' @param input_config - list - list of default values for various input widgets
 #' @export
 ui <- function(id, input_config) {
   ns <- shiny::NS(id)
@@ -18,17 +14,6 @@ ui <- function(id, input_config) {
   )
 }
 
-#' Server-side logic / processing for TrisomExploreR GSEA pathway analysis inputs
-#' @param id - string - id for this module namespace
-#' @param r6 - R6 class defining server-side logic for inputs
-#' @param parent - session object - parent session
-#' @import glue
-#' @importFrom gargoyle watch
-#' @importFrom bsplus bs_modal
-#' @importFrom bsplus bs_modal_closebutton
-#' @importFrom bsplus bs_attach_modal
-#' @importFrom shinybusy show_modal_spinner
-#' @importFrom shinybusy remove_modal_spinner
 #' @export
 server <-  function(id, Study, VolcanoSummaryData, parent) {
 
@@ -87,13 +72,6 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
       shiny::validate(
         shiny::need(input$RunGSEA > 0, "")
       )
-
-      shinybusy::show_modal_spinner(
-        spin = "atom",
-        color = "#3c8dbc",
-        text = "Calculating GSEA Data..."
-      )
-    
       shiny::insertTab(
         session = parent,
         inputId = "AnalytePlotBox",
@@ -105,16 +83,16 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
         select = TRUE
       )
 
-      shiny::insertTab(
-        session = parent,
-        inputId = "AnalytePlotBox",
-        shiny::tabPanel(
-          title = "GSEA Enrichment Plot",
-          plots_GSEA_analysis_enrichment$ui(ns("GSEA-enrichment-plot"))
-        ),
-        target = NULL,
-        select = FALSE
-      )
+      # shiny::insertTab(
+      #   session = parent,
+      #   inputId = "AnalytePlotBox",
+      #   shiny::tabPanel(
+      #     title = "GSEA Enrichment Plot",
+      #     plots_GSEA_analysis_enrichment$ui(ns("GSEA-enrichment-plot"))
+      #   ),
+      #   target = NULL,
+      #   select = FALSE
+      # )
 
       # shiny::insertUI(
       #   session = parent,
@@ -135,9 +113,6 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
       #   )
       # )
 
-      gsea_r6$getGSEAData()
-
-      shinybusy::remove_modal_spinner()
 
       shinyjs::click("configure-GSEA")
 
@@ -174,8 +149,17 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
 
 
     GSEAData <- shiny::reactive({
-      gsea_r6$GSEAData
-    })
+      shinybusy::show_modal_spinner(
+        spin = "atom",
+        color = "#3c8dbc",
+        text = "Calculating GSEA Data..."
+      )
+      gsea_r6$getGSEAData()
+      data <- gsea_r6$GSEAData
+      shinybusy::remove_modal_spinner()
+      return(data)
+    }) |>
+      shiny::bindEvent(input$RunGSEA)
 
     plots_GSEA_analysis$server(
       id = "GSEA-plot",
@@ -184,12 +168,12 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
       parent = parent
     )
 
-    plots_GSEA_analysis_enrichment$server(
-      id = "GSEA-enrichment-plot",
-      r6 = gsea_r6,
-      GSEAEnrichmentData = GSEAData,
-      parent = parent
-    )
+    # plots_GSEA_analysis_enrichment$server(
+    #   id = "GSEA-enrichment-plot",
+    #   r6 = gsea_r6,
+    #   GSEAEnrichmentData = GSEAData,
+    #   parent = parent
+    # )
 
     # feature_analysis_GSEA_summary_data_server(
     #   id = "GSEA-summary-data",
