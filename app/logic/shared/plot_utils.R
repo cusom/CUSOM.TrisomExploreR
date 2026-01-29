@@ -89,7 +89,7 @@ object_is_rendered <- function(session, target_obj_name) {
 #' @importFrom stringr str_split_i
 get_object_name_from_namespace_session <- function(session, namespace, object_name) {
 
-  if (is.null(session) | is.null(namespace) | is.null(object_name)) {
+  if (is.null(session) || is.null(namespace) || is.null(object_name)) {
     stop("session, namespace, and object_name are required parameters")
   }
 
