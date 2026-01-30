@@ -1,31 +1,34 @@
 box::use(
-    shiny[bootstrapPage, div, moduleServer, NS, renderUI, tags, uiOutput, icon]
+    shiny[bootstrapPage, div, moduleServer, NS, renderUI, uiOutput, tags, tagList, icon, HTML],
+    shinydashboardPlus[dashboardPage, dashboardHeader, dashboardSidebar, dashboardFooter],
+    shinydashboard[sidebarMenu, menuItem, dashboardBody, tabItems, tabItem],
+    waiter[spin_orbiter],
+    glue[glue],
+    shinyjs[useShinyjs]
 )
+
 box::use(
+    app/logic/shared/ui_utils[create_app_links],
     app/view/overviews/overview_proteome,
     app/view/layouts/feature_analysis,
     app/view/layouts/correlates_analysis
-
 )
-
 
 #' @export
 ui <- function(id) {
 
     ns <- NS(id)
 
-    shinydashboardPlus::dashboardPage(
+    dashboardPage(
         preloader = list(
-            html = shiny::tagList(
-                waiter::spin_orbiter(),
-                glue::glue("Loading  Explorer...")
+            html = tagList(
+                spin_orbiter(),
+                glue("Loading  Proteome Explorer...")
             ),
             color = "#3c8dbc"
         ),
-
         title = "Proteome",
-
-        header = shinydashboardPlus::dashboardHeader(
+        header = dashboardHeader(
             title = tags$a(
                 href = "",
                 tags$img(
@@ -36,19 +39,18 @@ ui <- function(id) {
                 style = "color:#fff;"
             ),
             titleWidth = 300,
-            controlbarIcon = shiny::icon("bars")
-            # shiny::tags$li(
-            #     class = "dropdown",
-            #     ui_utils$createApplicationLinks(appGlobals$app_config$applicationLinks)
-            # )
+            controlbarIcon = icon("bars"),
+            tags$li(
+                class = "dropdown",
+                uiOutput(ns("links"))
+            )
         ),
-
-        sidebar = shinydashboardPlus::dashboardSidebar(
+        sidebar = dashboardSidebar(
             collapsed = FALSE,
             width = 300,
-            shinydashboard::sidebarMenu(
+            sidebarMenu(
                 id = "sidebar",
-                shinydashboard::menuItem(
+                menuItem(
                     text = "Overview",
                     icon = icon("home"),
                     tabName = ns("overview"),
@@ -56,23 +58,23 @@ ui <- function(id) {
                     newtab = TRUE,
                     selected = TRUE
                 ),
-                shinydashboard::menuItem(
+                menuItem(
                     text = "Effect of trisomy 21",
                     icon = icon("dna"),
                     tabName = ns("karyotype"),
                     href = NULL,
                     newtab = TRUE,
                     selected = FALSE
-                ), 
-                shinydashboard::menuItem(
+                ),
+                menuItem(
                     text = "Effects of age",
                     icon = icon("chart-line"),
                     tabName = ns("age"),
                     href = NULL,
                     newtab = TRUE,
                     selected = FALSE
-                ),  
-                shinydashboard::menuItem(
+                ),
+                menuItem(
                     text = "Sex differences",
                     icon = icon("venus-mars"),
                     tabName = ns("sex"),
@@ -80,7 +82,7 @@ ui <- function(id) {
                     newtab = TRUE,
                     selected = FALSE
                 ),
-                shinydashboard::menuItem(
+                menuItem(
                     text = "Effect of Co-Occuring Conditions",
                     icon = icon("file-medical-alt"),
                     tabName = ns("comorbidity"),
@@ -88,7 +90,7 @@ ui <- function(id) {
                     newtab = TRUE,
                     selected = FALSE
                 ),
-                shinydashboard::menuItem(
+                menuItem(
                     text = "Cross Omics Correlates",
                     icon = icon("circle-nodes"),
                     tabName = ns("correlates"),
@@ -99,56 +101,54 @@ ui <- function(id) {
             )
         ),
 
-        body = shinydashboard::dashboardBody(
+        body = dashboardBody(
             #tags$head(tags$html("ga/google-analytics.html")),
-            shiny::tags$head(shiny::HTML('<meta name="robots" content="noindex">')),
-            shiny::tags$head(tags$script(src = "custom-assets/js/script.min.js")),
-            shiny::tags$head(tags$style("@import url(https://use.fontawesome.com/releases/v5.15.1/css/all.css);")),
-            shiny::tags$head(tags$link(rel="stylesheet", type = "text/css", href = "custom-assets/css/style.css")),
-            shiny::tags$link(rel = "icon", href = "www/favicon.png"),
-            shinyjs::useShinyjs(),
-            shinydashboard::tabItems(
-                shinydashboard::tabItem(
+            tags$head(HTML('<meta name="robots" content="noindex">')),
+            tags$head(tags$script(src = "custom-assets/js/script.min.js")),
+            tags$head(tags$style("@import url(https://use.fontawesome.com/releases/v5.15.1/css/all.css);")),
+            tags$head(tags$link(rel = "stylesheet", type = "text/css", href = "custom-assets/css/style.css")),
+            tags$link(rel = "icon", href = "www/favicon.png"),
+            useShinyjs(),
+            tabItems(
+                tabItem(
                     tabName = ns("overview"),
                     tags$div(
                         overview_proteome$ui(ns("overview"))
                     )
                 ),
-                shinydashboard::tabItem(
+                tabItem(
                     tabName = ns("karyotype"),
                     tags$div(
                         feature_analysis$ui(ns("karyotype"))
                     )
                 ),
-                shinydashboard::tabItem(
+                tabItem(
                     tabName = ns("age"),
                     tags$div(
                         feature_analysis$ui(ns("age"))
                     )
                 ),
-                shinydashboard::tabItem(
+                tabItem(
                     tabName = ns("sex"),
                     tags$div(
                         feature_analysis$ui(ns("sex"))
                     )
                 ),
-                shinydashboard::tabItem(
+                tabItem(
                     tabName = ns("comorbidity"),
                     tags$div(
                         feature_analysis$ui(ns("comorbidity"))
                     )
                 ),
-                shinydashboard::tabItem(
+                tabItem(
                     tabName = ns("correlates"),
                     tags$div(
                         correlates_analysis$ui(ns("correlates"))
                     )
                 )
             )
-            
         ),
-
-        footer = shinydashboardPlus::dashboardFooter(
+        footer = dashboardFooter(
             tags$p("")
         )
     )
@@ -160,6 +160,10 @@ server <- function(id, app_config) {
     moduleServer(id, function(input, output, session) {
 
         ns <- session$ns
+
+        output$links <- renderUI({
+            create_app_links(app_config$app_config$applicationLinks)
+        })
 
         overview_proteome$server(ns("overview"))
 
