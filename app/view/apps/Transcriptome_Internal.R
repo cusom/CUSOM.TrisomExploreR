@@ -9,7 +9,8 @@ box::use(
 
 box::use(
     app/logic/shared/ui_utils[create_app_links],
-    app/view/overviews/overview_transcriptome
+    app/view/overviews/overview_transcriptome,
+    app/view/layouts/cell_type_analysis
 )
 
 #' @export
@@ -55,6 +56,14 @@ ui <- function(id) {
                     href = NULL,
                     newtab = TRUE,
                     selected = TRUE
+                ),
+                menuItem(
+                    text = "Effect of Triomsy 21 - Cell Types",
+                    icon = icon("chart-bar"),
+                    tabName = ns("cell_types"),
+                    href = NULL,
+                    newtab = TRUE,
+                    selected = FALSE
                 )
             )
         ),
@@ -72,6 +81,12 @@ ui <- function(id) {
                     tabName = ns("overview"),
                     tags$div(
                         overview_transcriptome$ui(ns("overview"))
+                    )
+                ),
+                tabItem(
+                    tabName = ns("cell_types"),
+                    tags$div(
+                        cell_type_analysis$ui(ns("cell-types"))
                     )
                 )
             )
@@ -97,6 +112,13 @@ server <- function(id, app_config) {
         output$links <- renderUI({
             create_app_links(app_config$app_config$applicationLinks)
         })
+
+        cell_type_analysis$server(
+            "cell-types",
+            app_config = app_config,
+            app_config$get_analysis_config("celltype"),
+            app_config$get_input_config("celltype")
+        )
 
     })
 }
