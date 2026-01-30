@@ -1,34 +1,22 @@
 box::use(
   fgsea[fgseaMultilevel],
-  dplyr[select, filter, mutate, arrange, inner_join, group_by, summarise, ungroup, rowwise, pull, rename, distinct, n_distinct, add_count],
-  rlang[enquo, quo_name, `:=`, `!!!`],
+  dplyr[select, filter, mutate, arrange, inner_join, group_by, summarize, summarise, ungroup,
+    rowwise, pull, rename, distinct, n, n_distinct, add_count, summarise_at, vars,
+    first, nth, row_number, top_n, case_when],
+  rlang[enquo, quo_name, `:=`, `!!!`, sym],
   stats[lm, p.adjust],
   broom[tidy],
   tidyr[pivot_longer, pivot_wider, separate_rows, nest, unnest],
-  purrr[map],
+  purrr[map, map_df],
   tibble[tibble, as_tibble],
+  stringr[str_detect],
+  glue[glue, glue_collapse]
 )
 
-#' Calculate statistical test between 2 groups for each key value in a dataframe
-#'
-#' @param .data A dataframe
-#' @param id A string or numeric column - represents a unique
-#' observation within each key/group combination. PersonId, LabId, etc
-#' @param key A string or numeric column - key value for dataframe.
-#' Statistics will be computed between groups for each key value
-#' @param response A numeric column - numerical value to use
-#' with statitical test between groups.
-#' @param independentVariable A string column indicating group membership - should be binary.
-#' @param baselineLabel independentVariable label used for fold change comparison / calculation
-#' @param testMethod a string - indicating which statisical
-#' test to perform. One of either ks.test, t.test, or wilcox.test
-#' @param ... dots - accomodate additional arguments
-#' function is called as parent router
-#' @return dataframe containing resulting p.values for each key/group stat test
-#' @importFrom rlang enquo
-#' @importFrom rlang quo_name
-#' @importFrom rlang :=
-#' @import dplyr
+box::use(
+
+)
+
 #' @export
 getStatTestByKeyGroup <- function(
   .data,
@@ -39,13 +27,12 @@ getStatTestByKeyGroup <- function(
   baselineLabel,
   testMethod,
   ...
-)
-{
+) {
 
-  id <- rlang::enquo(id)
-  key <- rlang::enquo(key)
-  response <- rlang::enquo(response)
-  independentVariable <- rlang::enquo(independentVariable)
+  id <- enquo(id)
+  key <- enquo(key)
+  response <- enquo(response)
+  independentVariable <- enquo(independentVariable)
 
   if (testMethod == "Linear Model") {
     finalData <- .data |>
@@ -59,13 +46,13 @@ getStatTestByKeyGroup <- function(
   } else {
 
     foldChange <- .data |>
-      CUSOMShinyHelpers::summarizeByGroup(
+      summarizeByGroup(
         !!response,
         !!key,
         !!independentVariable,
         na.rm = TRUE
       ) |>
-      CUSOMShinyHelpers::calculateFoldChangeByKeyGroup(
+      calculateFoldChangeByKeyGroup(
         !!key,
         !!independentVariable,
         median,
@@ -83,10 +70,10 @@ getStatTestByKeyGroup <- function(
         ...
       )
 
-    finalData <- dplyr::inner_join(
+    finalData <- inner_join(
       foldChange,
       statsData,
-      by = rlang::quo_name(key)
+      by = quo_name(key)
     )
 
   }
@@ -95,20 +82,37 @@ getStatTestByKeyGroup <- function(
 
 }
 
-#' run linear model
-#'
-#' @param .data data for model
-#' @param id id column - a linear model will be run for each id value in .data
-#' @param key a unique identifier per id
-#' @param response a numeric column to be used as response variable in linear model
-#' @param independentVariable indepdendent variable to be used in linear model
-#' @param covariates list of covariate columns to be included in linear model
-#' @param adjustmentMethod p.value adjustment method to be applied
-#' @param ... dots - accomodate additional arguments
-#' @importFrom rlang enquo
-#' @importFrom rlang quo_name
-#' @importFrom rlang :=
-#' @import dplyr
+#' @export
+getGroupedStatTestByKeyGroup <- function(
+  .data,
+  groupVar,
+  ...
+) {
+
+  groupVar <- enquo(groupVar)
+
+  groups <- .data |>
+    select(!!groupVar) |>
+    distinct() |>
+    pull()
+
+  return(
+    .data |>
+      select(!!groupVar) |>
+      distinct() |>
+      pull() |>
+      map_df(function(x) {
+        .data |>
+          filter(!!groupVar == x) |>
+          getStatTestByKeyGroup(...) |>
+          mutate(`:=`(!!groupVar, x)) |>
+          ungroup() |>
+          select(!!groupVar, p.value)
+      })
+  )
+
+}
+
 getLinearModel <- function(
   .data,
   id,
@@ -120,102 +124,104 @@ getLinearModel <- function(
   ...
 ) {
 
-  id <- rlang::enquo(id)
-  key <- rlang::enquo(key)
-  response <- rlang::enquo(response)
-  independentVariable <- rlang::enquo(independentVariable)
+  id <- enquo(id)
+  key <- enquo(key)
+  response <- enquo(response)
+  independentVariable <- enquo(independentVariable)
 
   if (!is.null(covariates)) {
     modelCovariates <- .data |>
-      dplyr::select(!!key, !!id, !!response, !!covariates) |>
-      dplyr::group_by(!!key) |>
-      dplyr::summarise_at(
-        dplyr::vars(!!covariates),
-        dplyr::n_distinct
+      select(!!key, !!id, !!response, !!covariates) |>
+      group_by(!!key) |>
+      summarise_at(
+        vars(!!covariates),
+        n_distinct
       ) |>
-      tidyr::pivot_longer(!!covariates) |>
-      dplyr::mutate(KeepVar = ifelse(value >= 2, 1, 0)) |>
-      dplyr::filter(KeepVar == 1) |>
-      dplyr::select(name) |>
-      dplyr::distinct() |>
-      dplyr::pull()
+      pivot_longer(!!covariates) |>
+      mutate(KeepVar = ifelse(value >= 2, 1, 0)) |>
+      filter(KeepVar == 1) |>
+      select(name) |>
+      distinct() |>
+      pull()
   } else {
     modelCovariates <- NULL
   }
 
   independentVariableClass <- .data |>
-    dplyr::select(!!independentVariable) |>
-    dplyr::pull() |>
+    select(!!independentVariable) |>
+    pull() |>
     class()
 
   independentVars <- as.list(
     c(
-      rlang::quo_name(independentVariable),
+      quo_name(independentVariable),
       modelCovariates
     )
   )
 
   ivs <- paste(
-    purrr::map(independentVars, rlang::quo_name),
+    map(independentVars, quo_name),
     collapse = " + "
   )
 
-  lmformula <- paste(rlang::quo_name(response), " ~ ", ivs)
+  lmformula <- paste(quo_name(response), " ~ ", ivs)
 
   linearModelData <- .data |>
-    dplyr::select(
+    select(
       !!key,
       !!id,
       !!response,
       !!!independentVars
     ) |>
-    tidyr::nest(
+    nest(
       data = c(!!id, !!response, !!!independentVars)
     ) |>
-    dplyr::mutate(
-      fit = purrr::map(data, ~stats::lm(lmformula, data = .x)),
-      tidied = purrr::map(fit, broom::tidy)
+    mutate(
+      fit = map(data, ~lm(lmformula, data = .x)),
+      tidied = map(fit, tidy)
     ) |>
-    tidyr::unnest(tidied) |>
-    dplyr::select(
+    unnest(tidied) |>
+    select(
       !!key,
       term,
       estimate,
       p.value
     ) |>
-    dplyr::group_by(!!key) |>
-    dplyr::summarize(
-      log2_denom = dplyr::first(estimate),
-      log2_num = dplyr::nth(estimate, n = 2) + log2_denom,
-      log2FoldChange = dplyr::nth(estimate, n = 2),
+    group_by(!!key) |>
+    summarize(
+      log2_denom = first(estimate),
+      log2_num = nth(estimate, n = 2) + log2_denom,
+      log2FoldChange = nth(estimate, n = 2),
       FoldChange = 2^log2FoldChange,
-      p.value.original = dplyr::nth(p.value, n = 2)
+      p.value.original = nth(p.value, n = 2)
     ) |>
-    dplyr::arrange(p.value.original) |>
-    dplyr::ungroup() |>
-    dplyr::mutate(
-      p.value = stats::p.adjust(p.value.original,
+    arrange(p.value.original) |>
+    ungroup() |>
+    mutate(
+      p.value = p.adjust(p.value.original,
       method = getStatTestByKeyGroup.getAdjustmentMethodName(adjustmentMethod),
       n = length(p.value.original))
     ) |>
-    dplyr::mutate(p.value.adjustment.method = adjustmentMethod) |>
-    dplyr::mutate(`-log10pvalue` = -log10(p.value)) |>
-    dplyr::mutate(lmFormula = lmformula, ivs = ivs)
+    mutate(
+      p.value.adjustment.method = adjustmentMethod,
+      `-log10pvalue` = -log10(p.value),
+      lmFormula = lmformula, ivs = ivs
+    )
 
-  if(independentVariableClass %in% c("factor", "character")) {
+  if (independentVariableClass %in% c("factor", "character")) {
 
     independentVariableLevels <- levels(
-      .data[[rlang::quo_name(independentVariable)]]
+      .data[[quo_name(independentVariable)]]
     )
 
     linearModelData <- linearModelData |>
-      dplyr::rename(
+      rename(
         `:=`(
-          !!rlang::quo_name(independentVariableLevels[1]),
+          !!quo_name(independentVariableLevels[1]),
           log2_denom
         ),
         `:=`(
-          !!rlang::quo_name(independentVariableLevels[2]),
+          !!quo_name(independentVariableLevels[2]),
           log2_num
         )
         )
@@ -223,10 +229,10 @@ getLinearModel <- function(
   } else {
 
     linearModelData <- linearModelData |>
-      dplyr::select(-log2_denom) |>
-      dplyr::rename(
+      select(-log2_denom) |>
+      rename(
         `:=`(
-          !!rlang::quo_name(independentVariable),
+          !!quo_name(independentVariable),
           log2_num
         )
       )
@@ -249,82 +255,82 @@ getLinearModelWithInteraction <- function(
   ...
 ) {
 
-  id <- rlang::enquo(id)
-  key <- rlang::enquo(key)
-  response <- rlang::enquo(response)
-  independentVariable <- rlang::enquo(independentVariable)
-  interactionVariable <- rlang::enquo(interactionVariable)
+  id <- enquo(id)
+  key <- enquo(key)
+  response <- enquo(response)
+  independentVariable <- enquo(independentVariable)
+  interactionVariable <- enquo(interactionVariable)
 
   if (!is.null(covariates)) {
 
     modelCovariates <- .data |>
-      dplyr::select(!!key, !!id, !!response, !!covariates) |>
-      dplyr::group_by(!!key) |>
-      dplyr::summarise_at(
-        dplyr::vars(!!covariates),
-        dplyr::n_distinct
+      select(!!key, !!id, !!response, !!covariates) |>
+      group_by(!!key) |>
+      summarise_at(
+        vars(!!covariates),
+        n_distinct
       ) |>
-      tidyr::pivot_longer(!!covariates) |>
-      dplyr::mutate(KeepVar = ifelse(value >= 2, 1, 0)) |>
-      dplyr::filter(KeepVar == 1) |>
-      dplyr::select(name) |>
-      dplyr::distinct() |>
-      dplyr::pull()
+      pivot_longer(!!covariates) |>
+      mutate(KeepVar = ifelse(value >= 2, 1, 0)) |>
+      filter(KeepVar == 1) |>
+      select(name) |>
+      distinct() |>
+      pull()
     } else {
     modelCovariates <- NULL
   }
 
   independentVariableClass <- .data |>
-    dplyr::select(!!independentVariable) |>
-    dplyr::pull() |>
+    select(!!independentVariable) |>
+    pull() |>
     class()
 
   independentVars <- as.list(
     c(
-      rlang::quo_name(independentVariable),
+      quo_name(independentVariable),
       modelCovariates
     )
   )
 
   addInteractionTerm <- .data |>
-    dplyr::select(!!interactionVariable) |>
-    dplyr::summarise(
-      n = dplyr::n_distinct(!!interactionVariable)
+    select(!!interactionVariable) |>
+    summarise(
+      n = n_distinct(!!interactionVariable)
     ) |>
-    dplyr::mutate(
+    mutate(
       AddInteraction = ifelse(
         n >= 2,
         TRUE,
         FALSE
       )
     ) |>
-    dplyr::pull(AddInteraction)
+    pull(AddInteraction)
 
   if (addInteractionTerm) {
 
-    ivs =  glue::glue_collapse(
-      purrr::map(
+    ivs <- glue_collapse(
+      map(
         c(
           independentVars,
-          rlang::quo_name(interactionVariable)
+          quo_name(interactionVariable)
         ),
-        rlang::quo_name
+        quo_name
       ),
       sep = " + "
     )
 
-    interactionTerm <- glue::glue(
-      "{rlang::quo_name(independentVariable)} * {rlang::quo_name(interactionVariable)}"
+    interactionTerm <- glue(
+      "{quo_name(independentVariable)} * {quo_name(interactionVariable)}"
       )
 
-    allVars <- glue::glue("{ivs} + {interactionTerm}")
+    allVars <- glue("{ivs} + {interactionTerm}")
 
   } else {
 
-    ivs <- glue::glue_collapse(
-      purrr::map(
+    ivs <- glue_collapse(
+      map(
         independentVars,
-        rlang::quo_name
+        quo_name
       )
       , sep = " + "
     )
@@ -333,25 +339,25 @@ getLinearModelWithInteraction <- function(
 
   }
 
-  lmformula = glue::glue("{rlang::quo_name(response)} ~ {allVars}")
+  lmformula <- glue("{quo_name(response)} ~ {allVars}")
 
   rawModelData <- .data |>
-    dplyr::select(
-      !!key, 
-      !!id, 
-      !!response, 
-      !!!independentVars, 
+    select(
+      !!key,
+      !!id,
+      !!response,
+      !!!independentVars,
       !!interactionVariable
     ) |>
     tidyr::nest(
       data = c(!!id, !!response, !!!independentVars, !!interactionVariable)
     ) |>
-    dplyr::mutate(
-        fit = purrr::map(data, ~stats::lm(lmformula, data = .x)),
-        tidied = purrr::map(fit, broom::tidy)
+    mutate(
+        fit = map(data, ~stats::lm(lmformula, data = .x)),
+        tidied = map(fit, tidy)
     ) |>
-    tidyr::unnest(tidied) |>
-    dplyr::select(
+    unnest(tidied) |>
+    select(
       !!key,
       term,
       estimate,
@@ -359,53 +365,53 @@ getLinearModelWithInteraction <- function(
       statistic,
       p.value
     ) |>
-    dplyr::mutate(
-      interaction.term.flag = stringr::str_detect(term, ":")
-        & stringr::str_detect(term, rlang::quo_name(independentVariable))
-        & stringr::str_detect(term, rlang::quo_name(interactionVariable))
+    mutate(
+      interaction.term.flag = str_detect(term, ":")
+        & str_detect(term, quo_name(independentVariable))
+        & str_detect(term, quo_name(interactionVariable))
     ) |>
-    dplyr::group_by(!!key) |>
-    dplyr::mutate(rank = dplyr::row_number()) |>
-    dplyr::ungroup()
+    group_by(!!key) |>
+    mutate(rank = row_number()) |>
+    ungroup()
 
   interactionTermLocation <- rawModelData |>
-    dplyr::filter(interaction.term.flag == TRUE) |>
-    dplyr::group_by(rank) |>
-    dplyr::summarise(n = dplyr::n()) |>
-    dplyr::ungroup() |>
-    dplyr::arrange(n) |>
-    dplyr::top_n(1, n) |>
-    dplyr::select(rank) |>
-    dplyr::pull()
+    filter(interaction.term.flag == TRUE) |>
+    group_by(rank) |>
+    summarise(n = n()) |>
+    ungroup() |>
+    arrange(n) |>
+    top_n(1, n) |>
+    select(rank) |>
+    pull()
 
   if (length(interactionTermLocation) == 0) {
       interactionTermLocation <- 999
   }
 
   linearModelData <- rawModelData |>
-    dplyr::group_by(!!key) |>
-    dplyr::summarize(
-      log2_denom = dplyr::first(estimate),
-      log2_num = dplyr::nth(estimate, n = 2) + log2_denom,
+    group_by(!!key) |>
+    summarize(
+      log2_denom = first(estimate),
+      log2_num = nth(estimate, n = 2) + log2_denom,
       log2FoldChange = ifelse(
         addInteractionTerm,
-        dplyr::nth(estimate, n = interactionTermLocation),
-        dplyr::nth(estimate, n = 2)
+        nth(estimate, n = interactionTermLocation),
+        nth(estimate, n = 2)
       ),
       FoldChange = 2^log2FoldChange,
-      p.value.original = dplyr::nth(p.value, n = 2),
-      p.value.interaction = dplyr::nth(p.value, n = interactionTermLocation)
+      p.value.original = nth(p.value, n = 2),
+      p.value.interaction = nth(p.value, n = interactionTermLocation)
     ) |>
-    dplyr::arrange(p.value.original) |>
-    dplyr::ungroup() |>
-    dplyr::mutate(
-      p.value.original = dplyr::case_when(
+    arrange(p.value.original) |>
+    ungroup() |>
+    mutate(
+      p.value.original = case_when(
         is.na(p.value.interaction) ~ p.value.original,
         TRUE ~ p.value.interaction
       )
     ) |>
-    dplyr::select(-p.value.interaction) |>
-    dplyr::mutate(
+    select(-p.value.interaction) |>
+    mutate(
       p.value = stats::p.adjust(
         p.value.original,
         method = getStatTestByKeyGroup.getAdjustmentMethodName(adjustmentMethod),
@@ -420,22 +426,20 @@ getLinearModelWithInteraction <- function(
     if (independentVariableClass %in% c("factor", "character")) {
 
       independentVariableLevels <- levels(
-        .data[[rlang::quo_name(independentVariable)]]
+        .data[[quo_name(independentVariable)]]
       )
 
       linearModelData <- linearModelData |>
-      dplyr::rename(
-        `:=`(!!rlang::quo_name(independentVariableLevels[1]), log2_denom),
-        `:=`(!!rlang::quo_name(independentVariableLevels[2]), log2_num)
+      rename(
+        `:=`(!!quo_name(independentVariableLevels[1]), log2_denom),
+        `:=`(!!quo_name(independentVariableLevels[2]), log2_num)
         )
 
-    }
-
-    else {
+    } else {
 
       linearModelData <- linearModelData |>
-        dplyr::select(-log2_denom) |>
-        dplyr::rename(`:=`(!!rlang::quo_name(independentVariable), log2_num))
+        select(-log2_denom) |>
+        rename(`:=`(!!quo_name(independentVariable), log2_num))
 
     }
 
@@ -443,7 +447,7 @@ getLinearModelWithInteraction <- function(
 
 }
 
-getPairwiseStatTestByKeyGroup <- function (
+getPairwiseStatTestByKeyGroup <- function(
   .data,
   .id,
   .key,
@@ -454,43 +458,42 @@ getPairwiseStatTestByKeyGroup <- function (
   ...
 ) {
 
-  .id <- rlang::enquo(.id)
-  .key <- rlang::enquo(.key)
-  .group <- rlang::enquo(.group)
-  .response <- rlang::enquo(.response)
+  .id <- enquo(.id)
+  .key <- enquo(.key)
+  .group <- enquo(.group)
+  .response <- enquo(.response)
 
   groupLabels <- .data |>
-    dplyr::select(!!.group) |>
-    dplyr::distinct() |>
-    dplyr::pull()
-  
+    select(!!.group) |>
+    distinct() |>
+    pull()
+
   StatResults <- .data |>
-    dplyr::select(!!.key, !!.group, !!.response) |>
-    dplyr::group_by(!!.key, !!.group) |>
-    dplyr::summarise(!!.response := list(!!.response)) |>
-    tidyr::pivot_wider(
+    select(!!.key, !!.group, !!.response) |>
+    group_by(!!.key, !!.group) |>
+    summarise(!!.response := list(!!.response)) |>
+    pivot_wider(
       names_from = !!.group,
       values_from = !!.response,
       values_fill = NA
     ) |>
-    dplyr::rename(
+    rename(
       "x" = groupLabels[1],
       "y" = groupLabels[2]
     ) |>
-    tidyr::nest(data = c(y, x)) |>
-    dplyr::mutate(
-      fit = purrr::map(
+    nest(data = c(y, x)) |>
+    mutate(
+      fit = map(
         data, ~ runStatMethod(
           method,
           unlist(.x$x),
           unlist(.x$y)
           )
         ),
-      tidied = purrr::map(fit, broom::tidy)
+      tidied = map(fit, tidy)
     ) |>
-    tidyr::unnest(tidied) |>
-    dplyr::select(-c(data, fit))
-
+    unnest(tidied) |>
+    select(-c(data, fit))
 
   if ("p.value" %in% colnames(StatResults)) {
 
@@ -502,23 +505,23 @@ getPairwiseStatTestByKeyGroup <- function (
       )
     )
     StatResults$p.value.original <- StatResults$p.value
-    StatResults$p.value <- stats::p.adjust(
+    StatResults$p.value <- p.adjust(
       StatResults$p.value,
       getStatTestByKeyGroup.getAdjustmentMethodName(adjustmentMethod)
     )
     StatResults$p.value.adjustment.method <- adjustmentMethod
     StatResults <- StatResults |>
-      dplyr::mutate(`-log10pvalue` = -log10(p.value))
+      mutate(`-log10pvalue` = -log10(p.value))
 
   } else {
 
     StatResults <- StatResults |>
-      dplyr::mutate(
+      mutate(
         statistic = NA,
         p.value = NA,
         `-log10pvalue` = 0,
-         method = method,
-         error = paste0("Not Enough Observations to run ", method)
+        method = method,
+        error = paste0("Not Enough Observations to run ", method)
       )
   }
 
@@ -527,22 +530,13 @@ getPairwiseStatTestByKeyGroup <- function (
 }
 
 runStatMethod <- function(method, x, y) {
-
   methodName <- getStatTestByKeyGroup.getMethodName(method)
-
   tryCatch({
-
     result <- do.call(methodName, args = list(x, y))
-
     return(result)
-
-
   }, error = function(err) {
-
     return(NA)
-
   })
-
 }
 
 #' Return implemented stat test methods
@@ -554,12 +548,10 @@ getStatTestByKeyGroup.methods <- c("Linear Model",
   "Wilcoxon test"
   )
 
-
-
 # internal lookup between label and method name for all stat tests
 getStatTestByKeyGroup.getMethodName <- function(method) {
 
-  statMethods <- tibble::tibble(
+  statMethods <- tibble(
     StatTestMethodLabel = c("Kolmogorov-Smirnov Test",
                             "Student's t-test",
                             "Wilcoxon test"
@@ -568,13 +560,13 @@ getStatTestByKeyGroup.getMethodName <- function(method) {
   )
 
   methodName <- statMethods |>
-    dplyr::filter(
+    filter(
       StatTestMethodLabel == method | StatTestMethodName == method
     ) |>
-    dplyr::select(StatTestMethodName) |>
-    dplyr::pull()
+    select(StatTestMethodName) |>
+    pull()
 
-  if(length(methodName) == 0) {
+  if (length(methodName) == 0) {
     msg <- paste0("'", method, "' Method Not Yet Implemented")
     stop(msg, call. = FALSE)
   } else {
@@ -598,7 +590,7 @@ getStatTestByKeyGroup.getAdjustmentMethodName <- function(adjustment) {
     "AdjustmentMethodName"]
     )
 
-  if(length(adjustmentName) == 0) {
+  if (length(adjustmentName) == 0) {
     return(adjustment)
   } else {
     return(adjustmentName)
@@ -625,22 +617,84 @@ formatPValue <- function(
     } else {
       return("No significant difference")
     }
-  } else {    
+  } else { 
     return("Unable to compute using chosen methods")
   }
+}
+
+summarizeByGroup <- function(
+  .data,
+  .summaryVar,
+  ...,
+  na.rm = TRUE
+) {
+
+  .summaryVar <- enquo(.summaryVar)
+  .group_vars <- enquos(...)
+
+  .data |>
+    group_by(!!!.group_vars) |>
+    summarise(
+      median = median(!!.summaryVar, na.rm = na.rm),
+      mean = mean(!!.summaryVar, na.rm = na.rm),
+      n = n()
+    )
+}
+
+calculateFoldChangeByKeyGroup <- function(
+  .data,
+  .key,
+  .group,
+  .response,
+  baselineGroupLabel,
+  inf.rm = TRUE,
+  ...
+) {
+
+  .key <- enquo(.key)
+  .group <- enquo(.group)
+  .response <- enquo(.response)
+
+  groupLabels <- .data |>
+    ungroup() |>
+    select(!!.group) |>
+    unique()
+
+  comparisonGroupLabel <- groupLabels |>
+    filter(!!.group != baselineGroupLabel) |>
+    pull() |>
+    as.character()
+
+  baselineGroupLabel <- sym(baselineGroupLabel)
+  comparisonGroupLabel <- sym(comparisonGroupLabel)
+
+  foldChangeData <- .data |>
+    select(!!.key, !!.group, !!.response) |>
+    pivot_wider(names_from = !!.group, values_from = !!.response, values_fill = NA) |>
+    mutate(
+      log2FoldChange = !!comparisonGroupLabel - !!baselineGroupLabel,
+      FoldChange = 2^log2FoldChange
+    )
+
+  if (inf.rm) {
+      foldChangeData <- foldChangeData |>
+        filter(FoldChange != Inf)
+  }
+
+  return(foldChangeData)
 }
 
 #' @export
 addGroupCount <- function(.data, group, addLineBreak = TRUE) {
 
-  group <- rlang::enquo(group)
-  lineBreak <- ifelse(addLineBreak,"\n","")
+  group <- enquo(group)
+  lineBreak <- ifelse(addLineBreak, "\n", "")
 
   return(
     .data |>
-      dplyr::add_count(!!group)|>
-      dplyr::mutate(
-        `:=`(!!group, paste0("<b>",!!group,"</b>",lineBreak," (n=",n,")"))
+      add_count(!!group) |>
+      mutate(
+        `:=`(!!group, paste0("<b>", !!group, "</b>", lineBreak, " (n=", n, ")"))
       )
     )
 }
@@ -681,24 +735,24 @@ runfGSEA <- function(geneset, ranks, min_size = 15, max_size = 500, gsea_param =
 
   fgseaRes_combined <- dplyr::bind_rows(
       fgseaRes_pos_neg |>
-      dplyr::filter(ES_POS > abs(ES_NEG)) |>
-      dplyr::select(pathway) |>
+      filter(ES_POS > abs(ES_NEG)) |>
+      select(pathway) |>
       dplyr::inner_join(
         fgseaRes_positive,
         by = c("pathway")
       ),
       fgseaRes_pos_neg |>
-      dplyr::filter(ES_POS < abs(ES_NEG)) |>
-      dplyr::select(pathway) |>
+      filter(ES_POS < abs(ES_NEG)) |>
+      select(pathway) |>
       dplyr::inner_join(
         fgseaRes_negative,
         by = c("pathway")
       )
     ) |>
-    dplyr::mutate(
-      padj = stats::p.adjust(pval, method = "BH")
+    mutate(
+      padj = p.adjust(pval, method = "BH")
     ) |>
-    dplyr::arrange(padj, -abs(NES))
+    arrange(padj, -abs(NES))
 
   return(fgseaRes_combined)
 
@@ -708,10 +762,10 @@ runfGSEA <- function(geneset, ranks, min_size = 15, max_size = 500, gsea_param =
 calculate_GSEA_scores <- function(stats, pathway_data, gsea_param = 0) {
 
     pathway_nammed <- pathway_data |>
-      dplyr::select(Leading.edge.genes) |>
-      dplyr::mutate(id = dplyr::row_number()) |>
+      select(Leading.edge.genes) |>
+      mutate(id = row_number()) |>
       tidyr::separate_rows(Leading.edge.genes, sep = ",") |>
-      dplyr::select(-id) |>
+      select(-id) |>
       purrr::simplify()
 
     rnk <- rank(-stats)
@@ -743,7 +797,7 @@ calculate_GSEA_scores <- function(stats, pathway_data, gsea_param = 0) {
         tibble::tibble(x = pathway, Gene = pathway_nammed),
         by = "x"
       ) |>
-      dplyr::rename("Rank" = x, "ES" = y) |>
+      rename("Rank" = x, "ES" = y) |>
       dplyr::relocate("Gene")
 
     return(gsea_scores)
