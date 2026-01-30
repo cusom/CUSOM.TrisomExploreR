@@ -4,7 +4,7 @@ box::use(
     shinydashboard[sidebarMenu, menuItem, dashboardBody, tabItems, tabItem],
     waiter[spin_orbiter],
     glue[glue],
-    shinyjs[useShinyjs]
+    shinyjs[useShinyjs, runjs]
 )
 
 box::use(
@@ -23,11 +23,11 @@ ui <- function(id) {
         preloader = list(
             html = tagList(
                 spin_orbiter(),
-                glue("Loading  Proteome Explorer...")
+                glue("Loading TrisomExplorer...")
             ),
             color = "#3c8dbc"
         ),
-        title = "Proteome",
+        title = "",
         header = dashboardHeader(
             title = tags$a(
                 href = "",
@@ -160,6 +160,11 @@ server <- function(id, app_config) {
     moduleServer(id, function(input, output, session) {
 
         ns <- session$ns
+
+        runjs(
+            "App.setPageTitle('" |>
+            paste0(app_config$app_config$applicationTitle, "');")
+        )
 
         output$links <- renderUI({
             create_app_links(app_config$app_config$applicationLinks)
