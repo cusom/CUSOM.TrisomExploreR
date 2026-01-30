@@ -1,5 +1,5 @@
 box::use(
-  app/view/custom_ui/ui_utils
+  app/logic/shared/ui_utils
 )
 
 box::use(
