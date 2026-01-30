@@ -1,3 +1,7 @@
+export function setPageTitle(title) {
+  document.title = title;
+}
+
 export function launchTutorial(id,tutorialName){
     Shiny.setInputValue(id +"-TutorialName", tutorialName);
   }
