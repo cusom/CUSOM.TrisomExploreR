@@ -7,7 +7,7 @@
 #' @importFrom shinydashboard sidebarMenu
 #' @export
 create_menu_items <- function(namespaces, ui_config) {
-  
+
   do.call(
     shinydashboard::sidebarMenu,
     sapply(
@@ -71,7 +71,7 @@ create_tab_items <- function(namespaces, ui_config, input_config) {
 #' @importFrom shinydashboard tabItem
 #' @export
 create_tab_item <- function(id, ui_config, input_config) {
-  
+
   Namespace <- NULL
 
   tab_config <- ui_config |>
@@ -92,21 +92,21 @@ create_tab_item <- function(id, ui_config, input_config) {
 }
 
 #' @export
-createApplicationLinks <- function(linkData) {
+create_app_links <- function(linkData) {
 
   requiredColumns <- c("label", "imageURL", "link", "IsCurrentApplication")
 
-  if(length(requiredColumns) > length(colnames(linkData))) {
+  if (length(requiredColumns) > length(colnames(linkData))) {
 
     missingArguments <- paste0(
       intersect(requiredColumns, colnames(linkData)),
       collapse = ", "
-      )
+    )
 
     msg <- paste0(
       "Missing the following required columns: ",
       missingArguments, " "
-      )
+    )
 
     stop(msg)
 
@@ -114,7 +114,7 @@ createApplicationLinks <- function(linkData) {
 
   linkItems <- vector("list", nrow(linkData))
 
-  for(i in 1:length(linkItems)) {
+  for (i in seq_along(linkItems)) {
     linkItems[[i]] <- list(
       inputId = linkData$label[[i]],
       label = linkData$label[[i]],
@@ -156,18 +156,17 @@ getActionButtonLink <- function(x) {
 }
 
 #' @export
-createTooltip <- function(Text,URL,TooltipText,ShowTooltip=TRUE, ...) {
+createTooltip <- function(Text, URL, TooltipText, ShowTooltip = TRUE, ...) {
 
-  if(!ShowTooltip) {
+  if (!ShowTooltip) {
     return(
       shiny::HTML(
-        glue::glue('<div>{Text}</div>')
+        glue::glue("<div>{Text}</div>")
       )
     )
-  }
-  else {
+  } else {
 
-    if(URL != "" & !is.na(URL)) {
+    if (URL != "" && !is.na(URL)) {
       return(
         shiny::HTML(
           glue::glue(
@@ -185,8 +184,7 @@ createTooltip <- function(Text,URL,TooltipText,ShowTooltip=TRUE, ...) {
           )
         )
       )
-    }
-    else {
+    } else {
       return(
         shiny::HTML(
           glue::glue(
