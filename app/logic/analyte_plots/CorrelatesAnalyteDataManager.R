@@ -70,19 +70,17 @@ CorrelatesAnalyteDataManager <- R6::R6Class(
     }
   ),
   public = list(
-    remoteDB = NULL,
-    initialize = function(analysis_config, study_data, analyte, summary_data, config_file_name = "config.yml") {
+    remote_db = NULL,
+    initialize = function(app_config, analysis_config, study, study_data, analyte, summary_data) {
 
-      super$initialize(analysis_config, study_data, analyte, summary_data)
+      super$initialize(analysis_config, study, study_data, analyte, summary_data)
 
-      self$remoteDB <- ODBCQueryManager$new(
-        conn_args = config::get(file = config_file_name, "database")
-      )
+      self$remote_db <- app_config$remote_db
 
     },
     getAnalyteData = function() {
       ## Query on X-axis, Comparison on y-axis
-      self$AnalyteData <- self$remoteDB$getQuery(
+      self$AnalyteData <- self$remote_db$getQuery(
           "[shiny].[GetAnalyteDataByExperiment] ?, ?",
           tibble::tibble(
             "ExperimentID" =  self$CompareExperiment,
@@ -93,7 +91,7 @@ CorrelatesAnalyteDataManager <- R6::R6Class(
         dplyr::select(LabID, "ComparisonAnalyte" = Analyte,  MeasuredValue, Measurement) |>
         dplyr::rename(y = MeasuredValue) |>
         dplyr::inner_join(
-          self$remoteDB$getQuery(
+          self$remote_db$getQuery(
             "[shiny].[GetAnalyteDataByExperiment] ?, ?",
             tibble::tibble(
               "ExperimentID" = self$QueryExperiment,

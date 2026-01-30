@@ -102,7 +102,9 @@ server <- function(id, app_config, analysis_config, input_config) {
         plots_feature_analysis_analyte$server(
             id = "analyte",
             r6 = CorrelatesAnalyteDataManager$new(
+                app_config = app_config,
                 analysis_config = analysis_config,
+                study = inputs$Study,
                 study_data = inputs$StudyData,
                 analyte = analyte$analyte,
                 summary_data = analyte$SummaryData
