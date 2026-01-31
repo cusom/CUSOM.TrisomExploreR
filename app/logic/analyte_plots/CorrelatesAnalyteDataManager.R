@@ -73,9 +73,7 @@ CorrelatesAnalyteDataManager <- R6::R6Class(
     remote_db = NULL,
     initialize = function(app_config, analysis_config, study, study_data, analyte, summary_data) {
 
-      super$initialize(analysis_config, study, study_data, analyte, summary_data)
-
-      self$remote_db <- app_config$remote_db
+      super$initialize(app_config, analysis_config, study, study_data, analyte, summary_data)
 
     },
     getAnalyteData = function() {

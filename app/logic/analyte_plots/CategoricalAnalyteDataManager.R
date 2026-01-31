@@ -34,8 +34,8 @@ CategoricalFeatureAnalysisAnalyteDataManager <- R6::R6Class(
     }
   ),
   public = list(
-    initialize = function(analysis_config, study, study_data, analyte, summary_data) {
-      super$initialize(analysis_config, study, study_data, analyte, summary_data)
+    initialize = function(app_config, analysis_config, study, study_data, analyte, summary_data) {
+      super$initialize(app_config, analysis_config, study, study_data, analyte, summary_data)
     },
     set_single_analyte_data = function() {
       self$AnalyteData <- self$StudyData() |>

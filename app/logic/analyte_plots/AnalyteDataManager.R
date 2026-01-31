@@ -112,7 +112,7 @@ FeatureAnalysisAnalyteDataManager <- R6::R6Class(
   public = list(
     applicationName = NULL,
     namespace = NULL,
-
+    remote_db = NULL,
     analysisVariable = "",
     analysisVariableLabel = "",
     analysisType = "",
@@ -135,13 +135,14 @@ FeatureAnalysisAnalyteDataManager <- R6::R6Class(
     AnalyteSearchName = "",
     AnalyteData = NULL,
     HeatmapData = NULL,
-    initialize = function(analysis_config, study, study_data, analyte, summary_data) {
+    initialize = function(app_config, analysis_config, study, study_data, analyte, summary_data) {
 
       self$study <- study
       self$StudyData <- study_data
       self$Analyte <- analyte
       self$SummaryData <- summary_data
 
+      self$remote_db <- app_config$remote_db
       namespace_config <- analysis_config
       self$applicationName <- namespace_config$ApplicationName
 
