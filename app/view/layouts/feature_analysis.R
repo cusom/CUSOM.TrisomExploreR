@@ -4,17 +4,15 @@ box::use(
 
 
 box::use(
-  app/logic/inputs/inputs_feature_analysis[FeatureAnalysisInputsManager],
+  app/logic/inputs/inputs_manager_factory[get_inputs_manager],
   app/logic/summary_plots/SummaryDataManagerFactory[getFeatureAnalysisSummaryDataManager],
   app/logic/analyte_plots/AnalyteDataManagerFactory[getFeatureAnalysisAnalyteDataManager],
   app/view/inputs/inputs_feature_analysis,
   app/view/inputs/inputs_volcano_plot_analyte,
   app/view/plots/plots_volcano,
   app/view/tables/table_volcano,
-  #app/logic/table_volcano_datatable[volcano_data_table_ui, volcano_data_table_server],
   app/view/plots/plots_feature_analysis_analyte,
   app/view/tables/table_analyte,
-  #app/logic/table_feature_analysis_analyte[feature_analysis_analyte_summary_data_ui,feature_analysis_analyte_summary_data_server]
 )
 
 #' @export
@@ -97,7 +95,7 @@ server <- function(id, app_config, analysis_config, input_config) {
     #base inputs
     inputs <- inputs_feature_analysis$server(
       id = "inputs",
-      r6 = FeatureAnalysisInputsManager$new(
+      r6 = get_inputs_manager(
         app_config = app_config,
         analysis_config = analysis_config,
         input_config = input_config
@@ -131,6 +129,7 @@ server <- function(id, app_config, analysis_config, input_config) {
     analyte_data <- plots_feature_analysis_analyte$server(
       id = "analyte",
       r6 = getFeatureAnalysisAnalyteDataManager(
+        app_config = app_config,
         analysis_config = analysis_config,
         study = inputs$Study,
         study_data = inputs$StudyData,
