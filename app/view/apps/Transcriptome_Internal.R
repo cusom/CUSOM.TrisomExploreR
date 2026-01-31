@@ -10,7 +10,8 @@ box::use(
 box::use(
     app/logic/shared/ui_utils[create_app_links],
     app/view/overviews/overview_transcriptome,
-    app/view/layouts/cell_type_analysis
+    app/view/layouts/cell_type_analysis,
+    app/view/layouts/feature_analysis,
 )
 
 #' @export
@@ -58,9 +59,25 @@ ui <- function(id) {
                     selected = TRUE
                 ),
                 menuItem(
-                    text = "Effect of Triomsy 21 - Cell Types",
+                    text = "Effect of Trisomsy 21 - Cell Types",
                     icon = icon("chart-bar"),
                     tabName = ns("cell_types"),
+                    href = NULL,
+                    newtab = TRUE,
+                    selected = FALSE
+                ),
+                menuItem(
+                    text = "Effect of Trisomsy 21",
+                    icon = icon("dna"),
+                    tabName = ns("karyotype"),
+                    href = NULL,
+                    newtab = TRUE,
+                    selected = FALSE
+                ),
+                menuItem(
+                    text = "Effect of Age",
+                    icon = icon("chart-line"),
+                    tabName = ns("age"),
                     href = NULL,
                     newtab = TRUE,
                     selected = FALSE
@@ -88,7 +105,20 @@ ui <- function(id) {
                     tags$div(
                         cell_type_analysis$ui(ns("cell-types"))
                     )
+                ),
+                tabItem(
+                    tabName = ns("karyotype"),
+                    tags$div(
+                        feature_analysis$ui(ns("karyotype"))
+                    )
+                ),
+                tabItem(
+                    tabName = ns("age"),
+                    tags$div(
+                        feature_analysis$ui(ns("age"))
+                    )
                 )
+
             )
         ),
         footer = dashboardFooter(
@@ -119,6 +149,19 @@ server <- function(id, app_config) {
             app_config$get_analysis_config("celltype"),
             app_config$get_input_config("celltype")
         )
+
+        #sapply(c("karyotype", "age"), function(x) {
+        sapply(c("karyotype"), function(x) {
+            do.call(
+                what = eval(parse(text = "feature_analysis$server")),
+                args = list(
+                    id = x,
+                    app_config = app_config,
+                    analysis_config = app_config$get_analysis_config(x),
+                    input_config = app_config$get_input_config(x)
+                )
+            )
+        })
 
     })
 }
