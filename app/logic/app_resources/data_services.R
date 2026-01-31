@@ -402,7 +402,7 @@ AzureRemoteDataFileManager <- R6::R6Class(
     files_downloaded = FALSE,
     targeted_file = NULL,
     blobs = NULL,
-    initialize = function(account_name, key, container_name, 
+    initialize = function(account_name, key, container_name,
       download_mode = c("on demand", "all"), local_data_directory = "Remote_Data") {
       match.arg(download_mode)
       private$account_name <- account_name
@@ -412,12 +412,14 @@ AzureRemoteDataFileManager <- R6::R6Class(
       self$local_data_directory <- local_data_directory
       private$endpoint <- AzureStor::storage_endpoint(self$uri, private$key)
       private$container <- AzureStor::storage_container(private$endpoint, private$container_name)
+      unlink(self$local_data_directory, recursive = TRUE)
       self$set_blob_metadata()
       if (self$download_mode == "all") {
         self$download_files()
       }
     },
     set_blob_metadata = function() {
+
       self$blobs <- AzureStor::list_blobs(private$container) |>
         tidyr::separate(
           col = name,
@@ -439,7 +441,17 @@ AzureRemoteDataFileManager <- R6::R6Class(
           sep = "\\=",
           remove = FALSE
         ) |>
-        dplyr::select(data_group, sub_folder, ExperimentID, name, file_type, size)
+        dplyr::mutate(
+          namespace = ifelse(
+            !is.na(ExperimentID) & Remove == "namespace", 
+            ExperimentID, 
+            NA
+          ),
+          ExperimentID = ifelse(
+            !is.na(namespace), NA, ExperimentID
+          )
+        ) |>
+        dplyr::select(data_group, sub_folder, ExperimentID, namespace, name, file_type, size)
       return(invisible(self$blobs))
     },
     get_remote_file_data = function(file_name) {
@@ -481,7 +493,16 @@ AzureRemoteDataFileManager <- R6::R6Class(
         self$read_file_data()
       )
     },
-
+    get_pre_calculated_data = function(target_namespace) {
+      self$targeted_file <- self$blobs |>
+        dplyr::filter(
+          namespace == target_namespace
+        ) |>
+        dplyr::pull(name)
+      return(
+        self$read_file_data()
+      )
+    },
     download_files = function(reload_files = TRUE) {
       self$files_downloaded <- FALSE
       if (reload_files) {
@@ -506,7 +527,6 @@ AzureRemoteDataFileManager <- R6::R6Class(
         print(glue::glue("{length(list.files(self$local_data_directory, recursive = TRUE))} existing files found"))
       }
     },
-
     get_file_group_directory = function(file_group) {
       dirs <- list.dirs(self$local_data_directory)
       fqdn <- dirs[intersect(which(grepl(file_group, dirs)), which(!grepl("=", dirs)))]
