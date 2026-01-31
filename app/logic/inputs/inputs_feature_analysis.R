@@ -70,15 +70,6 @@ FeatureAnalysisInputsManager <- R6::R6Class(
       }
     },
 
-    addInputSpecialClass = function(input_name, class = c("disabled", "hide")) {
-      class <- match.arg(class)
-      if (self$analysisVariable == input_name) {
-        return(
-          glue::glue("shinyjs-{class}")
-        )
-      }
-    },
-
     validate_study_data = function() {
       return(self$Study != "")
     },
