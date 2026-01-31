@@ -1,19 +1,12 @@
 box::use(
-  app/logic/shared/ui_utils
+  dplyr[select]
 )
 
 box::use(
+  app/logic/shared/ui_utils,
   app/logic/app_resources/data_services[AzureRemoteDataFileManager, ODBCQueryManager]
 )
 
-#' R6 Class to manage core TrisomExploreR applications
-#' @description
-#'  R6 Class to manage core TrisomExploreR applications
-#' @field app_config - list -
-#' @field module_config - list -
-#' @field analysis_config - list -
-#' @field input_config - list -
-#' @importFrom arrow open_dataset
 #' @export
 TrisomExplorerAppManager <- R6::R6Class(
   "TrisomExplorerAppManager",
@@ -127,9 +120,11 @@ TrisomExplorerAppManager <- R6::R6Class(
         ModuleServerName, UseR6Class, R6ClassName)
 
       self$analysis_config <- self$namespace_config |>
-        dplyr::select(ApplicationId, Namespace, ExperimentIDs,
-            AnalysisVariableName, AnalysisVariableLabel, AnalysisType,
-            AnalysisVariableBaselineLabel, AnalysisVolcanoPlotTopAnnotation)
+        select(
+          ApplicationId, Namespace, ExperimentIDs, UsesPreCalculatedData,
+          AnalysisVariableName, AnalysisVariableLabel, AnalysisType,
+          AnalysisVariableBaselineLabel, AnalysisVolcanoPlotTopAnnotation
+        )
 
       inputs <- self$remote_files$get_remote_file_data("inputs.json")
 
