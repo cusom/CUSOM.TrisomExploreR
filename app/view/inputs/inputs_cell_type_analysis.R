@@ -122,17 +122,15 @@ server <- function(id, r6) {
         )
 
         output$CellType <- renderUI({
-            disabled(
-                pickerInput(
-                    inputId = ns("CellType"),
-                    label = "Disabled - Coming Soon",
-                    choices = r6$CellTypes,
-                    selected = r6$CellTypes,
-                    options = list(
-                        `actions-box` = TRUE
-                    ),
-                    multiple = TRUE
-                )
+            pickerInput(
+                inputId = ns("CellType"),
+                label = "",
+                choices = r6$CellTypes,
+                selected = r6$CellTypes,
+                options = list(
+                    `actions-box` = TRUE
+                ),
+                multiple = TRUE
             )
         })
 
