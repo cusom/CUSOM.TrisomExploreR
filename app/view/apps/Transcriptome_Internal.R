@@ -67,7 +67,7 @@ ui <- function(id) {
                     selected = FALSE
                 ),
                 menuItem(
-                    text = "Effect of Trisomsy 21",
+                    text = "Effect of Trisomy 21",
                     icon = icon("dna"),
                     tabName = ns("karyotype"),
                     href = NULL,
@@ -150,8 +150,8 @@ server <- function(id, app_config) {
             app_config$get_input_config("celltype")
         )
 
-        #sapply(c("karyotype", "age"), function(x) {
-        sapply(c("karyotype"), function(x) {
+        sapply(c("karyotype", "age"), function(x) {
+        #sapply(c("karyotype"), function(x) {
             do.call(
                 what = eval(parse(text = "feature_analysis$server")),
                 args = list(
