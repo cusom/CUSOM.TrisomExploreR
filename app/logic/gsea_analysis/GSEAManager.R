@@ -1,7 +1,7 @@
 box::use(
   app/logic/shared/statistical_analysis[getStatTestByKeyGroup, formatPValue, runfGSEA, calculate_GSEA_scores],
   app/logic/summary_plots/volcano_plot_helpers[getVolcanoPlot, getVolcanoAnnotations, addSignificanceGroup],
-  app/logic/shared/string_helper_functions[parse_delimited_string],
+  app/logic/shared/string_utils[parse_delimited_string],
 )
 
 #' @export
