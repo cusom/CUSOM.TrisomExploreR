@@ -1,3 +1,7 @@
+box::use(
+  app/logic/feature_analysis/analyte/FeatureAnalysisAnalyte[getFeatureAnalysisForAnalyte],
+  app/logic/shared/string_utils[parse_delimited_string]
+)
 
 #' @export
 ui <- function(id) {
@@ -53,11 +57,26 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, r6, analyte, analyte_input_name, analyte_session) {
+server <- function(id, analysis_config, app_config, analyte, study, study_data, summary_data, analyte_input_name, analyte_session) {
 
   shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
+
+    r6 <- shiny::reactive({
+      shiny::validate(
+        shiny::need(analyte() != "", "")
+      )
+      getFeatureAnalysisForAnalyte(
+        analysis_config = analysis_config,
+        analyte = analyte(),
+        app_config = app_config,
+        study = study(),
+        study_data = study_data(),
+        summary_data = summary_data()
+      )
+    }) |>
+      shiny::bindEvent(analyte())
 
     analyte_data <- shiny::reactive({
       shiny::validate(
@@ -74,11 +93,11 @@ server <- function(id, r6, analyte, analyte_input_name, analyte_session) {
         )
       )
 
-      r6$getAnalyteData()
+      data <- r6()$get_analyte_data(analyte())
 
       shinybusy::remove_modal_spinner()
 
-      r6$AnalyteData
+      data
 
     }) |>
       shiny::bindEvent(analyte())
@@ -87,8 +106,9 @@ server <- function(id, r6, analyte, analyte_input_name, analyte_session) {
       shiny::validate(
         shiny::need(!is.null(analyte_data()), "")
       )
+
       analyte_data() |>
-        r6$getAnalytePlot(ns)
+        r6()$get_analyte_plot()
     })
 
     # shiny::observeEvent(
@@ -119,7 +139,7 @@ server <- function(id, r6, analyte, analyte_input_name, analyte_session) {
     #     dplyr::select(Analyte) |>
     #     dplyr::pull() |>
     #     as.character()
-  
+
     #   # update analyte source input
     #   shiny::updateSelectizeInput(
     #     session = analyte_session,
@@ -129,9 +149,8 @@ server <- function(id, r6, analyte, analyte_input_name, analyte_session) {
 
     # }, domain = session)
 
-    analyteSearchName <- shiny::reactive({#shiny::eventReactive(
-      #c(gargoyle::watch("show_analyte_plot", session = session)), {
-        r6$AnalyteSearchName
+    analyteSearchName <- shiny::reactive({
+        parse_delimited_string(analyte(), 1)
     }) |>
       shiny::bindEvent(analyte(), ignoreInit = FALSE)
 
@@ -145,7 +164,7 @@ server <- function(id, r6, analyte, analyte_input_name, analyte_session) {
         class = "toggle-btn"
       )
 
-      if (r6$AnalytePlotMethod == "Heatmap") {
+      if (length(analyte()) > 1) {
         shiny::tags$div(
           style = "padding-bottom: 65px;",
           shinyjs::hidden(
@@ -180,7 +199,7 @@ server <- function(id, r6, analyte, analyte_input_name, analyte_session) {
     # })
 
     table_data <- shiny::reactive({
-      r6$get_table_data()
+      r6()$get_table_data()
     })
 
     return(
