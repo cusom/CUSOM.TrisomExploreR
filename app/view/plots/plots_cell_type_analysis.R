@@ -6,7 +6,7 @@ box::use(
 )
 
 box::use(
-    app/logic/analyte_plots/CellTypeAnalyteDataManager[get_cell_type_plot]
+    app/logic/celltype_analysis/CellTypeAnalyteDataManager[get_cell_type_plot]
 )
 
 #' @export

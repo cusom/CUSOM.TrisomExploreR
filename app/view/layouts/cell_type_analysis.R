@@ -7,7 +7,7 @@ box::use(
 )
 
 box::use(
-    app/logic/inputs/inputs_cell_type_analysis[CellTypesInputsManager],
+    app/logic/celltype_analysis/inputs_cell_type_analysis[CellTypesInputsManager],
     app/view/inputs/inputs_cell_type_analysis,
     app/view/plots/plots_cell_type_analysis
 )
