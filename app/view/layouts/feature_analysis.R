@@ -2,11 +2,9 @@ box::use(
   shiny[tags]
 )
 
-
 box::use(
-  app/logic/inputs/inputs_manager_factory[get_inputs_manager],
+  app/logic/feature_analysis/inputs/inputs_manager_factory[get_inputs_manager],
   app/logic/summary_plots/SummaryDataManagerFactory[getFeatureAnalysisSummaryDataManager],
-  app/logic/analyte_plots/AnalyteDataManagerFactory[getFeatureAnalysisAnalyteDataManager],
   app/view/inputs/inputs_feature_analysis,
   app/view/inputs/inputs_volcano_plot_analyte,
   app/view/plots/plots_volcano,
@@ -128,15 +126,12 @@ server <- function(id, app_config, analysis_config, input_config) {
     # analyte plot
     analyte_data <- plots_feature_analysis_analyte$server(
       id = "analyte",
-      r6 = getFeatureAnalysisAnalyteDataManager(
-        app_config = app_config,
-        analysis_config = analysis_config,
-        study = inputs$Study,
-        study_data = inputs$StudyData,
-        analyte = analyte$analyte,
-        summary_data = analyte$SummaryData
-      ),
+      analysis_config = analysis_config,
       analyte = analyte$analyte,
+      app_config = app_config,
+      study = inputs$Study,
+      study_data = inputs$StudyData,
+      summary_data = analyte$SummaryData,
       analyte_input_name = analyte$analyte_input_name,
       analyte_session = analyte$analyte_session
     )

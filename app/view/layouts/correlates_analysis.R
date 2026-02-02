@@ -3,10 +3,9 @@ box::use(
 )
 
 box::use(
-    #app/logic/feature_analysis/InputsCorrelatesManager[CorrelatesAnalysisInputsManager],
-    app/logic/inputs/inputs_correlates[CorrelatesAnalysisInputsManager],
-    app/logic/summary_plots/CorrelatesSummaryDataManager[CorrelatesSummaryDataManager],
-    app/logic/analyte_plots/CorrelatesAnalyteDataManager[CorrelatesAnalyteDataManager],
+    app/logic/correlates_analysis/inputs_correlates[CorrelatesAnalysisInputsManager],
+    app/logic/correlates_analysis/CorrelatesSummaryDataManager[CorrelatesSummaryDataManager],
+    app/logic/correlates_analysis/CorrelatesAnalyteDataManager[CorrelatesAnalyteDataManager],
     app/view/inputs/inputs_correlates,
     app/view/inputs/inputs_volcano_plot_analyte,
     app/view/plots/plots_volcano,
@@ -101,15 +100,12 @@ server <- function(id, app_config, analysis_config, input_config) {
         # analyte plot
         plots_feature_analysis_analyte$server(
             id = "analyte",
-            r6 = CorrelatesAnalyteDataManager$new(
-                app_config = app_config,
-                analysis_config = analysis_config,
-                study = inputs$Study,
-                study_data = inputs$StudyData,
-                analyte = analyte$analyte,
-                summary_data = analyte$SummaryData
-            ),
+            analysis_config = analysis_config,
             analyte = analyte$analyte,
+            app_config = app_config,
+            study = inputs$Study,
+            study_data = inputs$StudyData,
+            summary_data = analyte$SummaryData,
             analyte_input_name = analyte$analyte_input_name,
             analyte_session = analyte$analyte_session
         )
