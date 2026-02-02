@@ -6,8 +6,6 @@ box::use(
     tidyr[separate_rows],
     forcats[fct_inorder],
     glue[glue],
-    plotly[layout, config],
-    htmlwidgets[onRender],
     rlang[sym]
 )
 
