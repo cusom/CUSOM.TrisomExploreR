@@ -1,34 +1,38 @@
 box::use(
-    app/logic/summary_plots/SummaryDataManager[FeatureAnalysis_SummaryDataManager],
-    app/logic/summary_plots/CategoricalSummaryDataManager[FeatureAnalysis_CategoricalSummaryDataManager],
-    app/logic/summary_plots/PreCalculatedCategoricalSummaryDataManager[PreCalculatedFeatureAnalysis_CategoricalSummaryDataManager],
-    app/logic/summary_plots/ContinuousSummaryDataManager[FeatureAnalysis_ContinuousSummaryDataManager]
+    app/logic/shared/factory_routing[resolve_route_map],
+    app/logic/summary_plots/Routing[get_summary_data_manager_route_map],
 )
 
 #' @export
 getFeatureAnalysisSummaryDataManager <- function(analysis_config, StatTest, Covariates, AdjustmentMethod) {
-    if (analysis_config$AnalysisType == "Categorical") {
-        if (analysis_config$UsesPreCalculatedData) {
-            return(
-                PreCalculatedFeatureAnalysis_CategoricalSummaryDataManager$new(
-                    analysis_config, StatTest, Covariates, AdjustmentMethod
-                )
-            )
-        } else {
-            return(
-                FeatureAnalysis_CategoricalSummaryDataManager$new(
-                    analysis_config, StatTest, Covariates, AdjustmentMethod
-                )
-            )
-        }
-    } else if (analysis_config$AnalysisType == "Continuous") {
-        return(
-            FeatureAnalysis_ContinuousSummaryDataManager$new(
-                analysis_config, StatTest, Covariates, AdjustmentMethod
-            )
-        )
-    } else {
-        stop("Unknown Analysis Type")
+
+    analysis_type <- analysis_config$AnalysisType
+    if (!is.character(analysis_type) || length(analysis_type) != 1L) {
+        stop("analysis_config$AnalysisType must be a single string.", call. = FALSE)
     }
+
+    analysis_type <- trimws(analysis_type)
+
+    allowed_types <- c("Categorical", "Continuous")
+    if (!analysis_type %in% allowed_types) {
+        stop(sprintf(
+        "Unknown AnalysisType: '%s'. Expected one of: %s",
+        analysis_type, paste(allowed_types, collapse = ", ")
+        ), call. = FALSE)
+    }
+
+    precalc_key <- if (isTRUE(analysis_config$UsesPreCalculatedData)) "Precalc" else "Raw"
+
+    mgr_class <- resolve_route_map(
+        route_map = get_summary_data_manager_route_map(), 
+        keys = c(AnalysisType = analysis_type, Data = precalc_key)
+    )
+
+    mgr_class$new(
+        analysis_config, 
+        StatTest, 
+        Covariates, 
+        AdjustmentMethod
+    )
 
 }
