@@ -33,6 +33,8 @@ inst/examples/*/rsconnect/
 inst/Apps/*
 R/__archive/*
 
+*__ignore__*
+
 # Example code in package build process
 *-Ex.R
 .Rproj.user
