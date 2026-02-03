@@ -10,7 +10,7 @@ box::use(
         PreCalculatedSummaryDataSource, CorrelatesSummaryDataSource],
     app/logic/feature_analysis/summary/SummaryDataPreparers[CategoricalSummaryPreparer,
         ContinuousSummaryPreparer, CorrelatesSummaryPreparer],
-    app/logic/feature_analysis/summary/SummaryDataPlotStrategies[VolcanoPlotStrategy],
+    app/logic/feature_analysis/summary/SummaryDataPlotStrategies[VolcanoPlotStrategy, CorrelatesVolcanoPlotStrategy],
 )
 
 getPlotKind <- function(analysis_type) {
@@ -41,11 +41,16 @@ getPreparer <- function(analysis_type, analysis_config, ...) {
     cls$new(analysis_config = analysis_config, ...)
 }
 
-getPlotStrategy <- function(plot_kind, analysis_config, ...) {
-    map <- list(
-        Volcano     = VolcanoPlotStrategy
+getPlotStrategy <- function(plot_kind, analysis_type, analysis_config, ...) {
+    type <- if_else(
+        analysis_type == "Correlates", "Correlates",
+        plot_kind
     )
-    cls <- resolve_class(map, plot_kind, "PlotStrategy")
+    map <- list(
+        Volcano     = VolcanoPlotStrategy,
+        Correlates  = CorrelatesVolcanoPlotStrategy
+    )
+    cls <- resolve_class(map, type, "PlotStrategy")
     cls$new(analysis_config = analysis_config, ...)
 }
 
@@ -76,7 +81,6 @@ FeatureAnalysisSummaryRunner <- R6Class(
             self$data_source <- data_source
             self$preparer <- preparer
             self$plotter <- plotter
-
         },
         get_summary_data = function(source_data) {
             self$data_source$get_data(source_data) |>
@@ -111,7 +115,7 @@ getFeatureAnalysisSummary <- function(
     plot_kind  <- getPlotKind(analysis_type)
     data_src   <- getDataSource(precalculated, analysis_type, analysis_config, ...)
     preparer   <- getPreparer(analysis_type, analysis_config, ...)
-    plotter    <- getPlotStrategy(plot_kind, analysis_config, ...)
+    plotter    <- getPlotStrategy(plot_kind, analysis_type, analysis_config, ...)
 
     FeatureAnalysisSummaryRunner$new(
         precalculated,
