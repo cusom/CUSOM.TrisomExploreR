@@ -3,7 +3,7 @@ box::use(
     glue[glue, glue_collapse],
     tibble[tibble],
     dplyr[select, mutate, mutate_at, group_by, summarise, ungroup, rename_with, distinct, n,
-            pull, arrange, dense_rank, row_number, vars],
+            pull, arrange, dense_rank, row_number, vars, filter],
     forcats[fct_relevel],
     purrr[pmap],
     stringr[str_split_1],
@@ -11,7 +11,7 @@ box::use(
 )
 
 box::use(
-    app/logic/shared/statistical_analysis[getStatTestByKeyGroup, getLinearModelWithInteraction, 
+    app/logic/shared/statistical_analysis[getStatTestByKeyGroup, getLinearModelWithInteraction,
         formatPValue, addGroupCount],
 )
 
@@ -45,6 +45,7 @@ SummaryDataPreparerBase <- R6Class(
         stat_test = NULL,
         covariates = NULL,
         adjustment_method = NULL,
+        source_data = NULL,
         summary_data = NULL,
         prepared_data = NULL,
         initialize = function(analysis_config, app_config, study, study_data,
@@ -57,6 +58,10 @@ SummaryDataPreparerBase <- R6Class(
             self$stat_test <- stat_test
             self$covariates <- covariates
             self$adjustment_method <- adjustment_method
+        },
+        set_source_data = function(source_data) {
+            self$source_data <- source_data
+            return(invisible(self$source_data))
         },
         set_summary_data = function(source_data) {
             stop("Abstract: must implement")
@@ -93,7 +98,7 @@ CategoricalSummaryPreparer <- R6Class(
                 stat_test, covariates, adjustment_method)
         },
         set_summary_data = function(source_data) {
-            self$summary_data <- source_data |>
+            self$summary_data <- self$set_source_data(source_data) |>
                 select(LabID, Analyte, log2MeasuredValue, self$analysis_variable, self$covariates) |>
                 mutate_at(vars(self$analysis_variable), ~fct_relevel(.x, self$group_baseline_label)) |>
                 getStatTestByKeyGroup(
@@ -128,7 +133,7 @@ ContinuousSummaryPreparer <- R6Class(
                 stat_test, covariates, adjustment_method)
         },
         set_summary_data = function(source_data) {
-            self$summary_data <- source_data |>
+            self$summary_data <- self$set_source_data(source_data) |>
                 select(LabID, Analyte, log2MeasuredValue, self$analysis_variable, self$covariates, Karyotype) |>
                 mutate(Karyotype = fct_relevel(Karyotype, "Control")) |>
                 getLinearModelWithInteraction(
@@ -154,7 +159,26 @@ CorrelatesSummaryPreparer <- R6Class(
     "CorrelatesSummaryPreparer",
     inherit = SummaryDataPreparerBase,
     private = list(),
-    active = list(),
+    active = list(
+        summary_data_max_finite = function(value) {
+            return(
+                self$source_data |>
+                    filter(p.value > 0) |>
+                    pull(p.value) |>
+                    min() |>
+                        (\(x) {
+                            -log10(x)
+                        })()
+            )
+        },
+        measure_name = function(value) {
+            return(
+                self$source_data |>
+                    distinct(CorrelationMeasureName) |>
+                    pull()
+            )
+        }
+    ),
     public = list(
         initialize = function(analysis_config, app_config, study, study_data,
             stat_test, covariates, adjustment_method) {
@@ -162,7 +186,38 @@ CorrelatesSummaryPreparer <- R6Class(
                 stat_test, covariates, adjustment_method)
         },
         set_summary_data = function(source_data) {
-            source_data
+            self$summary_data <- self$set_source_data(source_data)
+        },
+        prepare = function(source_data) {
+            self$prepared_data <- self$set_summary_data(source_data) |>
+                mutate(
+                    shape = ifelse(p.value == 0, "triangle-up", "circle"),
+                    p.value = ifelse(p.value == 0, 10^-(self$summary_data_max_finite * 1.05), p.value),
+                    `-log10pvalue` = -log10(p.value)
+                ) |>
+                group_by(Analyte) |>
+                mutate(rank = row_number(-abs(CorrelationValue))) |>
+                filter(rank == 1) |>
+                select(-rank) |>
+                mutate(
+                    "p.value.adjustment.method" = self$adjustment_method,
+                    formattedPValue = unlist(
+                        pmap(
+                            .l = list(p.value, p.value.adjustment.method),
+                            formatPValue
+                        )
+                    ),
+                    text = glue(
+                        "Analyte: {Analyte} <br />{self$measure_name}:\\
+                            {round(CorrelationValue,2)} <br />{formattedPValue}"
+                        )
+                    ) |>
+                ungroup() |>
+                mutate(
+                    shape = "circle",
+                    selectedPoint = 0
+                )
+            return(invisible(self$prepared_data))
         }
     )
 )
