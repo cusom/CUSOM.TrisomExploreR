@@ -13,6 +13,12 @@ box::use(
 )
 
 #' @export
+set_plot_source <- function(p, source_name) {
+  p$x$source <- source_name
+  return(p)
+}
+
+#' @export
 toggle_GSEA_volcano_plot_trace <- function(
     session,
     ns,
@@ -241,9 +247,9 @@ getGroupedStatAnnotations <- function(
 
   keyText <- ifelse(
     adjustmentMethod != "none",
-    "<span><b>Statistical Significance Key</b>:        ns q > 0.1         
+    "<span><b>Statistical Significance Key</b>:        ns q > 0.1
      * q <= 0.1         ** q <= 0.01        *** q <= 0.001</span>",
-    "<span><b>Statistical Significance Key</b>:        ns p > 0.05        
+    "<span><b>Statistical Significance Key</b>:        ns p > 0.05
       * p <= 0.05        ** p <= 0.01        *** p <= 0.001</span>"
   )
 
