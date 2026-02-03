@@ -1,5 +1,14 @@
 box::use(
-    shiny[tags, tagList, bindEvent]
+    shiny[NS, moduleServer, tags, tagList, bindEvent, actionButton, icon, uiOutput,
+        selectizeInput, renderUI, reactive, updateSelectizeInput, observeEvent,
+        validate, need],
+    shinydashboardPlus[box],
+    htmltools[HTML],
+    shinyjs[disabled, disable, enable, removeClass, addClass],
+    bsplus[bs_embed_tooltip],
+    shinycustomloader[withLoader],
+    shinybusy[show_modal_spinner, remove_modal_spinner],
+    glue[glue]
 )
 
 box::use(
@@ -10,18 +19,18 @@ box::use(
 
 #' @export
 ui <- function(id) {
-    ns <- shiny::NS(id)
-    shiny::tagList(
-        shinydashboardPlus::box(
-            title = shiny::HTML(
+    ns <- NS(id)
+    tagList(
+        box(
+            title = HTML(
                 "<div class=\"dataset-options-title\">Dataset Options
-                <span
-                    data-toggle=\"tooltip\"
-                    data-placement=\"auto right\"
-                    title = \"\"
-                    class = \"fas fa-filter\"
-                    data-original-title=\"Set options below to generate volcano plot\">
-                </span>
+                    <span
+                        data-toggle=\"tooltip\"
+                        data-placement=\"auto right\"
+                        title = \"\"
+                        class = \"fas fa-filter\"
+                        data-original-title=\"Set options below to generate volcano plot\">
+                    </span>
                 </div>"
             ),
             height = "auto",
@@ -30,49 +39,49 @@ ui <- function(id) {
             solidHeader = FALSE,
             collapsible = FALSE,
             headerBorder = FALSE,
-            shinyjs::disabled(
-                shiny::actionButton(
+            disabled(
+                actionButton(
                     ns("PrimaryTutorial"),
                     label = "Take Tutorial",
                     class = "tutorial-btn",
-                    icon = shiny::icon("question-circle")
+                    icon = icon("question-circle")
                 ) |>
-                bsplus::bs_embed_tooltip(
+                bs_embed_tooltip(
                     title = "Click here to learn about setting dataset options
-                      to generate the volcano plot",
+                        to generate the volcano plot",
                     placement = "top",
                     html = TRUE
                 )
             ),
-            shiny::tags$div(
+            tags$div(
                 id = ns("scrollableOptions"),
                 style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
-                shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+                tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
                 tags$b("1) Select Query Dataset"),
-                shiny::tags$div(
+                tags$div(
                     id = ns("QueryStudies"),
-                    shinycustomloader::withLoader(
-                        shiny::uiOutput(ns("QueryExperiment")),
+                    withLoader(
+                        uiOutput(ns("QueryExperiment")),
                         type = "html",
                         loader = "loader6",
                         proxy.height = "20px"
                     )
                 ),
-                shiny::tags$hr(),
-                shiny::tags$div(
+                tags$hr(),
+                tags$div(
                     id = ns("CompareExperiments"),
-                    shinycustomloader::withLoader(
-                        shiny::uiOutput(ns("CompareExperiment")),
+                    withLoader(
+                        uiOutput(ns("CompareExperiment")),
                         type = "html",
                         loader = "loader6",
                         proxy.height = "20px"
                     )
                 ),
-                shiny::tags$hr(),
+                tags$hr(),
                 tags$b("3) Select Query Analyte"),
-                shiny::tags$div(
+                tags$div(
                     id = ns("QueryAnalyteInput"),
-                    shiny::selectizeInput(
+                    selectizeInput(
                         inputId = ns("QueryAnalyte"),
                         label = "",
                         choices = NULL,
@@ -88,12 +97,12 @@ ui <- function(id) {
                     )
                 )
             ),
-            footer = shiny::tagList(
-                shiny::actionButton(
+            footer = tagList(
+                actionButton(
                     ns("getData"),
                     label = "Analyze & Plot",
                     class = "refresh-btn",
-                    icon = shiny::icon("play")
+                    icon = icon("play")
                 )
             )
         )
@@ -104,7 +113,7 @@ ui <- function(id) {
 #' @export
 server <- function(id, r6) {
 
-    shiny::moduleServer(id, function(input, output, session) {
+    moduleServer(id, function(input, output, session) {
 
         ns <- session$ns
 
@@ -115,19 +124,19 @@ server <- function(id, r6) {
             parent_input = input
         )
 
-        output$QueryExperiment <- shiny::renderUI({
+        output$QueryExperiment <- renderUI({
 
             choices <- r6$getQueryExperiments()
 
             selected <- ifelse(nrow(choices) == 1, choices, character(0))
-        
+
             prettyRadioButtonsFieldSet(
                 input_id = ns("QueryExperiment"),
                 label = NULL,
                 field_set_data = choices,
                 selected = selected
             ) |>
-                bsplus::bs_embed_tooltip(
+                bs_embed_tooltip(
                     title = "Select a study below",
                     placement = "top",
                     html = TRUE
@@ -135,27 +144,27 @@ server <- function(id, r6) {
 
         })
 
-        ComparisonExperiments <- shiny::reactive({
+        ComparisonExperiments <- reactive({
 
-            shinybusy::show_modal_spinner(
+            show_modal_spinner(
                 spin = "atom",
                 color = "#3c8dbc",
-                text = glue::glue("Getting Comparison Experiments...")
+                text = glue("Getting Comparison Experiments...")
             )
 
             comparison_experiments <- r6$getComparisonExperiments()
 
-            shinybusy::remove_modal_spinner()
+            remove_modal_spinner()
 
             comparison_experiments
 
-            }) |>
-                shiny::bindEvent(c(input$QueryExperiment), ignoreInit = TRUE, ignoreNULL = TRUE)
+        }) |>
+            bindEvent(c(input$QueryExperiment), ignoreInit = TRUE, ignoreNULL = TRUE)
 
-        output$CompareExperiment <- shiny::renderUI({
+        output$CompareExperiment <- renderUI({
 
             if (!is.null(ComparisonExperiments())) {
-                shiny::tagList(
+                tagList(
                     tags$b("2) Select Comparison Dataset"),
                     prettyRadioButtonsFieldSet(
                         input_id = ns("CompareExperiment"),
@@ -163,29 +172,29 @@ server <- function(id, r6) {
                         field_set_data =  ComparisonExperiments(),
                         selected =  ComparisonExperiments(),
                     ) |>
-                        bsplus::bs_embed_tooltip(
+                        bs_embed_tooltip(
                             title = "Select a study below",
                             placement = "top",
                             html = TRUE
                         )
                 )
             } else {
-                shiny::tagList()
+                tagList()
             }
 
         })
 
-        shiny::observeEvent(c(input$CompareExperiment), {
+        observeEvent(c(input$CompareExperiment), {
 
-            shinybusy::show_modal_spinner(
+            show_modal_spinner(
                 spin = "atom",
                 color = "#3c8dbc",
-                text = glue::glue("Getting Query Analytes...")
+                text = glue("Getting Query Analytes...")
             )
 
             analyte_choices <- r6$getQueryAnalytes()
 
-            shiny::updateSelectizeInput(
+            updateSelectizeInput(
                 session = session,
                 inputId = "QueryAnalyte",
                 label = "",
@@ -201,20 +210,20 @@ server <- function(id, r6) {
                 )
             )
 
-            shinybusy::remove_modal_spinner()
+            remove_modal_spinner()
 
         }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
-        shiny::observeEvent(c(input$QueryAnalyte), {
+        observeEvent(c(input$QueryAnalyte), {
 
             if (input$QueryAnalyte == "") {
 
-                shinyjs::disable(id = "CompareExperiment")
+                disable(id = "CompareExperiment")
 
                 purge_plot(session, ns, "VolcanoPlot", r6)
                 purge_plot(session, ns, "AnalytePlot", r6)
 
-                shiny::updateSelectizeInput(
+                updateSelectizeInput(
                     session = session,
                     inputId = "ComparisonAnalyte",
                     selected = ""
@@ -222,37 +231,38 @@ server <- function(id, r6) {
 
             } else {
 
-                shinyjs::enable(id = "CompareExperiment")
+                enable(id = "CompareExperiment")
 
             }
 
         }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
-        shiny::observeEvent(c(input$QueryExperiment, input$QueryAnalyte, input$CompareExperiment), {
+        observeEvent(c(input$QueryExperiment, input$QueryAnalyte, input$CompareExperiment), {
 
-            if (any(length(input$QueryExperiment) != 1 |  input$QueryAnalyte == "" | is.null(input$CompareExperiment))) {
-                shinyjs::disable("getData")
-                shinyjs::removeClass(id = "getData", class = "refresh-ready-btn")
-                shinyjs::addClass(id = "getData", class = "refresh-btn")
+            if (any(length(input$QueryExperiment) != 1 |
+                input$QueryAnalyte == "" |
+                is.null(input$CompareExperiment))
+            ) {
+                disable("getData")
+                removeClass(id = "getData", class = "refresh-ready-btn")
+                addClass(id = "getData", class = "refresh-btn")
             } else {
-                shinyjs::enable("getData")
-                shinyjs::removeClass(id = "getData", class = "refresh-btn")
-                shinyjs::addClass(id = "getData", class = "refresh-ready-btn")
+                enable("getData")
+                removeClass(id = "getData", class = "refresh-btn")
+                addClass(id = "getData", class = "refresh-ready-btn")
             }
         }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
-        # shiny::observeEvent(c(input$getData), {
+        correlation_data <- reactive({
 
-        correlation_data <- shiny::reactive({
-
-            shiny::validate(
-                shiny::need(input$getData > 0, ""),
-                shiny::need(input$QueryExperiment != "", ""),
-                shiny::need(input$QueryAnalyte != "", ""),
-                shiny::need(input$CompareExperiment != "", "")
+            validate(
+                need(input$getData > 0, ""),
+                need(input$QueryExperiment != "", ""),
+                need(input$QueryAnalyte != "", ""),
+                need(input$CompareExperiment != "", "")
             )
 
-            shinybusy::show_modal_spinner(
+            show_modal_spinner(
                 spin = "atom",
                 color = "#3c8dbc",
                 text = "Getting Correlation Data..."
@@ -260,16 +270,16 @@ server <- function(id, r6) {
 
             data <- r6$get_correlation_data()
 
-            shinybusy::remove_modal_spinner()
+            remove_modal_spinner()
 
             data
 
         }) |>
-            shiny::bindEvent(c(input$getData), ignoreInit = TRUE)
+            bindEvent(c(input$getData), ignoreInit = TRUE)
 
         return(
             list(
-                Study = shiny::reactive(input$QueryExperiment),
+                Study = reactive(input$QueryExperiment),
                 StudyData = correlation_data
             )
         )
