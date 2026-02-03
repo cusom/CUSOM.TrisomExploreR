@@ -348,13 +348,11 @@ server <- function(id, r6) {
 
     return(
       list(
-        Study = shiny::reactive(input$Study),
-        StudyData = StudyData,
-        #StatisticalParameters = list(
-        StatTest = shiny::reactive(input$StatTest),
-        Covariates = shiny::reactive(input$Covariates),
-        AdjustmentMethod = shiny::reactive(input$AdjustmentMethod)
-        #)#shiny::reactive(r6$get_selected_statistical_parameters())
+        study = shiny::reactive(input$Study),
+        study_data = StudyData,
+        stat_test = shiny::reactive(input$StatTest),
+        covariates = shiny::reactive(input$Covariates),
+        adjustment_method = shiny::reactive(input$AdjustmentMethod)
       )
     )
 

@@ -104,11 +104,11 @@ server <- function(id, app_config, analysis_config, input_config) {
       id = "volcano",
       analysis_config = analysis_config,
       app_config = app_config,
-      study = inputs$Study,
-      study_data = inputs$StudyData,
-      stat_test = inputs$StatTest,
-      covariates = inputs$Covariates,
-      adjustment_method = inputs$AdjustmentMethod,
+      study = inputs$study,
+      study_data = inputs$study_data,
+      stat_test = inputs$stat_test,
+      covariates = inputs$covariates,
+      adjustment_method = inputs$adjustment_method,
       parent = session
     )
 
@@ -117,8 +117,8 @@ server <- function(id, app_config, analysis_config, input_config) {
       summary_data = analyte$table_data,
       fold_change_variable = analyte$fold_change_var,
       adjusted = analyte$adjusted,
-      stat_test = inputs$StatTest,
-      study = inputs$Study,
+      stat_test = inputs$stat_test,
+      study = inputs$study,
     )
 
     # analyte plot
@@ -127,9 +127,9 @@ server <- function(id, app_config, analysis_config, input_config) {
       analysis_config = analysis_config,
       analyte = analyte$analyte,
       app_config = app_config,
-      study = inputs$Study,
-      study_data = inputs$StudyData,
-      summary_data = analyte$SummaryData,
+      study = inputs$study,
+      study_data = inputs$study_data,
+      summary_data = analyte$summary_data,
       analyte_input_name = analyte$analyte_input_name,
       analyte_session = analyte$analyte_session
     )

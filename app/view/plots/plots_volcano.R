@@ -165,7 +165,7 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
 
     return(
       list(
-        SummaryData = summary_data,
+        summary_data = summary_data,
         table_data = table_data,
         fold_change_var = reactive({r6()$fold_change_var}),
         adjusted = reactive({r6()$adjusted}),
