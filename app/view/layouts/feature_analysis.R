@@ -4,7 +4,6 @@ box::use(
 
 box::use(
   app/logic/feature_analysis/inputs/inputs_manager_factory[get_inputs_manager],
-  app/logic/summary_plots/SummaryDataManagerFactory[getFeatureAnalysisSummaryDataManager],
   app/view/inputs/inputs_feature_analysis,
   app/view/inputs/inputs_volcano_plot_analyte,
   app/view/plots/plots_volcano,
@@ -103,14 +102,13 @@ server <- function(id, app_config, analysis_config, input_config) {
     # volcano plot
     analyte <- plots_volcano$server(
       id = "volcano",
-      r6 = getFeatureAnalysisSummaryDataManager(
-        analysis_config = analysis_config,
-        StatTest = inputs$StatTest,
-        Covariates = inputs$Covariates,
-        AdjustmentMethod = inputs$AdjustmentMethod
-      ),
-      Study = inputs$Study,
-      StudyData = inputs$StudyData,
+      analysis_config = analysis_config,
+      app_config = app_config,
+      study = inputs$Study,
+      study_data = inputs$StudyData,
+      stat_test = inputs$StatTest,
+      covariates = inputs$Covariates,
+      adjustment_method = inputs$AdjustmentMethod,
       parent = session
     )
 
