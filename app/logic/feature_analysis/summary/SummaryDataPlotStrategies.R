@@ -14,7 +14,8 @@ box::use(
 
 box::use(
     app/logic/shared/statistical_analysis[formatPValue, addGroupCount],
-    app/logic/shared/summary_plots[getVolcanoPlot, getVolcanoAnnotations, addSignificanceGroup]
+    app/logic/shared/summary_plots[getVolcanoPlot, getVolcanoAnnotations, addSignificanceGroup,
+        getCorrelationVolcanoAnnotations]
 )
 
 #' @export
@@ -297,6 +298,45 @@ VolcanoPlotStrategy <- R6Class(
                 runjs(glue('App.annotatePointByKey("{plot_name}","{keys}",5);'))
             }
 
+        }
+    )
+)
+
+#' @export
+CorrelatesVolcanoPlotStrategy <- R6Class(
+    "CorrelatesVolcanoPlotStrategy",
+    inherit = VolcanoPlotStrategy,
+    private = list(),
+    active = list(
+        query_analyte_label = function(value) {
+            return(
+                self$plot_data |>
+                    distinct(QueryAnalyte) |>
+                    pull()
+            )
+        }
+    ),
+    public = list(
+        fold_change_var = "CorrelationValue",
+        initialize = function(analysis_config, app_config, study, study_data,
+            stat_test, covariates, adjustment_method) {
+                super$initialize(
+                    analysis_config, app_config, study, study_data,
+                    stat_test, covariates, adjustment_method
+                )
+        },
+        get_volcano_annotations = function() {
+            return(
+                self$plot_data |>
+                    getCorrelationVolcanoAnnotations(
+                        foldChangeVar = !!sym(self$fold_change_var),
+                        significanceVariable = !!sym(self$significance_var),
+                        selected = selectedPoint,
+                        arrowLabelTextVar = Analyte,
+                        titleText = glue("Correlation with {self$query_analyte_label}:"),
+                        includeThresholdLabel = FALSE
+                    )
+            )
         }
     )
 )
