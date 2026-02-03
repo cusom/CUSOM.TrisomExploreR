@@ -29,7 +29,7 @@ AnalyteDataSourceBase <- R6Class(
         analyte = NULL,
         analyte_data = NULL,
         summary_data = NULL,
-        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {      
+        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {
             private$app_config <- app_config
             private$analysis_config <- analysis_config
             private$remote_db <- app_config$remote_db
@@ -49,7 +49,8 @@ AnalyteDataSourceBase <- R6Class(
             stop("Abstract: must implement")
         },
         get_multi_data = function(analyte) {
-            self$analyte_data <- self$summary_data 
+            self$analyte_data <- self$summary_data |>
+                filter(Analyte %in% analyte)
             return(invisible(self$analyte_data))
         }
     )
