@@ -1,13 +1,11 @@
+
 box::use(
+  app/logic/feature_analysis/summary/FeatureAnalysisSummary[getFeatureAnalysisSummary],
+  app/logic/shared/plot_utils[set_plot_source, object_is_rendered],
   app/view/inputs/inputs_volcano_plot_analyte,
   app/view/inputs/inputs_GSEA_analysis
 )
 
-#' Create Volcano Plot
-#' @param id namespace for this module instance
-#' @importFrom shinydashboardPlus box
-#' @importFrom shinycustomloader withLoader
-#' @importFrom plotly renderPlotly
 #' @export
 ui <- function(id) {
   ns <- shiny::NS(id)
@@ -26,7 +24,7 @@ ui <- function(id) {
       headerBorder = FALSE,
       shinycustomloader::withLoader(
         plotly::plotlyOutput(
-          ns("VolcanoPlot"),
+          ns("plot"),
           height = "600px",
           width = "99%"
         ),
@@ -40,27 +38,33 @@ ui <- function(id) {
   )
 }
 
-#' server side logic / processing for volcano plot ui module
-#' @param id namespace for this module instance
-#' @param r6 r6 class for data management
-#' @param ... dots - additional arguments passed to other submodules
-#' @import plotly
-#' @import glue
-#' @import shinyjs
-#' @importFrom gargoyle watch
-#' @importFrom gargoyle trigger
-#' @importFrom shinybusy show_modal_spinner
-#' @importFrom shinybusy remove_modal_spinner
 #' @export
-server <- function(id, r6, Study, StudyData, ...) {
+server <- function(id, analysis_config, app_config, study, study_data, stat_test, covariates, adjustment_method, ...) {
 
   shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    VolcanoSummaryData <- shiny::reactive({
+    r6 <- shiny::reactive({
       shiny::validate(
-        shiny::need(!is.null(StudyData()), "")
+        shiny::need(study_data() != "", "")
+      )
+
+      getFeatureAnalysisSummary(
+        analysis_config = analysis_config,
+        app_config = app_config,
+        study = study(),
+        study_data = study_data(),
+        stat_test = stat_test(),
+        covariates = covariates(),
+        adjustment_method = adjustment_method()
+      )
+    }) |>
+      shiny::bindEvent(study_data())
+
+    summary_data <- shiny::reactive({
+      shiny::validate(
+        shiny::need(!is.null(study_data()), "")
       )
 
       shinybusy::show_modal_spinner(
@@ -69,20 +73,19 @@ server <- function(id, r6, Study, StudyData, ...) {
           text = "Calculating Statistics for Volcano Plot..."
         )
 
-      SummaryData <- StudyData() |>
-        r6$setStudyData() |>
-        r6$getVolcanoSummaryData()
+      summary_data <- study_data() |>
+        r6()$get_summary_data()
 
       shinybusy::remove_modal_spinner()
 
-      return(SummaryData)
+      summary_data
 
     })
 
-    output$VolcanoPlot <- plotly::renderPlotly({
+    output$plot <- plotly::renderPlotly({
 
       shiny::validate(
-        shiny::need(!is.null(VolcanoSummaryData()), "")
+        shiny::need(!is.null(summary_data()), "")
       )
 
       shiny::isolate({
@@ -93,8 +96,9 @@ server <- function(id, r6, Study, StudyData, ...) {
           text = "Rendering Volcano Plot..."
         )
 
-        p <- VolcanoSummaryData() |>
-          r6$getVolcanoPlot(ns) |>
+        p <- summary_data() |>
+          r6()$get_summary_plot() |>
+          set_plot_source(ns("plot")) |>
           plotly::toWebGL()
 
         shinybusy::remove_modal_spinner()
@@ -107,53 +111,56 @@ server <- function(id, r6, Study, StudyData, ...) {
 
     plot_click_data <- shiny::reactive({
       shiny::validate(
-        shiny::need(!is.null(VolcanoSummaryData()), "")
+        shiny::need(!is.null(summary_data()), ""),
+        shiny::need(object_is_rendered(session, ns("plot")), "")
       )
       plotly::event_data(
         "plotly_click",
         priority = "event",
-        source = ns("VolcanoPlot")
+        source = ns("plot")
       )
-    }) 
+    })
 
     plot_selected_data <- shiny::reactive({
       shiny::validate(
-        shiny::need(!is.null(VolcanoSummaryData()), "")
+        shiny::need(!is.null(summary_data()), ""),
+        shiny::need(object_is_rendered(session, ns("plot")), "")
       )
       plotly::event_data(
         "plotly_selected",
         priority = "event",
-        source = ns("VolcanoPlot")
+        source = ns("plot")
       )
     })
 
     analyte <- inputs_volcano_plot_analyte$server(
       id = "volcano-analyte",
-      r6 = r6,
-      VolcanoSummaryData = VolcanoSummaryData,
+      r6 = r6(),
+      summary_data = summary_data,
       plot_click_data = plot_click_data,
       plot_selected_data = plot_selected_data,
+      summary_plot_name = ns("plot"),
       parent = session
     )
 
     inputs_GSEA_analysis$server(
       id = "gsea",
-      VolcanoSummaryData = VolcanoSummaryData,
-      Study = Study,
+      VolcanoSummaryData = summary_data,
+      Study = study,
       ...
     )
 
     table_data <- shiny::reactive({
-      r6$get_table_data()
+      r6()$get_table_data()
     })
 
     return(
       list(
-        SummaryData = VolcanoSummaryData,
+        SummaryData = summary_data,
         table_data = table_data,
-        fold_change_var = shiny::reactive({r6$FoldChangeVar}),
-        adjusted = shiny::reactive({r6$Adjusted}),
-        stat_test = shiny::reactive({r6$StatTest}),
+        fold_change_var = shiny::reactive({r6()$fold_change_var}),
+        adjusted = shiny::reactive({r6()$adjusted}),
+        stat_test = shiny::reactive({r6()$stat_test}),
         analyte = analyte$analyte,
         analyte_input_name = analyte$analyte_input_name,
         analyte_session = analyte$analyte_session
