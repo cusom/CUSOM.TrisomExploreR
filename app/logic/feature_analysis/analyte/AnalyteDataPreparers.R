@@ -48,7 +48,7 @@ CategoricalSinglePreparer <- R6Class(
                     text      = glue("LabID: {LabID} <br />{log2Measurement}: {log2MeasuredValue}")
                 ) |>
                 select(-n)
-            return(invisible(self$prepared_data)) 
+            return(invisible(self$prepared_data))
         }
     )
 )
@@ -76,7 +76,7 @@ ContinuousSinglePreparer <- R6Class(
                 mutate(
                     text = glue("LabID: {LabID} <br />{log2Measurement}: {log2MeasuredValue}")
                 )
-            return(invisible(self$prepared_data))    
+            return(invisible(self$prepared_data))
         }
     )
 )
@@ -92,12 +92,11 @@ HeatmapPreparer <- R6Class(
             super$initialize(analysis_config, ...)
         },
         prepare = function(.data) {
-
             self$prepared_data <- .data |>
                 select(Analyte, log2FoldChange, text) |>
                 arrange(-log2FoldChange) |>
                 mutate(Analyte = fct_inorder(Analyte), "Analysis" = "T21vD21")
-            return(invisible(self$prepared_data))        
+            return(invisible(self$prepared_data))
         }
     )
 )

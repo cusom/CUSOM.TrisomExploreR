@@ -19,7 +19,8 @@ box::use(
 box::use(
     app/logic/shared/statistical_analysis[formatPValue],
     app/logic/shared/string_utils[parse_delimited_string],
-    app/logic/shared/analyte_plots[getBoxPlotWithHighlightGroup, getScatterPlotByGroup, getScatterPlotWithSmoothing, getDensityColors],
+    app/logic/shared/analyte_plots[getBoxPlotWithHighlightGroup, getScatterPlotByGroup,
+        getScatterPlotWithSmoothing, getDensityColors],
 )
 
 PlotStrategyBase <- R6Class(
@@ -89,7 +90,7 @@ PlotStrategyBase <- R6Class(
         applicationName = NULL,
         namespace = NULL,
         analysisVariable = NULL,
-        analysisVariableLabel= NULL,
+        analysisVariableLabel = NULL,
         analysisType = NULL,
         is_precalculated = NULL,
         experimentIDs = NULL,
@@ -278,7 +279,8 @@ ScatterPlotStrategy <- R6Class(
                     } else {
                         return(
                             glue(
-                                "Comparison of {self$analysisVariableLabel} trajectories between karyotype for {self$analyte}"
+                                "Comparison of {self$analysisVariableLabel} \\
+                                trajectories between karyotype for {self$analyte}"
                             )
                         )
                     }
@@ -353,7 +355,8 @@ ScatterPlotStrategy <- R6Class(
                     toImageButtonOptions = list(
                         format = "svg",
                         filename = glue(
-                            "{self$applicationName} - {self$analyte} Analyte Plot {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
+                            "{self$applicationName} - {self$analyte} Analyte Plot \\
+                                {format(Sys.time(),\"%Y%m%d_%H%M%S\")}"
                         ),
                         width = NULL,
                         height = NULL
