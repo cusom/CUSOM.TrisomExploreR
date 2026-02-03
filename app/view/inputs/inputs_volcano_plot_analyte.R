@@ -1,17 +1,24 @@
 box::use(
+  shiny[NS, tagList, tags, moduleServer, reactive, validate, need, bindEvent,
+    isolate, selectizeInput, updateSelectizeInput, htmlOutput, insertUI, 
+    observeEvent, renderText],
+  htmltools[HTML],
+  bsplus[bs_embed_tooltip],
+  dplyr[select, distinct, arrange, pull],
+
+)
+
+box::use(
   app/logic/shared/server_utils
 )
 
-#' Create analyte inputs for volcano plot
-#' @param id namespace for this module instance
-#' @importFrom bsplus bs_embed_tooltip
 #' @export
 ui <- function(id) {
-  ns <- shiny::NS(id)
-  shiny::tagList(
-    shiny::tags$span(
+  ns <- NS(id)
+  tagList(
+    tags$span(
       id = ns("AnalyteInput"),
-      shiny::selectizeInput(
+      selectizeInput(
         inputId = ns("analyte"),
         label = "",
         choices = NULL,
@@ -39,54 +46,43 @@ ui <- function(id) {
             }"))
         )
       ) |>
-        bsplus::bs_embed_tooltip(
+        bs_embed_tooltip(
           title = "Select from this dropdown",
           placement = "left",
           html = TRUE
         ),
-      shiny::htmlOutput(ns("AnalyteSearchError"))
+      htmlOutput(ns("AnalyteSearchError"))
     )
   )
 }
 
-#' Server side processing / logic for analyte input for volcano plot
-#' @param id namespace for this module instance
-#' @param r6 r6 class for data management
-#' @param parent shiny session - parent session
-#' @importFrom gargoyle watch
-#' @importFrom gargoyle trigger
-#' @import dplyr
-#' @importFrom data.table as.data.table
-#' @importFrom plotly event_data
-#' @import glue
-#' @importFrom shinyjs runjs
 #' @export
 server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, summary_plot_name, parent) {
 
-  shiny::moduleServer(id, function(input, output, session) {
+  moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    shiny::insertUI(
+    insertUI(
       session = parent,
       selector = paste0("#", parent$ns("volcanoMultiSelectTextPlaceholder")),
       immediate = TRUE,
       where = "afterEnd",
-      ui = shiny::htmlOutput(ns("volcanoMultiSelectText"))
+      ui = htmlOutput(ns("volcanoMultiSelectText"))
     )
 
-    shiny::observeEvent(c(summary_data()), {
-      shiny::validate(
-        shiny::need(!is.null(summary_data()), "")
+    observeEvent(c(summary_data()), {
+      validate(
+        need(!is.null(summary_data()), "")
       )
-      shiny::isolate({
+      isolate({
         analytes <- summary_data() |>
-          dplyr::select(Analyte) |>
-          dplyr::distinct() |>
-          dplyr::arrange(Analyte) |>
-          dplyr::pull()
+          select(Analyte) |>
+          distinct() |>
+          arrange(Analyte) |>
+          pull()
 
-        shiny::updateSelectizeInput(
+        updateSelectizeInput(
           session = session,
           inputId = "analyte",
           choices = analytes,
@@ -100,12 +96,12 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
 
     }, domain = session)
 
-    shiny::observeEvent(
+    observeEvent(
       c(plot_click_data()), {
       plot_click_data() |>
         r6$set_plot_event_data()
 
-      shiny::updateSelectizeInput(
+      updateSelectizeInput(
         session = session,
         inputId = "analyte",
         selected = plot_click_data()$key
@@ -113,12 +109,12 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
 
     }, domain = session)
 
-    shiny::observeEvent(
+    observeEvent(
       c(plot_selected_data()), {
         plot_selected_data() |>
           r6$set_plot_event_data()
 
-        shiny::updateSelectizeInput(
+        updateSelectizeInput(
           session = session,
           inputId = "analyte",
           selected = plot_selected_data()$key
@@ -126,50 +122,22 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
 
     }, domain = session)
 
-    volcano_multi_select_text <- shiny::reactive({
+    volcano_multi_select_text <- reactive({
         r6$volcanoMultiSelectText
     }) |>
-      shiny::bindEvent(input$analyte, ignoreInit = TRUE)
+      bindEvent(input$analyte, ignoreInit = TRUE)
 
-    output$volcanoMultiSelectText <- shiny::renderText({
-      shiny::HTML(volcano_multi_select_text())
+    output$volcanoMultiSelectText <- renderText({
+      HTML(volcano_multi_select_text())
     })
 
-    shiny::observeEvent(c(input$analyte), {
+    observeEvent(c(input$analyte), {
       r6$set_analyte(input$analyte, annotate = TRUE, plot_name = summary_plot_name)
     }, ignoreInit = TRUE, domain = session)
 
-    # analyte_search_error_text <- shiny::eventReactive(
-    #   c(input$analyteSearchResults, input$analyte), {
-    #   search_result_data <- input$analyteSearchResults
-    #   shiny::req(search_result_data)
-
-    #   if (length(input$analyte) > 0) {
-    #     shiny::HTML("")
-    #   } else if (search_result_data$total == 0) {
-    #     shiny::HTML(
-    #       paste0(
-    #         '<span style="color:black;font-size:smaller;padding-left:10px;"><b>"',
-    #         search_result_data$query,
-    #         '"</b> not found. Please try another value</span>'
-    #       )
-    #     )
-    #   } else {
-    #     shiny::HTML("")
-    #   }
-    # }, domain = session)
-
-    # output$AnalyteSearchError <- shiny::renderUI({
-    #   analyte_search_error_text()
-    # })
-
-    # Analyte <- shiny::eventReactive(c(input$Analyte), {
-    #   input$Analyte
-    # })
-
     return(
       list(
-        analyte = shiny::reactive({input$analyte}),
+        analyte = reactive({input$analyte}),
         analyte_input_name = "analyte",
         analyte_session = session
       )

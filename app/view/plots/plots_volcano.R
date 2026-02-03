@@ -1,17 +1,26 @@
+box::use(
+  shiny[NS, tagList, tags, moduleServer, reactive, validate, need, bindEvent,
+    isolate],
+  shinydashboardPlus[box],
+  shinycustomloader[withLoader],
+  plotly[plotlyOutput, renderPlotly, event_data, toWebGL],
+  shinybusy[show_modal_spinner, remove_modal_spinner],
+)
+
 
 box::use(
   app/logic/feature_analysis/summary/FeatureAnalysisSummary[getFeatureAnalysisSummary],
   app/logic/shared/plot_utils[set_plot_source, object_is_rendered],
   app/view/inputs/inputs_volcano_plot_analyte,
-  app/view/inputs/inputs_GSEA_analysis
+  app/view/inputs/inputs_GSEA_analysis,
 )
 
 #' @export
 ui <- function(id) {
-  ns <- shiny::NS(id)
-  shiny::tagList(
-    shinydashboardPlus::box(
-      title = shiny::tags$div(
+  ns <- NS(id)
+  tagList(
+    box(
+      title = tags$div(
         class = "volcano-top-input-panel",
         inputs_volcano_plot_analyte$ui(ns("volcano-analyte")),
         inputs_GSEA_analysis$ui(ns("gsea"))
@@ -22,8 +31,8 @@ ui <- function(id) {
       solidHeader = FALSE,
       collapsible = FALSE,
       headerBorder = FALSE,
-      shinycustomloader::withLoader(
-        plotly::plotlyOutput(
+      withLoader(
+        plotlyOutput(
           ns("plot"),
           height = "600px",
           width = "99%"
@@ -31,7 +40,7 @@ ui <- function(id) {
         type = "html",
         loader = "dnaspin"
       ),
-      shiny::tags$div(
+      tags$div(
         id = ns("volcanoMultiSelectTextPlaceholder")
       )
     )
@@ -41,13 +50,13 @@ ui <- function(id) {
 #' @export
 server <- function(id, analysis_config, app_config, study, study_data, stat_test, covariates, adjustment_method, ...) {
 
-  shiny::moduleServer(id, function(input, output, session) {
+  moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    r6 <- shiny::reactive({
-      shiny::validate(
-        shiny::need(study_data() != "", "")
+    r6 <- reactive({
+      validate(
+        need(study_data() != "", "")
       )
 
       getFeatureAnalysisSummary(
@@ -60,14 +69,14 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
         adjustment_method = adjustment_method()
       )
     }) |>
-      shiny::bindEvent(study_data())
+      bindEvent(study_data())
 
-    summary_data <- shiny::reactive({
-      shiny::validate(
-        shiny::need(!is.null(study_data()), "")
+    summary_data <- reactive({
+      validate(
+        need(!is.null(study_data()), "")
       )
 
-      shinybusy::show_modal_spinner(
+      show_modal_spinner(
           spin = "atom",
           color = "#3c8dbc",
           text = "Calculating Statistics for Volcano Plot..."
@@ -76,21 +85,21 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
       summary_data <- study_data() |>
         r6()$get_summary_data()
 
-      shinybusy::remove_modal_spinner()
+      remove_modal_spinner()
 
       summary_data
 
     })
 
-    output$plot <- plotly::renderPlotly({
+    output$plot <- renderPlotly({
 
-      shiny::validate(
-        shiny::need(!is.null(summary_data()), "")
+      validate(
+        need(!is.null(summary_data()), "")
       )
 
-      shiny::isolate({
+      isolate({
 
-        shinybusy::show_modal_spinner(
+        show_modal_spinner(
           spin = "atom",
           color = "#3c8dbc",
           text = "Rendering Volcano Plot..."
@@ -99,9 +108,9 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
         p <- summary_data() |>
           r6()$get_summary_plot() |>
           set_plot_source(ns("plot")) |>
-          plotly::toWebGL()
+          toWebGL()
 
-        shinybusy::remove_modal_spinner()
+        remove_modal_spinner()
 
         p
 
@@ -109,24 +118,24 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
 
     })
 
-    plot_click_data <- shiny::reactive({
-      shiny::validate(
-        shiny::need(!is.null(summary_data()), ""),
-        shiny::need(object_is_rendered(session, ns("plot")), "")
+    plot_click_data <- reactive({
+      validate(
+        need(!is.null(summary_data()), ""),
+        need(object_is_rendered(session, ns("plot")), "")
       )
-      plotly::event_data(
+      event_data(
         "plotly_click",
         priority = "event",
         source = ns("plot")
       )
     })
 
-    plot_selected_data <- shiny::reactive({
-      shiny::validate(
-        shiny::need(!is.null(summary_data()), ""),
-        shiny::need(object_is_rendered(session, ns("plot")), "")
+    plot_selected_data <- reactive({
+      validate(
+        need(!is.null(summary_data()), ""),
+        need(object_is_rendered(session, ns("plot")), "")
       )
-      plotly::event_data(
+      event_data(
         "plotly_selected",
         priority = "event",
         source = ns("plot")
@@ -150,7 +159,7 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
       ...
     )
 
-    table_data <- shiny::reactive({
+    table_data <- reactive({
       r6()$get_table_data()
     })
 
@@ -158,9 +167,9 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
       list(
         SummaryData = summary_data,
         table_data = table_data,
-        fold_change_var = shiny::reactive({r6()$fold_change_var}),
-        adjusted = shiny::reactive({r6()$adjusted}),
-        stat_test = shiny::reactive({r6()$stat_test}),
+        fold_change_var = reactive({r6()$fold_change_var}),
+        adjusted = reactive({r6()$adjusted}),
+        stat_test = reactive({r6()$stat_test}),
         analyte = analyte$analyte,
         analyte_input_name = analyte$analyte_input_name,
         analyte_session = analyte$analyte_session
