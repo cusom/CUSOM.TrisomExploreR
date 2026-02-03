@@ -4,7 +4,7 @@ box::use(
         validate, need],
     shinydashboardPlus[box],
     htmltools[HTML],
-    shinyjs[disabled, disable, enable, removeClass, addClass],
+    shinyjs[disabled, disable, enable, removeClass, addClass, hidden],
     bsplus[bs_embed_tooltip],
     shinycustomloader[withLoader],
     shinybusy[show_modal_spinner, remove_modal_spinner],
@@ -93,6 +93,29 @@ ui <- function(id) {
                             persist = FALSE,
                             `live-search` = TRUE,
                             maxoptions = 1
+                        )
+                    )
+                ),
+                hidden(
+                    tags$div(
+                        id = "internals",
+                        selectizeInput(
+                            inputId = ns("stat_test"),
+                            label = "",
+                            choices = "spearman",
+                            selected = "spearman"
+                        ),
+                        selectizeInput(
+                            inputId = ns("covariates"),
+                            label = "",
+                            choices = c(0),
+                            selected = c(0)
+                        ),
+                        selectizeInput(
+                            inputId = ns("adjustment_method"),
+                            label = "",
+                            choices = "BH",
+                            selected = "BH"
                         )
                     )
                 )
@@ -279,8 +302,11 @@ server <- function(id, r6) {
 
         return(
             list(
-                Study = reactive(input$QueryExperiment),
-                StudyData = correlation_data
+                study = reactive({input$QueryExperiment}),
+                study_data = correlation_data,
+                stat_test = reactive({input$stat_test}),
+                covariates = reactive({input$covariates}),
+                adjustment_method = reactive({input$adjustment_method})
             )
         )
 
