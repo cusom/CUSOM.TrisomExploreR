@@ -391,6 +391,20 @@ HeatmapPlotStrategy <- R6Class(
     inherit = PlotStrategyBase,
     private = list(),
     active = list(
+        analyte_var_name = function(value) {
+            if ("QueryAnalyte" %in% colnames(self$summary_data)) {
+                return("QueryAnalyte")
+            } else {
+                return("Analyte")
+            }
+        },
+        analyte_count = function(value) {
+            return(
+                self$summary_data |>
+                    distinct(!!sym(self$analyte_var_name)) |>
+                    nrow()
+            )
+        },
         change_var_label = function(value) {
             return(
                 self$analyte_data |>
@@ -417,6 +431,17 @@ HeatmapPlotStrategy <- R6Class(
                 )
             }
         },
+        heatmap_title = function(value) {
+            if (self$analyte_count == 1) {
+                return(
+                    glue("{self$analysisVariableLabel} vs. selected analytes")
+                )
+            } else {
+                return(
+                    glue("{self$change_var_label} with {self$analysisVariable}")
+                )
+            }
+        },
         data_limit = function(value) {
             return(
                 self$analyte_data |>
@@ -430,11 +455,13 @@ HeatmapPlotStrategy <- R6Class(
             return("")
         },
         analysisVariableLabel = function(value) {
-            return(
-                self$summary_data |>
-                    distinct(QueryAnalyte) |>
-                    pull()
-            )
+            if (self$analyte_count == 1) {
+                return(
+                    self$summary_data |>
+                        distinct(!!sym(self$analyte_var_name)) |>
+                        pull()
+                )
+            }
         }
     ),
     public = list(
@@ -483,7 +510,7 @@ HeatmapPlotStrategy <- R6Class(
             ) |>
             layout(
                 title = list(
-                    text = HTML(glue("{self$analysisVariableLabel} vs. selected analytes")),
+                    text = HTML(self$heatmap_title),
                     font = list(
                         family = "Arial",
                         color = "rgb(58, 62, 65)",
