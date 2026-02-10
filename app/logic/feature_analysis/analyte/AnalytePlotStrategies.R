@@ -381,11 +381,18 @@ HeatmapPlotStrategy <- R6Class(
     inherit = PlotStrategyBase,
     private = list(),
     active = list(
+        change_var_label = function(value) {
+            return(
+                self$analyte_data |>
+                    distinct(ChangeVarName) |>
+                    pull()
+            )
+        },
         long_data = function(value) {
             if (missing(value)) {
                 return(
                     self$analyte_data |>
-                        select(name = Analyte, variable = Analysis, value = log2FoldChange)
+                        select(name = Analyte, variable = Analysis, value = ChangeValue)
                 )
             }
         },
@@ -393,7 +400,7 @@ HeatmapPlotStrategy <- R6Class(
             if (missing(value)) {
                 return(
                     self$long_data |>
-                        select(name = Analyte, variable = Analysis, value = log2FoldChange) |>
+                        select(name = Analyte, variable = Analysis, value = ChangeValue) |>
                         select("Analyte" = name, z = value) |>
                         arrange(z) |>
                         mutate(r = row_number())
@@ -403,7 +410,7 @@ HeatmapPlotStrategy <- R6Class(
         data_limit = function(value) {
             return(
                 self$analyte_data |>
-                    pull(log2FoldChange) |>
+                    pull(ChangeValue) |>
                     abs() |>
                     max() |>
                     round_any(0.01, f = ceiling)
@@ -428,7 +435,7 @@ HeatmapPlotStrategy <- R6Class(
                 ylab = "",
                 key = ~ name,
                 showticklabels = c(FALSE, TRUE),
-                main = HTML(glue("Fold Change with {self$analysisVariableLabel}")),
+                main = HTML(glue("Change with {self$analysisVariableLabel}")),
                 margins = c(60, 100, 40, 20),
                 subplot_widths = 0.65,
                 yaxis_width = 10,
@@ -441,7 +448,7 @@ HeatmapPlotStrategy <- R6Class(
                     seq(-self$data_limit, self$data_limit, length.out = 11),
                     brewer.pal(11, "RdBu") |> rev()
                 ),
-                key.title = "log<sub>2</sub>(Fold Change)",
+                key.title = self$change_var_label,
                 branches_lwd = 0.1,
                 fontsize_row = 10,
                 fontsize_col = 1,
@@ -460,7 +467,7 @@ HeatmapPlotStrategy <- R6Class(
             ) |>
             layout(
                 title = list(
-                    text = HTML(glue("Fold Change with {self$analysisVariableLabel}")),
+                    text = HTML(glue("{self$change_var_label} with {self$analysisVariableLabel}")),
                     font = list(
                         family = "Arial",
                         color = "rgb(58, 62, 65)",
