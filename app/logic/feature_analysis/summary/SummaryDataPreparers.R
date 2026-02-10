@@ -3,9 +3,9 @@ box::use(
     glue[glue, glue_collapse],
     tibble[tibble],
     dplyr[select, mutate, mutate_at, group_by, summarise, ungroup, rename_with, distinct, n,
-            pull, arrange, dense_rank, row_number, vars, filter],
+            pull, arrange, dense_rank, row_number, vars, filter, if_else, slice_max],
     forcats[fct_relevel],
-    purrr[pmap],
+    purrr[pmap, map2_chr],
     stringr[str_split_1],
     rlang[sym],
 )
@@ -72,12 +72,7 @@ SummaryDataPreparerBase <- R6Class(
                     log2FoldChange = log2(FoldChange),
                     `-log10pvalue` = -log10(p.value),
                     `p.value.adjustment.method` = self$adjustment_method,
-                    formattedPValue = unlist(
-                        pmap(
-                            .l = list(p.value, p.value.adjustment.method),
-                            formatPValue
-                        )
-                    ),
+                    formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
                     text = glue("Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}")
                 )
             return(invisible(self$prepared_data))
@@ -191,31 +186,29 @@ CorrelatesSummaryPreparer <- R6Class(
         prepare = function(source_data) {
             self$prepared_data <- self$set_summary_data(source_data) |>
                 mutate(
-                    shape = ifelse(p.value == 0, "triangle-up", "circle"),
-                    p.value = ifelse(p.value == 0, 10^-(self$summary_data_max_finite * 1.05), p.value),
-                    `-log10pvalue` = -log10(p.value)
-                ) |>
-                group_by(Analyte) |>
-                mutate(rank = row_number(-abs(CorrelationValue))) |>
-                filter(rank == 1) |>
-                select(-rank) |>
-                mutate(
-                    "p.value.adjustment.method" = self$adjustment_method,
-                    formattedPValue = unlist(
-                        pmap(
-                            .l = list(p.value, p.value.adjustment.method),
-                            formatPValue
-                        )
+                    shape = if_else(p.value == 0, "triangle-up", "circle"),
+                    p.value = if_else(
+                        p.value == 0,
+                        10^-(self$summary_data_max_finite * 1.05),
+                        p.value
                     ),
-                    text = glue(
-                        "Analyte: {Analyte} <br />{self$measure_name}:\\
-                            {round(CorrelationValue,2)} <br />{formattedPValue}"
-                        )
-                    ) |>
-                ungroup() |>
+                    `-log10pvalue` = -log10(p.value),
+                    selectedPoint = 0L
+                ) |>
+                # keep the row with the largest |CorrelationValue| per Analyte
+                slice_max(
+                    order_by = abs(CorrelationValue),
+                    n = 1,
+                    with_ties = FALSE,
+                    by = Analyte
+                ) |>
                 mutate(
-                    shape = "circle",
-                    selectedPoint = 0
+                    `p.value.adjustment.method` = self$adjustment_method,
+                    formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
+                    text = glue(
+                        "Analyte: {Analyte} <br />{self$measure_name}: \\
+                        {round(CorrelationValue, 2)} <br />{formattedPValue}"
+                    )
                 )
             return(invisible(self$prepared_data))
         }
