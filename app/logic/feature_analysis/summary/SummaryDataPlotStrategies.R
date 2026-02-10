@@ -308,7 +308,7 @@ CorrelatesVolcanoPlotStrategy <- R6Class(
     inherit = VolcanoPlotStrategy,
     private = list(),
     active = list(
-        query_analyte_label = function(value) {
+        analysis_variable_label = function(value) {
             return(
                 self$plot_data |>
                     distinct(QueryAnalyte) |>
