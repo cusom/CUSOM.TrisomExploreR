@@ -26,9 +26,36 @@ box::use(
 PlotStrategyBase <- R6Class(
     "PlotStrategyBase",
     private = list(
-        remote_db = NULL
+        remote_db = NULL,
+        analysis_config = NULL
     ),
     active = list(
+        applicationName = function(value) {
+            return(private$analysis_config$ApplicationName)
+        },
+        namespace = function(value) {
+            return(private$analysis_config$Namespace)
+        },
+        analysisVariable = function(value) {
+            return(private$analysis_config$AnalysisVariableName)
+        },
+        analysisVariableLabel = function(value) {
+            return(private$analysis_config$AnalysisVariableLabel)
+        },
+        analysisType = function(value) {
+            return(private$analysis_config$AnalysisType)
+        },
+        is_precalculated = function(value) {
+            return(private$analysis_config$UsesPreCalculatedData)
+        },
+        experimentIDs = function(value) {
+            return(
+                str_split_1(private$analysis_config$ExperimentIDs, "\\|")
+            )
+        },
+        groupBaselineLabel = function(value) {
+            return(private$analysis_config$AnalysisVariableBaselineLabel)
+        },
         GroupVariableCount = function(value) {
             if (missing(value)) {
                 return(
@@ -87,14 +114,6 @@ PlotStrategyBase <- R6Class(
         study_data = NULL,
         analyte = NULL,
         summary_data = NULL,
-        applicationName = NULL,
-        namespace = NULL,
-        analysisVariable = NULL,
-        analysisVariableLabel = NULL,
-        analysisType = NULL,
-        is_precalculated = NULL,
-        experimentIDs = NULL,
-        groupBaselineLabel = NULL,
         analyte_data = NULL,
         initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {
             self$study <- study
@@ -103,16 +122,7 @@ PlotStrategyBase <- R6Class(
             self$summary_data <- summary_data
 
             private$remote_db <- app_config$remote_db
-            self$applicationName <- analysis_config$ApplicationName
-
-            self$namespace <- analysis_config$Namespace
-            self$analysisVariable <- analysis_config$AnalysisVariableName
-            self$analysisVariableLabel <- analysis_config$AnalysisVariableLabel
-            self$analysisType <- analysis_config$AnalysisType
-            self$is_precalculated <- analysis_config$UsesPreCalculatedData
-
-            self$experimentIDs <- str_split_1(analysis_config$ExperimentIDs, "\\|")
-            self$groupBaselineLabel <- analysis_config$AnalysisVariableBaselineLabel
+            private$analysis_config <- analysis_config
         },
         set_analyte_data = function(.data) {
             self$analyte_data <- .data
@@ -418,6 +428,13 @@ HeatmapPlotStrategy <- R6Class(
         },
         AnalytePlotStatAnnotation = function(value) {
             return("")
+        },
+        analysisVariableLabel = function(value) {
+            return(
+                self$summary_data |>
+                    distinct(QueryAnalyte) |>
+                    pull()
+            )
         }
     ),
     public = list(
@@ -435,7 +452,6 @@ HeatmapPlotStrategy <- R6Class(
                 ylab = "",
                 key = ~ name,
                 showticklabels = c(FALSE, TRUE),
-                main = HTML(glue("Change with {self$analysisVariableLabel}")),
                 margins = c(60, 100, 40, 20),
                 subplot_widths = 0.65,
                 yaxis_width = 10,
@@ -467,7 +483,7 @@ HeatmapPlotStrategy <- R6Class(
             ) |>
             layout(
                 title = list(
-                    text = HTML(glue("{self$change_var_label} with {self$analysisVariableLabel}")),
+                    text = HTML(glue("{self$analysisVariableLabel} vs. selected analytes")),
                     font = list(
                         family = "Arial",
                         color = "rgb(58, 62, 65)",
