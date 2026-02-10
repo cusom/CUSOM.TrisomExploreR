@@ -314,10 +314,43 @@ CorrelatesVolcanoPlotStrategy <- R6Class(
                     distinct(QueryAnalyte) |>
                     pull()
             )
+        },
+        VolcanoSummaryDataXAxisLabel = function(value) {
+            if (missing(value)) {
+                return(self$significance_var_label)
+            }
+        },
+        volcanoMultiSelectText = function(value) {
+            if (missing(value)) {
+                if (length(self$analyte) == 1) {
+                    return("")
+                } else {
+                    return(
+                        self$plot_data |>
+                            filter(Analyte %in% self$analyte) |>
+                            summarise(
+                                count = n(),
+                                minFC = round(min(!!sym(self$fold_change_var)), 4),
+                                maxFC = round(max(!!sym(self$fold_change_var)), 4),
+                                minP = min(p.value),
+                                maxP = max(p.value)
+                            ) |>
+                            mutate(
+                                text = glue(
+                                    "<center>{count} points selected. Min {self$significance_var_label}: \\
+                                    {minFC}, Max {self$significance_var_label} {maxFC}</center>"
+                                )
+                            ) |>
+                            select(text) |>
+                            pull()
+                    )
+                }
+            }
         }
     ),
     public = list(
         fold_change_var = "CorrelationValue",
+        significance_var_label = "rho",
         initialize = function(analysis_config, app_config, study, study_data,
             stat_test, covariates, adjustment_method) {
                 super$initialize(
