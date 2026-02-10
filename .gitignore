@@ -5,18 +5,19 @@ PrivateSettings.config
 
 config.yml
 
-## rhino app artifacts
-app/*
-app.R
+app/logic/legacy_logic/*
+
+#package artifacts
+data/*
+data-raw/*
+inst/*
+man/*
+DESCRIPTION
+LICENSE
+NAMESPACE
+NEWS.md
+
 Remote_Data/*
-tests/*
-.rscignore
-rhino.yml
-.renvignore
-renv/*
-renv.lock
-dependencies.R
-settings.json
 
 # History files
 .Rhistory
@@ -31,6 +32,8 @@ inst/examples/*/rsconnect/
 
 inst/Apps/*
 R/__archive/*
+
+*__ignore__*
 
 # Example code in package build process
 *-Ex.R
