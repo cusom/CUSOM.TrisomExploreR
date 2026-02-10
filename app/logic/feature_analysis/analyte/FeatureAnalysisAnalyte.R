@@ -6,9 +6,12 @@ box::use(
 box::use(
     app/logic/shared/factory_routing[resolve_class],
     app/logic/shared/global_utils[`%||%`],
-    app/logic/feature_analysis/analyte/AnalyteDataManagers[RuntimeAnalyteDataSource, PreCalcualtedAnalyteDataSource, CorrelatesAnalyteDataSource],
-    app/logic/feature_analysis/analyte/AnalyteDataPreparers[CategoricalSinglePreparer, ContinuousSinglePreparer, HeatmapPreparer, CorrelatesPreparer],
-    app/logic/feature_analysis/analyte/AnalytePlotStrategies[BoxPlotStrategy, ScatterPlotStrategy, HeatmapPlotStrategy, ScatterPlotWithSmoothingStrategy]
+    app/logic/feature_analysis/analyte/AnalyteDataManagers[RuntimeAnalyteDataSource,
+        PreCalcualtedAnalyteDataSource, CorrelatesAnalyteDataSource],
+    app/logic/feature_analysis/analyte/AnalyteDataPreparers[CategoricalSinglePreparer,
+        ContinuousSinglePreparer, HeatmapPreparer, CorrelatesPreparer, CorrelatesHeatmapPreparer],
+    app/logic/feature_analysis/analyte/AnalytePlotStrategies[BoxPlotStrategy, ScatterPlotStrategy,
+        HeatmapPlotStrategy, ScatterPlotWithSmoothingStrategy]
 )
 
 getPlotKind <- function(analysis_type, analyte) {
@@ -24,7 +27,7 @@ getPlotKind <- function(analysis_type, analyte) {
 getDataSource <- function(precalculated, analysis_type, analyte, analysis_config, ...) {
     type <- if_else(
         analysis_type == "Correlates", "Correlates",
-        if(isTRUE(precalculated)) "Precalc" else "Runtime"
+        if (isTRUE(precalculated)) "Precalc" else "Runtime"
     )
     map <- list(
         Precalc     = PreCalcualtedAnalyteDataSource,
@@ -35,14 +38,19 @@ getDataSource <- function(precalculated, analysis_type, analyte, analysis_config
     cls$new(analysis_config = analysis_config, analyte = analyte, ...)
 }
 
-getPreparer <- function(plot_kind, analysis_config, analyte, ...) {
-    map <- list(
-        Scatter     = ContinuousSinglePreparer,
-        Box         = CategoricalSinglePreparer,
-        Heatmap     = HeatmapPreparer,
-        Correlates  = CorrelatesPreparer
+getPreparer <- function(plot_kind, analysis_type, analysis_config, analyte, ...) {
+    type <- if_else(
+        analysis_type == "Correlates" && plot_kind == "Heatmap", "CorrelatesHeatmap",
+        plot_kind
     )
-    cls <- resolve_class(map, plot_kind, "Preparer")
+    map <- list(
+        Scatter             = ContinuousSinglePreparer,
+        Box                 = CategoricalSinglePreparer,
+        Heatmap             = HeatmapPreparer,
+        Correlates          = CorrelatesPreparer,
+        CorrelatesHeatmap   = CorrelatesHeatmapPreparer
+    )
+    cls <- resolve_class(map, type, "Preparer")
     cls$new(analysis_config = analysis_config, analyte = analyte, ...)
 }
 
@@ -105,7 +113,7 @@ getFeatureAnalysisForAnalyte <- function(
     analysis_type <- analysis_config$AnalysisType
     plot_kind  <- getPlotKind(analysis_type, analyte)
     data_src   <- getDataSource(precalculated, analysis_type, analyte, analysis_config, ...)
-    preparer   <- getPreparer(plot_kind, analysis_config, analyte, ...)
+    preparer   <- getPreparer(plot_kind, analysis_type, analysis_config, analyte, ...)
     plotter    <- getPlotStrategy(plot_kind, analysis_config, analyte, ...)
 
     FeatureAnalysisAnalyteRunner$new(
