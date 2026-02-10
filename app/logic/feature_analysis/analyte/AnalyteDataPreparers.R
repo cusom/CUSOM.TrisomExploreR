@@ -1,6 +1,7 @@
 box::use(
     R6[R6Class],
-    dplyr[select, filter, mutate, case_when, add_count, ungroup, if_else, arrange],
+    dplyr[select, filter, mutate, case_when, add_count, ungroup, if_else, arrange,
+        inner_join, join_by, distinct],
     glue[glue],
     forcats[fct_inorder],
     rlang[sym]
@@ -15,9 +16,11 @@ PreparerBase <- R6Class(
     private = list(),
     active = list(),
     public = list(
+        source_data = NULL,
         prepared_data = NULL,
         initialize = function(analysis_config, ...) {
-
+            args_list <- list(...)
+            self$source_data <- args_list$study_data
         }
     )
 )
@@ -93,9 +96,13 @@ HeatmapPreparer <- R6Class(
         },
         prepare = function(.data) {
             self$prepared_data <- .data |>
-                select(Analyte, log2FoldChange, text) |>
-                arrange(-log2FoldChange) |>
-                mutate(Analyte = fct_inorder(Analyte), "Analysis" = "T21vD21")
+                select(Analyte, ChangeValue = log2FoldChange, text) |>
+                arrange(-ChangeValue) |>
+                mutate(
+                    Analyte = fct_inorder(Analyte),
+                    "ChangeVarName" = "log<sub>2</sub>(Fold Change)",
+                    "Analysis" = "T21vD21"
+                )
             return(invisible(self$prepared_data))
         }
     )
@@ -115,6 +122,30 @@ CorrelatesPreparer <- R6Class(
                     log2y = log2(y),
                     xLabel = parse_delimited_string(QueryAnalyte, 1),
                     yLabel = parse_delimited_string(ComparisonAnalyte, 1)
+                )
+            return(invisible(self$prepared_data))
+        }
+    )
+)
+
+#' @export
+CorrelatesHeatmapPreparer <- R6Class(
+    "CorrelatesHeatmapPreparer",
+    inherit = PreparerBase,
+    private = list(),
+    active = list(),
+    public = list(
+        prepare = function(.data) {
+            self$prepared_data <- self$source_data |>
+                inner_join(.data, join_by(Analyte == ComparisonAnalyte)) |>
+                mutate(text = "test") |>
+                select(Analyte, ChangeValue = CorrelationValue, text) |>
+                distinct() |>
+                arrange(-ChangeValue) |>
+                mutate(
+                    Analyte = fct_inorder(Analyte),
+                    "ChangeVarName" = "rho",
+                    "Analysis" = "T21vD21"
                 )
             return(invisible(self$prepared_data))
         }
