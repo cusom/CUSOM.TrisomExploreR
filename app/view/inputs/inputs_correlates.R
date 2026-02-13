@@ -142,7 +142,7 @@ server <- function(id, r6) {
 
         server_utils$bind_events(
             ids = c("QueryExperiment", "CompareExperiment", "QueryAnalyte"),
-            r6 = r6,
+            r6 = shiny::reactive({r6}),
             session = session,
             parent_input = input
         )
