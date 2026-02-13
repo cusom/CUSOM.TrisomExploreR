@@ -3,7 +3,7 @@ box::use(
 )
 
 box::use(
-  app/logic/feature_analysis/inputs/inputs_manager_factory[get_inputs_manager],
+  app/logic/feature_analysis/inputs/FeatureAnalysisInputs[getFeatureAnalysisInputs],
   app/logic/shared/server_utils,
   app/view/custom_ui/input_widgets[prettyRadioButtonsFieldSet],
   app/view/inputs/inputs_conditions_feature_analysis
@@ -159,7 +159,7 @@ server <- function(id, app_config, analysis_config) {
     # Recreate the R6 instance when Feature changes
     shiny::observeEvent(input$Feature, ignoreInit = TRUE, {
       shiny::req(input$Feature)
-      inst <- get_inputs_manager(
+      inst <- getFeatureAnalysisInputs(
         app_config = app_config,
         analysis_config = app_config$get_analysis_config(input$Feature),
         input_config = app_config$get_input_config(input$Feature)
@@ -219,15 +219,15 @@ server <- function(id, app_config, analysis_config) {
         selector = paste0("#", ns("getData"))
       )
 
-      if (r6()$namespace == "Comorbidity" & is.null(r6()$Conditions)) {
-        shinyjs::disable(
-          selector = paste0("#", ns("getData"))
-        )
-      } else {
+      # if (r6()$namespace == "Comorbidity" & is.null(r6()$Conditions)) {
+      #   shinyjs::disable(
+      #     selector = paste0("#", ns("getData"))
+      #   )
+      # } else {
         shinyjs::enable(
           selector = paste0("#", ns("getData"))
         )
-      }
+      # }
 
     }, ignoreInit = TRUE)
 
@@ -276,10 +276,10 @@ server <- function(id, app_config, analysis_config) {
         selected = sexes(),
         inline = TRUE,
         width = "90%"
-      ) |>
-      shiny::tagAppendAttributes(
-        class = r6()$addInputSpecialClass("Sex", "disabled")
-      )
+      ) #|>
+      # shiny::tagAppendAttributes(
+      #   class = r6()$addInputSpecialClass("Sex", "disabled")
+      # )
 
     })
 
