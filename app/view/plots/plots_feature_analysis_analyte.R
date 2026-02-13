@@ -57,26 +57,34 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, analysis_config, app_config, analyte, study, study_data, summary_data, analyte_input_name, analyte_session) {
+server <- function(id, analysis_config, app_config, analyte, feature, study, study_data,
+  summary_data, analyte_input_name, analyte_session) {
 
   shiny::moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    r6 <- shiny::reactive({
-      shiny::validate(
-        shiny::need(analyte() != "", "")
-      )
-      getFeatureAnalysisForAnalyte(
-        analysis_config = analysis_config,
+    r6_obj <- shiny::reactiveVal(NULL)
+
+    # Recreate the R6 instance when Feature changes
+    shiny::observeEvent(analyte(), {
+      shiny::req(analyte())
+      inst <- getFeatureAnalysisForAnalyte(
+        analysis_config = analysis_config$get_analysis_config(feature()),
         analyte = analyte(),
         app_config = app_config,
         study = study(),
         study_data = study_data(),
         summary_data = summary_data()
       )
-    }) |>
-      shiny::bindEvent(analyte())
+      r6_obj(inst)
+    })
+
+    #expose a reactive that always reads the current instance
+    r6 <- shiny::reactive({
+      shiny::req(r6_obj())
+      r6_obj()
+    })
 
     analyte_data <- shiny::reactive({
       shiny::validate(

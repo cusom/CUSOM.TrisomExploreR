@@ -3,7 +3,6 @@ box::use(
 )
 
 box::use(
-  app/logic/feature_analysis/inputs/inputs_manager_factory[get_inputs_manager],
   app/view/inputs/inputs_feature_analysis,
   app/view/inputs/inputs_volcano_plot_analyte,
   app/view/plots/plots_volcano,
@@ -78,25 +77,11 @@ server <- function(id, app_config, analysis_config, input_config) {
 
     ns <- session$ns
 
-    gargoyle::init(
-      "get_volcano_data",
-      "update_volcano_analytes",
-      "show_analyte_plot",
-      "sync_analyte_choice",
-      "validate_GSEA",
-      "run_GSEA",
-      "get_GSEA_path_data",
-      session = session
-    )
-
     #base inputs
     inputs <- inputs_feature_analysis$server(
       id = "inputs",
-      r6 = get_inputs_manager(
-        app_config = app_config,
-        analysis_config = analysis_config,
-        input_config = input_config
-      )
+      app_config = app_config,
+      analysis_config = analysis_config
     )
 
     # volcano plot
@@ -104,6 +89,7 @@ server <- function(id, app_config, analysis_config, input_config) {
       id = "volcano",
       analysis_config = analysis_config,
       app_config = app_config,
+      feature = inputs$feature,
       study = inputs$study,
       study_data = inputs$study_data,
       stat_test = inputs$stat_test,
@@ -127,6 +113,7 @@ server <- function(id, app_config, analysis_config, input_config) {
       analysis_config = analysis_config,
       analyte = analyte$analyte,
       app_config = app_config,
+      feature = inputs$feature,
       study = inputs$study,
       study_data = inputs$study_data,
       summary_data = analyte$summary_data,
