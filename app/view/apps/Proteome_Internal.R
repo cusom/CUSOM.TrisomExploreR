@@ -59,33 +59,9 @@ ui <- function(id) {
                     selected = TRUE
                 ),
                 menuItem(
-                    text = "Effect of trisomy 21",
-                    icon = icon("dna"),
-                    tabName = ns("karyotype"),
-                    href = NULL,
-                    newtab = TRUE,
-                    selected = FALSE
-                ),
-                menuItem(
-                    text = "Effects of age",
+                    text = "Feature Analysis",
                     icon = icon("chart-line"),
-                    tabName = ns("age"),
-                    href = NULL,
-                    newtab = TRUE,
-                    selected = FALSE
-                ),
-                menuItem(
-                    text = "Sex differences",
-                    icon = icon("venus-mars"),
-                    tabName = ns("sex"),
-                    href = NULL,
-                    newtab = TRUE,
-                    selected = FALSE
-                ),
-                menuItem(
-                    text = "Effect of Co-Occuring Conditions",
-                    icon = icon("file-medical-alt"),
-                    tabName = ns("comorbidity"),
+                    tabName = ns("feature"),
                     href = NULL,
                     newtab = TRUE,
                     selected = FALSE
@@ -117,27 +93,9 @@ ui <- function(id) {
                     )
                 ),
                 tabItem(
-                    tabName = ns("karyotype"),
+                    tabName = ns("feature"),
                     tags$div(
-                        feature_analysis$ui(ns("karyotype"))
-                    )
-                ),
-                tabItem(
-                    tabName = ns("age"),
-                    tags$div(
-                        feature_analysis$ui(ns("age"))
-                    )
-                ),
-                tabItem(
-                    tabName = ns("sex"),
-                    tags$div(
-                        feature_analysis$ui(ns("sex"))
-                    )
-                ),
-                tabItem(
-                    tabName = ns("comorbidity"),
-                    tags$div(
-                        feature_analysis$ui(ns("comorbidity"))
+                        feature_analysis$ui(ns("feature"))
                     )
                 ),
                 tabItem(
@@ -172,18 +130,12 @@ server <- function(id, app_config) {
 
         overview_proteome$server(ns("overview"))
 
-        sapply(c("karyotype", "age", "sex", "comorbidity"), function(x) {
-        #sapply(c("karyotype"), function(x) {
-            do.call(
-                what = eval(parse(text = "feature_analysis$server")),
-                args = list(
-                    id = x,
-                    app_config = app_config,
-                    analysis_config = app_config$get_analysis_config(x),
-                    input_config = app_config$get_input_config(x)
-                )
-            )
-        })
+        feature_analysis$server(
+            "feature",
+            app_config = app_config,
+            analysis_config = app_config,
+            input_config = app_config
+        )
 
         correlates_analysis$server(
             "correlates",
