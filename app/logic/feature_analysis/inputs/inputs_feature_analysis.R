@@ -70,24 +70,27 @@ FeatureAnalysisInputsManager <- R6::R6Class(
       }
     },
 
-    validate_study_data = function() {
-      return(self$Study != "")
-    },
+    get_study_data = function(study, karyotypes, sexes, ages) {
+      if (is.null(self$StudyData)) {
+        self$StudyData <- study
+      }
 
-    get_study_data = function() {
+      k_vec <- stringr::str_split(karyotypes, pattern = ";", simplify = FALSE) |>
+        unlist() |>
+        trimws() |>
+        unique()
 
       self$FeatureData <- self$StudyData |>
         dplyr::select(LabID, Karyotype, Sex, Age, BMI, Analyte, MeasuredValue, Measurement) |>
         dplyr::filter(
-          Age >= min(self$Age),
-          Age <= max(self$Age),
-          Sex %in% self$Sex,
-          Karyotype %in% unlist(stringr::str_split(self$Karyotype, pattern = ";"))
+          dplyr::between(Age, ages[1], ages[2]),
+          Sex %in% sexes,
+          Karyotype %in% k_vec,
+          !is.na(.data[[self$analysisVariable]])
         ) |>
-        dplyr::filter(!is.na(!!rlang::sym(self$analysisVariable))) |>
         dplyr::mutate(
-          log2MeasuredValue = ifelse(MeasuredValue == 0, 0, log2(MeasuredValue)),
-          log2Measurement = glue::glue("log<sub>2</sub>({Measurement})")
+          log2MeasuredValue = dplyr::if_else(MeasuredValue == 0, 0, log2(MeasuredValue)),
+          log2Measurement   = glue::glue("log<sub>2</sub>({Measurement})")
         )
 
       return(invisible(self$FeatureData))
