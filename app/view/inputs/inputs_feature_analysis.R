@@ -76,7 +76,7 @@ ui <- function(id) {
           proxy.height = "20px"
         ),
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        inputs_conditions_feature_analysis$ui(ns("conditions")),
+        shiny::uiOutput(ns("ConditionsInputs")),
         tags$b("Sex"),
         shinycustomloader::withLoader(
           shiny::uiOutput(ns("Sex")),
@@ -140,7 +140,7 @@ server <- function(id, app_config, analysis_config) {
       shiny::selectizeInput(
         inputId = ns("Feature"),
         label = "Set Analysis Option:",
-        choices = c("Karyotype", "Age", "Sex", "BMI"),
+        choices = c("Karyotype", "Age", "Sex", "Comorbidity", "BMI"),
         selected = NULL,
         multiple = FALSE,
         options = list(
@@ -253,13 +253,14 @@ server <- function(id, app_config, analysis_config) {
         shinyjs::disabled(
           input
         )
-      } else {
-        input |>
-          shiny::tagAppendAttributes(
-            class = r6()$addInputSpecialClass("Karyotype", "disabled")
-          )
       }
-
+      # else {
+      #   input |>
+      #     shiny::tagAppendAttributes(
+      #       class = r6()$addInputSpecialClass("Karyotype", "disabled")
+      #     )
+      # }
+      input
     })
 
     sexes <- shiny::reactive({
@@ -289,21 +290,29 @@ server <- function(id, app_config, analysis_config) {
       shiny::bindEvent(c(input$Study), ignoreNULL = TRUE)
 
     output$Age <- shiny::renderUI({
-
       shinyWidgets::numericRangeInput(
         inputId = ns("Age"),
         label = "Age range",
         value = ages(),
         width = "90%"
       )
-
     })
 
-    # inputs_conditions_feature_analysis$server(
-    #   id = "conditions",
-    #   r6 = r6,
-    #   parent = session
-    # )
+    # Only show conditions UI when Feature is Comorbidity
+    output$ConditionsInputs <- shiny::renderUI({
+      shiny::req(input$Feature == "Comorbidity")
+      inputs_conditions_feature_analysis$ui(ns("conditions"))
+    })
+
+    # Only activate conditions server when Feature is Comorbidity
+    # shiny::observe({
+    #   shiny::req(input$Feature == "Comorbidity")
+    conditions <- inputs_conditions_feature_analysis$server(
+      id = "conditions",
+      r6 = r6,
+      parent = session
+    )
+    # })
 
     output$StatTest <- shiny::renderUI({
 
@@ -384,7 +393,8 @@ server <- function(id, app_config, analysis_config) {
         study = input$Study,
         karyotypes = input$Karyotype,
         sexes = input$Sex,
-        ages = input$Age
+        ages = input$Age,
+        conditions = if (input$Feature == "Comorbidity") conditions$selected_conditions() else NULL
       )
 
       shinybusy::remove_modal_spinner()
