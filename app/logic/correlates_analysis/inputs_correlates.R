@@ -1,5 +1,5 @@
 box::use(
-  app/logic/feature_analysis/inputs/inputs_base[InputsManagerBase],
+  app/logic/feature_analysis/inputs/InputsDataManagers[InputsManagerBase],
   app/logic/app_resources/data_services[ODBCQueryManager]
 )
 
