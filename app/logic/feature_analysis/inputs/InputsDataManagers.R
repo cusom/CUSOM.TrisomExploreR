@@ -1,4 +1,8 @@
 box::use(
+    app/view/custom_ui/input_widgets[dfToTree],
+)
+
+box::use(
     R6[R6Class],
     glue[glue],
     tibble[tibble, as_tibble, enframe],
@@ -7,10 +11,35 @@ box::use(
             n_distinct, if_else],
     purrr[pmap, pluck, set_names],
     stringr[str_split_1, str_c],
+    stats[median],
     rlang[sym],
     shinyTree[get_selected]
 )
 
+# Helper to create HTML tooltip with info icon
+make_tooltip <- function(tooltip_text) {
+    glue('<span data-toggle="tooltip" data-placement="auto right" ',
+        'class="fas fa-info-circle gtooltip info-tooltip" ',
+        'data-original-title="{tooltip_text}"></span>')
+}
+
+# Helper to create comparison choice HTML
+make_comparison_html <- function(karyo_list, tooltip_text) {
+    glue('<div>{str_c(karyo_list, collapse = " vs. ")} {make_tooltip(tooltip_text)}</div>')
+}
+
+# Helper to create comparison row for karyotype inputs
+make_comparison_row <- function(karyo_list, tooltip_text) {
+    tibble(
+        Karyotype = str_c(karyo_list, collapse = ";"),
+        n = NA,
+        sort = 999,
+        choiceNames = make_comparison_html(karyo_list, tooltip_text),
+        choiceValues = str_c(karyo_list, collapse = ";")
+    )
+}
+
+#' @export
 InputsManagerBase <- R6Class(
     "InputsManagerBase",
     private = list(
@@ -63,68 +92,32 @@ InputsManagerBase <- R6Class(
                 self$remote_files$get_experiment_data(self$Study)
             )
         },
+        KaryotypeCounts = function(value) {
+            return(
+                self$StudyData |>
+                    group_by(Analyte, Karyotype) |>
+                    summarise(n = n_distinct(LabID), .groups = "drop") |>
+                    group_by(Karyotype) |>
+                    summarise(n = round(median(n)), .groups = "drop") |>
+                    mutate(
+                        sort = if_else(Karyotype == "Trisomy 21", 1, 99),
+                        choiceNames = glue("{Karyotype} (n={n})"),
+                        choiceValues = Karyotype
+                    ) |>
+                    arrange(sort)
+            )
+        },
         Karyotypes = function(value) {
             karyotypes <- self$input_config$karyotypes
 
-            # Helper to create HTML tooltip with info icon
-            make_tooltip <- function(tooltip_text) {
-                glue('<span data-toggle="tooltip" data-placement="auto right" ',
-                    'class="fas fa-info-circle gtooltip info-tooltip" ',
-                    'data-original-title="{tooltip_text}"></span>')
-            }
-
-            # Helper to create comparison choice HTML
-            make_comparison_html <- function(karyo_list, tooltip_text) {
-                glue('<div>{str_c(karyo_list, collapse = " vs. ")} {make_tooltip(tooltip_text)}</div>')
-            }
-
-            # Case 1: Karyotype namespace - simple comparison option
-            if (self$namespace == "Karyotype") {
-                return(tibble(
-                    choiceNames = make_comparison_html(
-                        karyotypes,
-                        "Test for differences between Trisomy 21 & Controls"
-                    ),
-                    choiceValues = str_c(karyotypes, collapse = ";")
-                ))
-            }
-            # Case 2: Comorbidity namespace - first karyotype only
-            if (self$namespace == "Comorbidity") {
-                return(tibble(
-                    choiceNames = karyotypes[1],
-                    choiceValues = karyotypes[1]
-                ))
-            }
-            # Case 3: Default - calculate counts from StudyData
-            karyotype_counts <- self$StudyData |>
-                group_by(Analyte, Karyotype) |>
-                summarise(n = n_distinct(LabID), .groups = "drop") |>
-                group_by(Karyotype) |>
-                summarise(n = round(median(n)), .groups = "drop") |>
-                mutate(
-                    sort = if_else(Karyotype == "Trisomy 21", 1, 99),
-                    choiceNames = glue("{Karyotype} (n={n})"),
-                    choiceValues = Karyotype
-                ) |>
-                arrange(sort)
-
-            # Add comparison option for continuous analysis types
-            if (self$analysisType == "Continuous") {
-                comparison_row <- tibble(
-                    Karyotype = str_c(karyotypes, collapse = ";"),
-                    n = NA,
-                    sort = 999,
-                    choiceNames = make_comparison_html(
-                        karyotypes,
-                        glue("Test for differences in {self$analysisVariable} \\
-                        trajectories between Trisomy 21 & Controls")
-                    ),
-                    choiceValues = str_c(karyotypes, collapse = ";")
-                )
-                karyotype_counts <- bind_rows(karyotype_counts, comparison_row) |>
+            comparison_row <- make_comparison_row(
+                karyotypes,
+                glue("Test for differences in {self$analysisVariable} trajectories between Trisomy 21 & Controls")
+            )
+            return(
+                bind_rows(self$KaryotypeCounts, comparison_row) |>
                     arrange(sort)
-            }
-            return(karyotype_counts)
+            )
         },
         Sexes = function() {
             return(
@@ -136,28 +129,8 @@ InputsManagerBase <- R6Class(
                 c(min(self$input_config$ages), max(self$input_config$ages))
             )
         },
-        ConditionChoices = function(value) {
-            return(
-                self$input_config$ConditionChoices |>
-                select(ConditionClass, Condition)
-            )
-        },
-        SelectedConditionList = function(value) {
-            return(
-                get_selected(self$Conditions, "classid") |>
-                    unlist() |>
-                    tibble() |>
-                    set_names("selected") |>
-                    distinct() |>
-                    arrange() |>
-                    summarise(text = str_c(selected, collapse = "<br />")) |>
-                    pull()
-            )
-        },
         CovariateChoices = function(value) {
-            return(
-                setdiff(c("Age", "Sex"), self$analysisVariable)
-            )
+            return(c("Age", "Sex"))
         },
         StatTestNames = function(value) {
             return(
@@ -192,7 +165,6 @@ InputsManagerBase <- R6Class(
         Platform = NULL,
         CellType = NULL,
         Karyotype = NULL,
-        Conditions = NULL,
         Sex = NULL,
         Age = NULL,
         FilterLowCount = NULL,
@@ -244,39 +216,109 @@ InputsManagerBase <- R6Class(
     )
 )
 
+# karyotype inuts - only show karyotypes collapsed
 #' @export
-FeatureAnalysisInputsManager <- R6Class(
-    "FeatureAnalysisInputsManager",
+InputsManagerKaryotype <- R6Class(
+    "InputsManagerKaryotype",
     inherit = InputsManagerBase,
     private = list(),
-    active = list(),
+    active = list(
+        Karyotypes = function(value) {
+            karyotypes <- self$input_config$karyotypes
+            return(
+                tibble(
+                    choiceNames = make_comparison_html(
+                        karyotypes,
+                        "Test for differences between Trisomy 21 & Controls"
+                    ),
+                    choiceValues = str_c(karyotypes, collapse = ";")
+                )
+            )
+        }
+    ),
+    public = list(
+        initialize = function(app_config, analysis_config, input_config) {
+            super$initialize(app_config, analysis_config, input_config)
+        }
+    )
+)
+
+# Age inputs - do not show age as covariate
+#' @export
+InputsManagerAge <- R6Class(
+    "InputsManagerAge",
+    inherit = InputsManagerBase,
+    private = list(),
+    active = list(
+        CovariateChoices = function(value) {
+            return(c("Sex"))
+        }
+    ),
+    public = list(
+        initialize = function(app_config, analysis_config, input_config) {
+            super$initialize(app_config, analysis_config, input_config)
+        }
+    )
+)
+
+# Sex inputs - do not show sex as covariate
+#' @export
+InputsManagerSex <- R6Class(
+    "InputsManagerSex",
+    inherit = InputsManagerBase,
+    private = list(),
+    active = list(
+        CovariateChoices = function(value) {
+            return(c("Age"))
+        }
+    ),
+    public = list(
+        initialize = function(app_config, analysis_config, input_config) {
+            super$initialize(app_config, analysis_config, input_config)
+        }
+    )
+)
+
+# Comorbidity inputs - add comorbidity fields
+#' @export
+InputsManagerComorbidity <- R6Class(
+    "InputsManagerComorbidity",
+    inherit = InputsManagerBase,
+    private = list(),
+    active = list(
+        Karyotypes = function(value) {
+            karyotypes <- self$input_config$karyotypes
+            return(
+                tibble(
+                    choiceNames = karyotypes[1],
+                    choiceValues = karyotypes[1]
+                )
+            )
+        },
+        ConditionChoices = function(value) {
+            return(
+                self$input_config$ConditionChoices |>
+                    select(ConditionClass, Condition)
+            )
+        },
+        Conditions = function(value) {
+            return(
+                self$data_source$ConditionChoices
+            )
+        }
+    ),
     public = list(
         initialize = function(app_config, analysis_config, input_config) {
             super$initialize(app_config, analysis_config, input_config)
         },
-
-        # getGetDataButtonClass = function() {
-        # if (is.null(self$Study)) {
-        #     return("refresh-btn shinyjs-disabled")
-        # } else {
-        #     if (self$namespace == "Comorbidity" & is.null(self$Conditions)) {
-        #     return("refresh-btn shinyjs-disabled")
-        #     } else {
-        #     return("refresh-ready-btn shinyjs-enabled")
-        #     }
-        # }
-        # },
-
-        setConditionTreeAttributes = function(tree) {
-
-            # tree <- conditions |>
-            #   CUSOMShinyHelpers::dfToTree()
-
+        getConditionTree = function(conditions = NULL) {
+            tree <- conditions |>
+                dfToTree()
             if (!is.null(self$Conditions)) {
-                selected_nodes <- get_selected(self$Conditions, format = "classid") |>
+                selected_nodes <- shinyTree::get_selected(self$Conditions, format = "classid") |>
                     unlist() |>
-                    as_tibble() |>
-                    pull()
+                    tibble::as_tibble() |>
+                    dplyr::pull()
 
                 if (length(selected_nodes) > 0) {
                     for (i in seq_along(tree)) {
@@ -291,75 +333,73 @@ FeatureAnalysisInputsManager <- R6Class(
                     }
                 }
             }
+            return(tree)
+        },
+        get_selected_conditions = function(conditions) {
             return(
-                tree
+                get_selected(conditions, "classid") |>
+                    unlist() |>
+                    tibble() |>
+                    set_names("selected") |>
+                    distinct()
+            )
+        },
+        get_selected_condition_list = function(conditions) {
+            return(
+                self$get_selected_conditions(conditions) |>
+                    arrange() |>
+                    summarise(text = str_c(selected, collapse = "<br />")) |>
+                    pull()
             )
         }
     )
 )
 
+# BMI inputs - no spefici overrides, but create class for future BMI
+# specific input handling if needed
 #' @export
-PreCalculatedFeatureAnalysisInputsManager <- R6Class(
-    "PreCalculatedFeatureAnalysisInputsManager",
+InputsManagerBMI <- R6Class(
+    "InputsManagerBMI",
+    inherit = InputsManagerBase,
+    private = list(),
+    active = list(
+    ),
+    public = list(
+        initialize = function(app_config, analysis_config, input_config) {
+            super$initialize(app_config, analysis_config, input_config)
+        }
+    )
+)
+
+# cell types - source karyotype counts from remote files, include params field
+#' @export
+InputsManagerCellTypes <- R6Class(
+    "InputsManagerCellTypes",
     inherit = InputsManagerBase,
     private = list(),
     active = list(
         Karyotypes = function(value) {
-            if (self$namespace == "Karyotype") {
-                return(
-                    tibble(
-                        choiceNames = glue(
-                            '<div>
-                                {str_c(self$input_config$karyotypes, collapse = " vs. ")}
-                                    <span
-                                    data-toggle="tooltip"
-                                    data-placement="auto right"
-                                    title=""
-                                    class="fas fa-info-circle gtooltip info-tooltip"
-                                    data-original-title="Test for differences between Trisomy 21 & Controls">
-                                    </span>
-                            </div>'
+            karyotypes <- self$input_config$karyotypes
+            return(
+                self$remote_files$get_remote_file_data("input") |>
+                    pluck("whole_blood_karyotype_counts") |>
+                    as.data.frame() |>
+                    mutate(
+                        sort = case_when(
+                            Karyotype == "Trisomy 21" ~ 1,
+                            TRUE ~ 99
                         ),
-                        choiceValues = str_c(self$input_config$karyotypes, collapse = ";")
-                    )
-                )
-            } else {
-                return(
-                    self$remote_files$get_remote_file_data("input") |>
-                        pluck("whole_blood_karyotype_counts") |>
-                        as.data.frame() |>
-                        mutate(
-                            sort = case_when(
-                                Karyotype == "Trisomy 21" ~ 1,
-                                TRUE ~ 99
-                            ),
-                            choiceNames = glue("{Karyotype} (n={n})"),
-                            choiceValues = Karyotype
-                        ) |>
-                        bind_rows(
-                            tibble(
-                                Karyotype = str_c(self$input_config$karyotypes, collapse = ","),
-                                n = NA,
-                                sort = 999,
-                                choiceNames =
-                                    glue(
-                                        '<div>{str_c(self$input_config$karyotypes, collapse = " vs. ")}
-                                            <span
-                                                data-toggle="tooltip"
-                                                data-placement="auto right"
-                                                title=""
-                                                class="fas fa-info-circle gtooltip info-tooltip"
-                                                data-original-title="Test for differences in \\
-                                                trajectories between Trisomy 21 & Controls">
-                                            </span>
-                                        </div>'
-                                    ),
-                                choiceValues = str_c(self$input_config$karyotypes, collapse = ";")
-                            )
-                        ) |>
-                    arrange(sort)
-                )
-            }
+                        choiceNames = glue("{Karyotype} (n={n})"),
+                        choiceValues = Karyotype
+                    ) |>
+                    bind_rows(
+                        make_comparison_row(
+                            karyotypes,
+                            "Test for differences in trajectories between Trisomy 21 & Controls"
+                        )
+                    ) |>
+                arrange(sort)
+            )
         },
         params = function(value) {
             return(
