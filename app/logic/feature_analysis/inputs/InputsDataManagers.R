@@ -39,6 +39,17 @@ make_comparison_row <- function(karyo_list, tooltip_text) {
     )
 }
 
+# Helper to set shared karyotype sorting/label fields
+build_karyotype_choices <- function(.data) {
+    .data |>
+        mutate(
+            sort = if_else(Karyotype == "Trisomy 21", 1, 99),
+            choiceNames = glue("{Karyotype} (n={n})"),
+            choiceValues = Karyotype
+        ) |>
+        arrange(sort)
+}
+
 #' @export
 InputsManagerBase <- R6Class(
     "InputsManagerBase",
@@ -99,12 +110,7 @@ InputsManagerBase <- R6Class(
                     summarise(n = n_distinct(LabID), .groups = "drop") |>
                     group_by(Karyotype) |>
                     summarise(n = round(median(n)), .groups = "drop") |>
-                    mutate(
-                        sort = if_else(Karyotype == "Trisomy 21", 1, 99),
-                        choiceNames = glue("{Karyotype} (n={n})"),
-                        choiceValues = Karyotype
-                    ) |>
-                    arrange(sort)
+                    build_karyotype_choices()
             )
         },
         Karyotypes = function(value) {
@@ -186,7 +192,6 @@ InputsManagerBase <- R6Class(
 InputsManagerKaryotype <- R6Class(
     "InputsManagerKaryotype",
     inherit = InputsManagerBase,
-    private = list(),
     active = list(
         Karyotypes = function(value) {
             karyotypes <- self$input_config$karyotypes
@@ -200,11 +205,6 @@ InputsManagerKaryotype <- R6Class(
                 )
             )
         }
-    ),
-    public = list(
-        initialize = function(app_config, analysis_config, input_config) {
-            super$initialize(app_config, analysis_config, input_config)
-        }
     )
 )
 
@@ -213,15 +213,9 @@ InputsManagerKaryotype <- R6Class(
 InputsManagerAge <- R6Class(
     "InputsManagerAge",
     inherit = InputsManagerBase,
-    private = list(),
     active = list(
         CovariateChoices = function(value) {
             return(c("Sex"))
-        }
-    ),
-    public = list(
-        initialize = function(app_config, analysis_config, input_config) {
-            super$initialize(app_config, analysis_config, input_config)
         }
     )
 )
@@ -231,15 +225,9 @@ InputsManagerAge <- R6Class(
 InputsManagerSex <- R6Class(
     "InputsManagerSex",
     inherit = InputsManagerBase,
-    private = list(),
     active = list(
         CovariateChoices = function(value) {
             return(c("Age"))
-        }
-    ),
-    public = list(
-        initialize = function(app_config, analysis_config, input_config) {
-            super$initialize(app_config, analysis_config, input_config)
         }
     )
 )
@@ -249,7 +237,6 @@ InputsManagerSex <- R6Class(
 InputsManagerComorbidity <- R6Class(
     "InputsManagerComorbidity",
     inherit = InputsManagerBase,
-    private = list(),
     active = list(
         Karyotypes = function(value) {
             karyotypes <- self$input_config$karyotypes
@@ -273,31 +260,33 @@ InputsManagerComorbidity <- R6Class(
         }
     ),
     public = list(
-        initialize = function(app_config, analysis_config, input_config) {
-            super$initialize(app_config, analysis_config, input_config)
-        },
         getConditionTree = function(conditions = NULL) {
             tree <- conditions |>
                 dfToTree()
-            if (!is.null(self$Conditions)) {
-                selected_nodes <- shinyTree::get_selected(self$Conditions, format = "classid") |>
-                    unlist() |>
-                    tibble::as_tibble() |>
-                    dplyr::pull()
 
-                if (length(selected_nodes) > 0) {
-                    for (i in seq_along(tree)) {
-                        if (is.list(tree[i])) {
-                            for (node in names(tree[i][[1]])) {
-                                if (node %in% selected_nodes) {
-                                    attr(tree[[i]][[node]], "stselected") <- TRUE
-                                    attr(tree[[i]][[node]], "stopened") <- TRUE
-                                }
-                            }
-                        }
-                    }
+            if (is.null(self$Conditions)) {
+                return(tree)
+            }
+
+            selected_nodes <- self$get_selected_conditions(self$Conditions) |>
+                pull(selected)
+
+            if (length(selected_nodes) == 0) {
+                return(tree)
+            }
+
+            for (i in seq_along(tree)) {
+                if (!is.list(tree[i])) {
+                    next
+                }
+
+                available_nodes <- names(tree[[i]][[1]])
+                for (node in intersect(available_nodes, selected_nodes)) {
+                    attr(tree[[i]][[node]], "stselected") <- TRUE
+                    attr(tree[[i]][[node]], "stopened") <- TRUE
                 }
             }
+
             return(tree)
         },
         get_selected_conditions = function(conditions) {
@@ -325,15 +314,7 @@ InputsManagerComorbidity <- R6Class(
 #' @export
 InputsManagerBMI <- R6Class(
     "InputsManagerBMI",
-    inherit = InputsManagerBase,
-    private = list(),
-    active = list(
-    ),
-    public = list(
-        initialize = function(app_config, analysis_config, input_config) {
-            super$initialize(app_config, analysis_config, input_config)
-        }
-    )
+    inherit = InputsManagerBase
 )
 
 # cell types - source karyotype counts from remote files, include params field
@@ -341,7 +322,6 @@ InputsManagerBMI <- R6Class(
 InputsManagerCellTypes <- R6Class(
     "InputsManagerCellTypes",
     inherit = InputsManagerBase,
-    private = list(),
     active = list(
         Karyotypes = function(value) {
             karyotypes <- self$input_config$karyotypes
@@ -349,14 +329,7 @@ InputsManagerCellTypes <- R6Class(
                 self$remote_files$get_remote_file_data("input") |>
                     pluck("whole_blood_karyotype_counts") |>
                     as.data.frame() |>
-                    mutate(
-                        sort = case_when(
-                            Karyotype == "Trisomy 21" ~ 1,
-                            TRUE ~ 99
-                        ),
-                        choiceNames = glue("{Karyotype} (n={n})"),
-                        choiceValues = Karyotype
-                    ) |>
+                    build_karyotype_choices() |>
                     bind_rows(
                         make_comparison_row(
                             karyotypes,
@@ -374,11 +347,6 @@ InputsManagerCellTypes <- R6Class(
                     str_c(self$Covariates, collapse = ";")
                 )
             )
-        }
-    ),
-    public = list(
-        initialize = function(app_config, analysis_config, input_config) {
-            super$initialize(app_config, analysis_config, input_config)
         }
     )
 )
