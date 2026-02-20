@@ -79,11 +79,8 @@ server <- function(id, app_config, analysis_config, input_config) {
 
         inputs <- inputs_correlates$server(
             id = "inputs",
-            r6 = CorrelatesAnalysisInputsManager$new(
-                app_config = app_config,
-                analysis_config = analysis_config,
-                input_config = input_config
-            )
+            app_config = app_config,
+            analysis_config = analysis_config
         )
 
         # volcano plot
@@ -91,6 +88,7 @@ server <- function(id, app_config, analysis_config, input_config) {
             id = "volcano",
             analysis_config = analysis_config,
             app_config = app_config,
+            feature = inputs$feature,
             study = inputs$study,
             study_data = inputs$study_data,
             stat_test = inputs$stat_test,
@@ -104,6 +102,7 @@ server <- function(id, app_config, analysis_config, input_config) {
             id = "analyte",
             analysis_config = analysis_config,
             analyte = analyte$analyte,
+            feature = inputs$feature,
             app_config = app_config,
             study = inputs$study,
             study_data = inputs$study_data,
