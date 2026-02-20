@@ -140,8 +140,8 @@ server <- function(id, app_config) {
         correlates_analysis$server(
             "correlates",
             app_config = app_config,
-            app_config$get_analysis_config("correlates"),
-            app_config$get_input_config("correlates")
+            analysis_config = app_config,
+            input_config = app_config
         )
 
     })
