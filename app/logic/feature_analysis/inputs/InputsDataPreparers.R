@@ -8,7 +8,7 @@ box::use(
     tidyr[drop_na],
     forcats[fct_relevel],
     purrr[pmap],
-    stringr[str_split],
+    stringr[str_split, str_c],
     rlang[sym]
 )
 
@@ -35,6 +35,37 @@ InputsDataPreparerBase <- R6Class(
             private$analysis_config <- analysis_config
             private$app_config <- app_config
         },
+        parse_karyotypes = function(karyotypes) {
+            str_split(karyotypes, pattern = ";", simplify = FALSE) |>
+                unlist() |>
+                trimws() |>
+                unique()
+        },
+        prepare_feature_inputs = function(.data, ages, sexes, karyotypes, include_record_id = FALSE) {
+            columns <- c("LabID", "Karyotype", "Sex", "Age", "BMI", "Analyte", "MeasuredValue", "Measurement")
+            if (isTRUE(include_record_id)) {
+                columns <- c("record_id", columns)
+            }
+
+            .data |>
+                select(all_of(columns)) |>
+                filter(
+                    between(Age, ages[1], ages[2]),
+                    Sex %in% sexes,
+                    Karyotype %in% karyotypes
+                ) |>
+                mutate(
+                    log2MeasuredValue = if_else(MeasuredValue == 0, 0, log2(MeasuredValue)),
+                    log2Measurement = glue("log<sub>2</sub>({Measurement})")
+                )
+        },
+        collapse_values = function(values) {
+            str_c(values, collapse = ";")
+        },
+        set_prepared_data = function(data) {
+            self$data <- data
+            invisible(self$data)
+        },
         prepare = function() {
             stop("implement prepare")
         }
@@ -51,27 +82,18 @@ FeatureAnalysisInputsDataPreparer <- R6Class(
         initialize = function(analysis_config, app_config) {
             super$initialize(analysis_config, app_config)
         },
-        prepare = function(.data, study, karyotypes, sexes, ages) {
-            k_vec <- str_split(karyotypes, pattern = ";", simplify = FALSE) |>
-                unlist() |>
-                trimws() |>
-                unique()
+        prepare = function(.data, study, karyotypes, sexes, ages, ...) {
+            k_vec <- self$parse_karyotypes(karyotypes)
 
-            self$data <- .data |>
-                select(LabID, Karyotype, Sex, Age, BMI, Analyte, MeasuredValue, Measurement) |>
-                filter(
-                    between(Age, ages[1], ages[2]),
-                    Sex %in% sexes,
-                    Karyotype %in% k_vec,
-                    !is.na(.data[[self$analysisVariable]])
-                ) |>
-                mutate(
-                    log2MeasuredValue = if_else(MeasuredValue == 0, 0, log2(MeasuredValue)),
-                    log2Measurement   = glue("log<sub>2</sub>({Measurement})")
-                )
+            prepared <- self$prepare_feature_inputs(
+                .data = .data,
+                ages = ages,
+                sexes = sexes,
+                karyotypes = k_vec
+            ) |>
+                filter(!is.na(.data[[self$analysisVariable]]))
 
-            return(invisible(self$data))
-
+            self$set_prepared_data(prepared)
         }
     )
 )
@@ -99,18 +121,10 @@ FeatureAnalysisInputsComorbidityDataPreparer <- R6Class(
             private$app_config <- app_config
         },
         prepare = function(.data, study, karyotypes, sexes, ages, conditions) {
+            k_vec <- self$parse_karyotypes(karyotypes)
 
-            k_vec <- str_split(karyotypes, pattern = ";", simplify = FALSE) |>
-                unlist() |>
-                trimws() |>
-                unique()
-
-            # precompute conditions vector (if `conditions` is a tibble)
             conds <- conditions |> pull() |> unique()
 
-            # Build once: per-record_id flag with SAME semantics you had:
-            # - If ANY NA found among that record_id's rows → NA (and will be dropped below)
-            # - Else "Yes" if ANY True, otherwise "No"
             cond_flags <- self$participant_conditions |>
                 filter(Condition %in% conds) |>
                 mutate(
@@ -132,26 +146,21 @@ FeatureAnalysisInputsComorbidityDataPreparer <- R6Class(
                     },
                     .by = record_id
                 ) |>
-                tidyr::drop_na(HasAnyConditionFlag)
+                drop_na(HasAnyConditionFlag)
 
-            # Main pipeline
-            self$data <- .data |>
-                select(record_id, LabID, Karyotype, Sex, Age, BMI, Analyte, MeasuredValue, Measurement) |>
-                filter(
-                    between(Age, ages[1], ages[2]),
-                    Sex %in% sexes,
-                    Karyotype %in% k_vec
-                ) |>
-                mutate(
-                    # preserve original behavior: 0 → 0, positive → log2(value)
-                    log2MeasuredValue = if_else(MeasuredValue == 0, 0.0, log2(MeasuredValue)),
-                    log2Measurement   = sprintf("log<sub>2</sub>(%s)", Measurement)
-                ) |>
+            prepared <- self$prepare_feature_inputs(
+                .data = .data,
+                ages = ages,
+                sexes = sexes,
+                karyotypes = k_vec,
+                include_record_id = TRUE
+            ) |>
                 inner_join(cond_flags, by = "record_id") |>
                 mutate(
                     HasAnyConditionFlag = factor(HasAnyConditionFlag, levels = c("No", "Yes"))
                 )
-            return(invisible(self$data))
+
+            self$set_prepared_data(prepared)
         }
     )
 )
@@ -167,18 +176,19 @@ PreCalculatedFeatureAnalysisInputsPreparer <- R6Class(
             super$initialize(analysis_config)
         },
         prepare = function(data, study, karyotype, age, sex, params) {
-            self$data <- data
+            prepared <- data |>
                 filter(
                     samples == str_c(karyotype, collapse = ";"),
                     selected_parameters == params
                 ) |>
                 select(-c(samples, selected_parameters)) |>
                 mutate(
-                    karyotypes = str_c(karyotype, collapse = ";"),
-                    ages = str_c(age, collapse = ";"),
-                    sexes = str_c(sex, collapse = ";")
+                    karyotypes = self$collapse_values(karyotype),
+                    ages = self$collapse_values(age),
+                    sexes = self$collapse_values(sex)
                 )
-            return(invisible(self$data))
+
+            self$set_prepared_data(prepared)
         }
     )
 )
