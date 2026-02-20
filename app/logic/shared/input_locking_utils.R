@@ -1,6 +1,6 @@
 box::use(
-    shinyjs[enable, disable],
-    shiny[observe, observeEvent, session]
+    shinyjs[enable, disable, addClass, removeClass],
+    shiny[observe, observeEvent]
 )
 
 #' Bind feature-based input locking
