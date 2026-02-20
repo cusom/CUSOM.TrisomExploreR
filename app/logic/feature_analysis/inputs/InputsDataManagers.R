@@ -160,7 +160,6 @@ InputsManagerBase <- R6Class(
         groupBaselineLabel = "",
         FoldChangeVar = "log2FoldChange",
         SignificanceVariable = "-log10pvalue",
-
         Study = NULL,
         Platform = NULL,
         CellType = NULL,
@@ -173,45 +172,11 @@ InputsManagerBase <- R6Class(
         AdjustmentMethod = NULL,
         Adjusted = FALSE,
         SignificanceLabel = "p-value",
-
         FeatureData = NULL,
         initialize = function(app_config, analysis_config, input_config) {
             private$app_config <- app_config
             private$analysis_config <- analysis_config
             self$input_config <- input_config
-        },
-
-        getGetDataButtonClass = function() {
-            stop("implement getGetDataButtonClass")
-        },
-
-        setConditionTreeAttributes = function(tree) {
-            stop("implement setConditionTreeAttributes")
-        },
-
-        getDisabledInputClass = function(input_name) {
-            if (self$analysisVariable == input_name) {
-                return(
-                    "shinyjs-disabled"
-                )
-            }
-        },
-
-        getHiddenInputClass = function(input_name) {
-            if (self$analysisVariable == input_name) {
-                return(
-                    "shinyjs-hide"
-                )
-            }
-        },
-
-        addInputSpecialClass = function(input_name, class_name = c("disabled", "hide")) {
-            class <- match.arg(class_name)
-            if (self$analysisVariable == input_name) {
-                return(
-                    glue("shinyjs-{class}")
-                )
-            }
         }
     )
 )
