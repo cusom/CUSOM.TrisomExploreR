@@ -1,9 +1,9 @@
 
 
 box::use(
-  app/logic/summary_plots/SummaryDataManager[FeatureAnalysis_SummaryDataManager],
+  app/logic/feature_analysis/summary/SummaryDataManagers[CorrelatesSummaryDataSource],
   app/logic/shared/statistical_analysis[formatPValue, addGroupCount],
-  app/logic/summary_plots/volcano_plot_helpers[getVolcanoPlot, getCorrelationVolcanoAnnotations, addSignificanceGroup],
+  app/logic/shared/summary_plots[getVolcanoPlot, getCorrelationVolcanoAnnotations, addSignificanceGroup],
   app/logic/shared/string_utils[parse_delimited_string]
 )
 
@@ -23,7 +23,7 @@ box::use(
 #' @export
 CorrelatesSummaryDataManager <- R6Class(
   "CorrelatesSummaryDataManager",
-  inherit = FeatureAnalysis_SummaryDataManager,
+  inherit = CorrelatesSummaryDataSource,
   private = list(),
   active = list(
     Adjusted = function(value) {
