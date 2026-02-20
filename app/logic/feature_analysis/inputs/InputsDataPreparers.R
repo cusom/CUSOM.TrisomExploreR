@@ -12,6 +12,7 @@ box::use(
     rlang[sym]
 )
 
+#' @export
 InputsDataPreparerBase <- R6Class(
     "InputsDataPreparerBase",
     private = list(
@@ -172,8 +173,8 @@ PreCalculatedFeatureAnalysisInputsPreparer <- R6Class(
     private = list(),
     active = list(),
     public = list(
-        initialize = function(analysis_config) {
-            super$initialize(analysis_config)
+        initialize = function(analysis_config, app_config) {
+            super$initialize(analysis_config, app_config)
         },
         prepare = function(data, study, karyotype, age, sex, params) {
             prepared <- data |>
