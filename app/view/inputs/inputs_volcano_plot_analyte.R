@@ -98,8 +98,8 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
 
     observeEvent(
       c(plot_click_data()), {
-      plot_click_data() |>
-        r6$set_plot_event_data()
+        plot_click_data() |>
+          r6()$set_plot_event_data()
 
       updateSelectizeInput(
         session = session,
@@ -112,7 +112,7 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
     observeEvent(
       c(plot_selected_data()), {
         plot_selected_data() |>
-          r6$set_plot_event_data()
+          r6()$set_plot_event_data()
 
         updateSelectizeInput(
           session = session,
@@ -123,7 +123,7 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
     }, domain = session)
 
     volcano_multi_select_text <- reactive({
-        r6$volcanoMultiSelectText
+      r6()$volcanoMultiSelectText
     }) |>
       bindEvent(input$analyte, ignoreInit = TRUE)
 
@@ -132,7 +132,11 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
     })
 
     observeEvent(c(input$analyte), {
-      r6$set_analyte(input$analyte, annotate = TRUE, plot_name = summary_plot_name)
+      r6()$set_analyte(
+        analyte = input$analyte,
+        annotate = TRUE,
+        plot_name = summary_plot_name
+      )
     }, ignoreInit = TRUE, domain = session)
 
     return(

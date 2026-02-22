@@ -151,7 +151,7 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
 
     analyte <- inputs_volcano_plot_analyte$server(
       id = "volcano-analyte",
-      r6 = r6(),
+      r6 = r6,
       summary_data = summary_data,
       plot_click_data = plot_click_data,
       plot_selected_data = plot_selected_data,
