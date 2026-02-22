@@ -89,14 +89,8 @@ FeatureAnalysisSummaryRunner <- R6Class(
         get_summary_plot = function(.data) {
             self$plotter$render(.data)
         },
-        set_analyte = function(analyte, annotate = TRUE, plot_name) {
+        set_analyte = function(analyte) {
             self$plotter$analyte <- analyte
-            if (annotate) {
-                self$plotter$annotate_volcano_point(plot_name)
-            }
-        },
-        set_plot_event_data = function(plot_event_data) {
-            self$plotter$plot_event_data <- plot_event_data
         },
         get_table_data = function() {
             self$preparer$prepared_data
