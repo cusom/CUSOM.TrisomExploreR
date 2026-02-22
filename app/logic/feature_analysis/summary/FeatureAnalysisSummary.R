@@ -56,13 +56,7 @@ getPlotStrategy <- function(plot_kind, analysis_type, analysis_config, ...) {
 
 FeatureAnalysisSummaryRunner <- R6Class(
     "FeatureAnalysisSummaryRunner",
-    active = list(
-        volcanoMultiSelectText = function(value) {
-            return(
-                self$plotter$volcanoMultiSelectText
-            )
-        }
-    ),
+    active = list(),
     public = list(
         precalculated = NULL,
         analysis_type = NULL,
@@ -93,7 +87,7 @@ FeatureAnalysisSummaryRunner <- R6Class(
             self$plotter$analyte <- analyte
         },
         get_table_data = function() {
-            self$preparer$prepared_data
+            self$preparer$formatted_summary_data
         }
     )
 )
