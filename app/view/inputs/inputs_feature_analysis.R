@@ -252,8 +252,7 @@ server <- function(id, app_config, analysis_config) {
         disabled(
           input
         )
-      }
-      else {
+      } else {
         input
       }
     })
@@ -272,11 +271,7 @@ server <- function(id, app_config, analysis_config) {
         selected = sexes(),
         inline = TRUE,
         width = "90%"
-      ) #|>
-      # tagAppendAttributes(
-      #   class = r6()$addInputSpecialClass("Sex", "disabled")
-      # )
-
+      )
     })
 
     ages <- reactive({
@@ -363,6 +358,10 @@ server <- function(id, app_config, analysis_config) {
 
     })
 
+    adjusted <- reactive({
+      input$AdjustmentMethod != "none"
+    })
+
     feature_locked_inputs <- list(
       Sex = c("Sex"),
       Age = c("Age")
@@ -432,7 +431,8 @@ server <- function(id, app_config, analysis_config) {
         study_data = StudyData,
         stat_test = reactive(input$StatTest),
         covariates = reactive(input$Covariates),
-        adjustment_method = reactive(input$AdjustmentMethod)
+        adjustment_method = reactive(input$AdjustmentMethod),
+        adjusted = adjusted
       )
     )
 
