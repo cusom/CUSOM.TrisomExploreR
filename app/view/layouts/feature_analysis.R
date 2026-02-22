@@ -39,7 +39,6 @@ ui <- function(id) {
           ),
           shiny::tabPanel(
             title = "Volcano Plot Summary Data",
-            #tags$p("holder")
             table_volcano$ui(ns("summary-data"))
           )
         )
@@ -102,7 +101,7 @@ server <- function(id, app_config, analysis_config, input_config) {
       id = "summary-data",
       summary_data = analyte$table_data,
       fold_change_variable = analyte$fold_change_var,
-      adjusted = analyte$adjusted,
+      adjusted = inputs$adjusted,
       stat_test = inputs$stat_test,
       study = inputs$study,
     )
