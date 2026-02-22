@@ -1,6 +1,6 @@
 box::use(
     R6[R6Class],
-    glue[glue, glue_collapse],
+    glue[glue],
     tibble[tibble],
     dplyr[select, mutate, group_by, summarise, ungroup, rename_with, distinct, n,
         filter, pull, arrange, dense_rank, row_number],
@@ -9,7 +9,6 @@ box::use(
     rlang[sym],
     plotly[layout, config],
     htmlwidgets[onRender],
-    shinyjs[runjs],
 )
 
 box::use(
@@ -72,33 +71,6 @@ VolcanoPlotStrategy <- R6Class(
         },
         volcanoTopAnnotationLabel = function(value) {
             return(private$analysis_config$AnalysisVolcanoPlotTopAnnotation)
-        },
-        volcanoMultiSelectText = function(value) {
-            if (missing(value)) {
-                if (length(self$analyte) == 1) {
-                    return("")
-                } else {
-                    return(
-                        self$plot_data |>
-                            filter(Analyte %in% self$analyte) |>
-                            summarise(
-                                count = n(),
-                                minFC = round(min(FoldChange), 4),
-                                maxFC = round(max(FoldChange), 4),
-                                minP = min(p.value),
-                                maxP = max(p.value)
-                            ) |>
-                            mutate(
-                                text = glue(
-                                    "<center>{count} points selected. Min Fold Change: \\
-                                    {minFC}, Max Fold Change: {maxFC}</center>"
-                                )
-                            ) |>
-                            select(text) |>
-                            pull()
-                    )
-                }
-            }
         }
     ),
     public = list(
@@ -219,85 +191,6 @@ VolcanoPlotStrategy <- R6Class(
                         el.scrollIntoView({behavior: "smooth", block: "end", inline: "nearest"});
                     }'
                 )
-        },
-        set_plot_event_data = function() {
-            self$plot_event_data <- self$plot_data |>
-                arrange(desc(significanceGroup)) |>
-                select(
-                    significanceGroup,
-                    shape,
-                    key = Analyte,
-                    x = !!self$fold_change_var,
-                    y = !!self$significance_var
-                ) |>
-                mutate(
-                    group = glue("{significanceGroup}-{shape}"),
-                    t = dense_rank(group),
-                    curveNumber = t - 1
-                ) |>
-                group_by(group) |>
-                mutate(
-                    r = row_number(),
-                    pointNumber = r - 1
-                ) |>
-                ungroup() |>
-                filter(key == self$analyte) |>
-                select(curveNumber, pointNumber, x, y, key)
-            return(invisible(self$plot_event_data))
-        },
-        annotate_volcano_point = function(plot_name) {
-            if (all(self$analyte != "")) {
-                if (length(self$analyte) == 1) {
-                    self$set_plot_event_data()
-
-                    keys <- glue_collapse(self$analyte, sep = "|")
-
-                    runjs(
-                        glue(
-                            'App.annotatePointByKey(
-                                "{plot_name}",
-                                {self$plot_event_data$curveNumber},
-                                {self$plot_event_data$pointNumber},
-                                "{keys}",
-                                5
-                            );'
-                        )
-                    )
-                } else {
-                    keys <- ""
-                    runjs(
-                        glue(
-                            'App.annotatePointByKey(
-                                "{plot_name}",
-                                -1,
-                                -1,
-                                "{keys}",
-                                5
-                            );'
-                        )
-                    )
-                    keys <- glue_collapse(self$analyte, sep = "|")
-                    runjs(glue('App.updateSelectedKeys("{plot_name}","{keys}");'))
-                }
-
-                # runjs(
-                #     paste0("
-                #         Shiny.setInputValue(
-                #         '", ns("analyteSearchResults"), "',
-                #         {
-                #             query: '", self$analyte, "',
-                #             total: ", self$analyte, "
-                #         },
-                #         { priority: 'event' }
-                #         );"
-                #     )
-                # )
-
-            } else {
-                keys <- ""
-                runjs(glue('App.annotatePointByKey("{plot_name}","{keys}",5);'))
-            }
-
         }
     )
 )
