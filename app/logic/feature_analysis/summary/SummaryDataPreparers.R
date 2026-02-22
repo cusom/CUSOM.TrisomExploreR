@@ -6,8 +6,8 @@ box::use(
             pull, arrange, dense_rank, row_number, vars, filter, if_else, slice_max],
     forcats[fct_relevel],
     purrr[pmap, map2_chr],
-    stringr[str_split_1],
-    rlang[sym],
+    stringr[str_split_1, str_replace],
+    rlang[sym]
 )
 
 box::use(
@@ -28,6 +28,20 @@ SummaryDataPreparerBase <- R6Class(
                 return(self$adjustment_method != "none")
             }
         },
+        p_val_label = function(value) {
+            label <- "p-value"
+            if (self$adjusted) {
+                label <- str_replace(label, "[/p+-]", "q")
+            }
+            return(label)
+        },
+        log_10_p_val_label = function(value) {
+            label <- "-log<sub>10</sub>(p-value)"
+            if (self$adjusted) {
+                label <- str_replace(label, "(?<=\\()p", "q")
+            }
+            return(label)
+        },
         analysis_variable = function(value) {
             return(
                 private$analysis_config$AnalysisVariableName
@@ -36,6 +50,37 @@ SummaryDataPreparerBase <- R6Class(
         group_baseline_label = function(value) {
             return(
                 private$analysis_config$AnalysisVariableBaselineLabel
+            )
+        },
+        measure_name = function(value) {
+            return(
+                prepared_data() |>
+                    distinct(Measurement) |>
+                    pull() |>
+                    as.character()
+            )
+        },
+        raw_column_names = function(value) {
+            return(
+                c(
+                    "FoldChange", "p.value.original", "p.value.adjustment.method",
+                    "log2FoldChange", "p.value", "-log10pvalue", "lmFormula"
+                )
+            )
+        },
+        formatted_column_names = function(value) {
+            return(
+                c(
+                    "Fold Change", "p-value (original)", "Multiple hypothesis correction method",
+                    "log<sub>2</sub>(Fold Change)", self$p_val_label, self$log_10_p_val_label, "Model"
+                )
+            )
+        },
+        formatted_summary_data = function(value) {
+            return(
+                self$prepared_data |>
+                    rename_with(~ self$formatted_column_names, all_of(self$raw_column_names)) |>
+                    select(-c(text, ivs, shape, selectedPoint, formattedPValue))
             )
         }
     ),
@@ -143,7 +188,8 @@ ContinuousSummaryPreparer <- R6Class(
                 mutate(
                     shape = "circle",
                     selectedPoint = 0
-                )
+                ) |>
+                select(-self$analysis_variable)
             return(invisible(self$summary_data))
         }
     )
