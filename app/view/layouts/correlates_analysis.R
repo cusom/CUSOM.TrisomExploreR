@@ -1,5 +1,6 @@
 box::use(
-    shiny[tags]
+    shiny[NS, tagList, fluidRow, column, tabPanel, moduleServer, tags],
+    shinydashboard[tabBox]
 )
 
 box::use(
@@ -11,48 +12,48 @@ box::use(
 #' @export
 ui <- function(id) {
 
-    ns <- shiny::NS(id)
-    shiny::tagList(
-        shiny::fluidRow(
-            shiny::column(
+    ns <- NS(id)
+    tagList(
+        fluidRow(
+            column(
                 width = 12,
                 class = "col-lg-2 col-slim",
                 inputs_correlates$ui(ns("inputs"))
             ),
-            shiny::column(
+            column(
                 width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
-                shinydashboard::tabBox(
+                tabBox(
                     id = ns("VolcanoPlotBox"),
                     title = "",
                     height = "auto",
                     width = NULL,
-                    shiny::tabPanel(
+                    tabPanel(
                         title = "Volcano Plot",
-                        shiny::tags$div(
+                        tags$div(
                             id = ns("VolcanoContent"),
                             plots_volcano$ui(ns("volcano"))
                         )
                     ),
-                    shiny::tabPanel(
+                    tabPanel(
                         title = "Volcano Plot Summary Data",
                         tags$p("holder")
                         #risomExploreR::volcano_data_table_ui(ns("volcano-summary"))
                     )
                 )
             ),
-            shiny::column(
+            column(
                 width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
-                shinydashboard::tabBox(
+                tabBox(
                     id = ns("AnalytePlotBox"),
                     title = "",
                     height = "auto",
                     width = NULL,
-                    shiny::tabPanel(
+                    tabPanel(
                         title = "Correlation Plot",
                         value = "Correlation Plot",
                         plots_feature_analysis_analyte$ui(ns("analyte"))
                     ),
-                    shiny::tabPanel(
+                    tabPanel(
                         title = "Correlation Sample Level Data",
                         value = "Correlation Sample Level Data",
                         tags$p("holder")
@@ -60,7 +61,7 @@ ui <- function(id) {
                 )
             )
         ),
-        shiny::tags$div(
+        tags$div(
             id = ns("GSEA-Placeholder")
         )
     )
@@ -69,7 +70,7 @@ ui <- function(id) {
 #' @export
 server <- function(id, app_config, analysis_config, input_config) {
 
-    shiny::moduleServer(id, function(input, output, session) {
+    moduleServer(id, function(input, output, session) {
 
         ns <- session$ns
 
