@@ -230,6 +230,10 @@ server <- function(id, app_config, analysis_config) {
 
     })
 
+    study_label <- reactive({
+      r6()$StudyLabel
+    })
+
     karyotypes <- reactive({
       r6()$Karyotypes
     }) |>
@@ -409,7 +413,7 @@ server <- function(id, app_config, analysis_config) {
       show_modal_spinner(
           spin = "atom",
           color = "#3c8dbc",
-          text = glue("Fetching {input$Study} data...")
+          text = glue("Fetching {study_label()} data...")
         )
       on.exit(remove_modal_spinner(), add = TRUE)
 
@@ -428,6 +432,7 @@ server <- function(id, app_config, analysis_config) {
       list(
         feature = reactive(input$Feature),
         study = reactive(input$Study),
+        study_label = study_label,
         study_data = StudyData,
         stat_test = reactive(input$StatTest),
         covariates = reactive(input$Covariates),
