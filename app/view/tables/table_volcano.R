@@ -4,7 +4,7 @@ box::use(
         fluidRow, column, uiOutput, bindEvent, sliderInput],
     shinyWidgets[prettyRadioButtons],
     shinycustomloader[withLoader],
-    DT[datatable, dataTableOutput, renderDataTable, JS],
+    DT[datatable, dataTableOutput, renderDataTable, JS, formatSignif],
     htmltools[HTML, em],
     glue[glue],
     dplyr[select, filter, mutate, case_when, sym, summarise],
@@ -130,6 +130,9 @@ server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, 
             validate(
                 need(!is.null(table_data()), "")
             )
+            numeric_cols <- table_data() |>
+                select(where(is.numeric)) |>
+                colnames()
 
             datatable(
                 data = table_data(),
@@ -155,24 +158,24 @@ server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, 
                     scrollX = TRUE,
                     scroller = TRUE,
                     buttons = list(
-                    "colvis",
-                    list(
-                        extend = "collection",
-                        text = "Download Data",
-                        action = JS(
-                            paste0(
-                                "function ( e, dt, node, config ) {
-                                    Shiny.setInputValue('", ns("data_download"), "', true, {priority: 'event'});
-                                }"
+                        "colvis",
+                        list(
+                            extend = "collection",
+                            text = "Download Data",
+                            action = JS(
+                                paste0(
+                                    "function ( e, dt, node, config ) {
+                                        Shiny.setInputValue('", ns("data_download"), "', true, {priority: 'event'});
+                                    }"
+                                )
                             )
                         )
                     )
-                    )
                 )
-                )
-            },
-            server = FALSE
-        )
+            ) |>
+                formatSignif(columns = numeric_cols, digits = 4)
+
+        }, server = FALSE)
 
         observeEvent(c(input$data_download), {
             download_file(
