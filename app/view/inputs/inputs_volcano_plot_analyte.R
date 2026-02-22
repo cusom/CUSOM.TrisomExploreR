@@ -1,6 +1,6 @@
 box::use(
   shiny[NS, tagList, tags, moduleServer, reactive, validate, need, bindEvent,
-    isolate, selectizeInput, updateSelectizeInput, htmlOutput, insertUI, 
+    isolate, selectizeInput, updateSelectizeInput, htmlOutput, insertUI,
     observeEvent, renderText],
   htmltools[HTML],
   bsplus[bs_embed_tooltip],
@@ -9,7 +9,8 @@ box::use(
 )
 
 box::use(
-  app/logic/shared/server_utils
+  app/logic/shared/server_utils,
+  app/logic/shared/plot_utils[annotate_volcano_from_events, get_volcano_multi_select_text]
 )
 
 #' @export
@@ -98,9 +99,6 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
 
     observeEvent(
       c(plot_click_data()), {
-        plot_click_data() |>
-          r6()$set_plot_event_data()
-
       updateSelectizeInput(
         session = session,
         inputId = "analyte",
@@ -111,9 +109,6 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
 
     observeEvent(
       c(plot_selected_data()), {
-        plot_selected_data() |>
-          r6()$set_plot_event_data()
-
         updateSelectizeInput(
           session = session,
           inputId = "analyte",
@@ -123,7 +118,10 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
     }, domain = session)
 
     volcano_multi_select_text <- reactive({
-      r6()$volcanoMultiSelectText
+      get_volcano_multi_select_text(
+        plot_data = summary_data(),
+        analyte = input$analyte
+      )
     }) |>
       bindEvent(input$analyte, ignoreInit = TRUE)
 
@@ -131,11 +129,13 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
       HTML(volcano_multi_select_text())
     })
 
-    observeEvent(c(input$analyte), {
-      r6()$set_analyte(
+    observeEvent(c(input$analyte, plot_click_data(), plot_selected_data()), {
+      annotate_volcano_from_events(
+        plot_name = summary_plot_name,
         analyte = input$analyte,
-        annotate = TRUE,
-        plot_name = summary_plot_name
+        plot_click_data = plot_click_data(),
+        plot_selected_data = plot_selected_data(),
+        marker_size = 5
       )
     }, ignoreInit = TRUE, domain = session)
 
