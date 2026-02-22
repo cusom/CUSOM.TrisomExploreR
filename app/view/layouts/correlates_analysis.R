@@ -3,11 +3,7 @@ box::use(
 )
 
 box::use(
-    app/logic/correlates_analysis/inputs_correlates[CorrelatesAnalysisInputsManager],
-    app/logic/correlates_analysis/CorrelatesSummaryDataManager[CorrelatesSummaryDataManager],
-    app/logic/correlates_analysis/CorrelatesAnalyteDataManager[CorrelatesAnalyteDataManager],
     app/view/inputs/inputs_correlates,
-    app/view/inputs/inputs_volcano_plot_analyte,
     app/view/plots/plots_volcano,
     app/view/plots/plots_feature_analysis_analyte,
 )
