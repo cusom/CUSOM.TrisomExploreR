@@ -1,8 +1,8 @@
 box::use(
     R6[R6Class],
     glue[glue, glue_collapse],
-    tibble[tibble, deframe],
-    dplyr[select, filter, pull, distinct, arrange, rename],
+    tibble[tibble],
+    dplyr[select, filter, pull, distinct, arrange, rename, mutate, inner_join, join_by],
 )
 
 box::use(
@@ -49,9 +49,19 @@ InputsManagerCorrelates <- R6Class(
                 )
             return(
                 self$QueryAnalytes |>
-                    arrange(QueryAnalyte) |>
                     select(QueryAnalyte, QueryAnalyteKey) |>
-                    deframe()
+                    mutate(
+                        QueryAnalyte = as.character(QueryAnalyte),
+                        QueryAnalyteKey = as.character(QueryAnalyteKey)
+                    ) |>
+                    filter(
+                        !is.na(QueryAnalyte),
+                        !is.na(QueryAnalyteKey),
+                        QueryAnalyte != "",
+                        QueryAnalyteKey != ""
+                    ) |>
+                    distinct() |>
+                    arrange(QueryAnalyte)
             )
         },
         set_correlation_source_data = function(

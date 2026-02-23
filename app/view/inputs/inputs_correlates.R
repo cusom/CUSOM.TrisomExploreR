@@ -1,14 +1,15 @@
 box::use(
     shiny[NS, moduleServer, tags, tagList, bindEvent, actionButton, icon, uiOutput,
         selectizeInput, renderUI, reactive, updateSelectizeInput, observeEvent,
-        validate, need],
+        validate, need, showNotification],
     shinydashboardPlus[box],
     htmltools[HTML],
+    shinyWidgets[virtualSelectInput, updateVirtualSelect, prepare_choices],
     shinyjs[disabled, disable, enable, removeClass, addClass, hidden],
     bsplus[bs_embed_tooltip],
     shinycustomloader[withLoader],
     shinybusy[show_modal_spinner, remove_modal_spinner],
-    glue[glue]
+    glue[glue],
 )
 
 box::use(
@@ -82,19 +83,13 @@ ui <- function(id) {
                 tags$b("3) Select Query Analyte"),
                 tags$div(
                     id = ns("QueryAnalyteInput"),
-                    selectizeInput(
+                    virtualSelectInput(
                         inputId = ns("QueryAnalyte"),
-                        label = "",
+                        label = NULL,
                         choices = NULL,
-                        options = list(
-                            placeholder = "Please select below",
-                            onInitialize = I('function() { this.setValue(""); }'),
-                            closeAfterSelect = TRUE,
-                            selectOnTab = TRUE,
-                            persist = FALSE,
-                            `live-search` = TRUE,
-                            maxoptions = 1
-                        )
+                        position = "auto",
+                        search = TRUE,
+                        maxOptions = 1
                     )
                 ),
                 hidden(
@@ -216,23 +211,21 @@ server <- function(id, app_config, analysis_config) {
             )
             on.exit(remove_modal_spinner(), add = TRUE)
 
-            updateSelectizeInput(
-                session = session,
+            choice_data <- r6()$getQueryAnalytes(
+                input$QueryExperiment,
+                input$CompareExperiment
+            )
+
+            updateVirtualSelect(
                 inputId = "QueryAnalyte",
                 label = "",
-                choices = r6()$getQueryAnalytes(
-                    input$QueryExperiment,
-                    input$CompareExperiment
+                choices = prepare_choices(
+                    choice_data,
+                    label = QueryAnalyte,
+                    value = QueryAnalyteKey
                 ),
-                options = list(
-                    placeholder = "Choose Query Analyte",
-                    onInitialize = I('function() { this.setValue(""); }'),
-                    closeAfterSelect = TRUE,
-                    selectOnTab = TRUE,
-                    persist = FALSE,
-                    `live-search` = TRUE,
-                    maxoptions = 1
-                )
+                selected = NULL,
+                session = session
             )
 
         }, ignoreInit = TRUE, ignoreNULL = TRUE)
