@@ -2,8 +2,8 @@ box::use(
     R6[R6Class],
     glue[glue, glue_collapse],
     tibble[tibble],
-    dplyr[select, mutate, mutate_at, group_by, summarise, ungroup, rename_with, distinct, n,
-            pull, arrange, dense_rank, row_number, vars, filter, if_else, slice_max],
+    dplyr[select, mutate, mutate_at, group_by, summarise, ungroup, rename_with, rename,
+            distinct, n, pull, arrange, dense_rank, row_number, vars, filter, if_else, slice_max],
     forcats[fct_relevel],
     purrr[pmap, map2_chr],
     stringr[str_split_1, str_replace],
@@ -216,7 +216,33 @@ CorrelatesSummaryPreparer <- R6Class(
             return(
                 self$source_data |>
                     distinct(CorrelationMeasureName) |>
-                    pull()
+                    pull() |>
+                    as.character()
+            )
+        },
+        raw_column_names = function(value) {
+            return(
+                c(
+                    "QueryExperimentID", "QueryAnalyte", "ComparisonExperimentID",
+                    "Analyte", "p.value", "-log10pvalue"
+                )
+            )
+        },
+        formatted_column_names = function(value) {
+            return(
+                c(
+                    "Query Experiment ID", "Query Analyte", "Comparison Experiment ID",
+                    "Comparison Analyte", "q-value (BH Adjusted)", "-log10(q-value)"
+                )
+            )
+        },
+        formatted_summary_data = function(value) {
+            return(
+                self$prepared_data |>
+                    rename_with(~ self$formatted_column_names, all_of(self$raw_column_names)) |>
+                    rename(`:=`(!!sym(self$measure_name), CorrelationValue)) |>
+                    select(-c(QueryAnalyteKey, QueryAnalyteID, ComparisonAnalyteKey, CorrelationMeasureName, text,
+                        AnalyteID, p.value.original, shape, selectedPoint, p.value.adjustment.method, formattedPValue))
             )
         }
     ),
