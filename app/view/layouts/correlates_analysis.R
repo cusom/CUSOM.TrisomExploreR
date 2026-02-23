@@ -8,6 +8,7 @@ box::use(
     app/view/plots/plots_volcano,
     app/view/plots/plots_feature_analysis_analyte,
     app/view/tables/table_volcano,
+    app/view/tables/table_analyte,
 )
 
 #' @export
@@ -56,7 +57,7 @@ ui <- function(id) {
                     tabPanel(
                         title = "Correlation Sample Level Data",
                         value = "Correlation Sample Level Data",
-                        tags$p("holder")
+                        table_analyte$ui(ns("analyte-data"))
                     )
                 )
             )
@@ -104,7 +105,7 @@ server <- function(id, app_config, analysis_config, input_config) {
         )
 
         # analyte plot
-        plots_feature_analysis_analyte$server(
+        analyte_data <- plots_feature_analysis_analyte$server(
             id = "analyte",
             analysis_config = analysis_config,
             analyte = analyte$analyte,
@@ -115,6 +116,12 @@ server <- function(id, app_config, analysis_config, input_config) {
             summary_data = analyte$summary_data,
             analyte_input_name = analyte$analyte_input_name,
             analyte_session = analyte$analyte_session
+        )
+
+        table_analyte$server(
+            id = "analyte-data",
+            analyte = analyte$analyte,
+            table_data = analyte_data$table_data
         )
 
     })
