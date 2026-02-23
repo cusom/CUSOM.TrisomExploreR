@@ -1,7 +1,7 @@
 box::use(
     R6[R6Class],
     dplyr[select, filter, mutate, case_when, add_count, ungroup, if_else, arrange,
-        inner_join, join_by, distinct],
+        inner_join, join_by, distinct, everything, rename, rename_with, pull],
     glue[glue],
     forcats[fct_inorder],
     rlang[sym]
@@ -14,7 +14,13 @@ box::use(
 PreparerBase <- R6Class(
     "PreparerBase",
     private = list(),
-    active = list(),
+    active = list(
+        formatted_analyte_data = function(value) {
+            return(
+                self$prepared_data
+            )
+        }
+    ),
     public = list(
         source_data = NULL,
         prepared_data = NULL,
@@ -113,7 +119,42 @@ CorrelatesPreparer <- R6Class(
     "CorrelatesPreparer",
     inherit = PreparerBase,
     private = list(),
-    active = list(),
+    active = list(
+        QueryAnalyteLabel = function(value) {
+            return(
+                self$prepared_data |>
+                    distinct(QueryAnalyte) |>
+                    pull()
+            )
+        },
+        ComparisonMeasurement = function(value) {
+            return(self$prepared_data[1, "Measurement.y"])
+        },
+        ComparisonAnalyteLabel = function(value) {
+            return(self$prepared_data[1, "yLabel"])
+        },
+        QueryMeasurement = function(value) {
+            return(self$prepared_data[1, "Measurement.x"])
+        },
+        x_label = function(value) {
+            return(
+                glue("{self$QueryAnalyteLabel} log<sub>2</sub>({self$QueryMeasurement})")
+            )
+        },
+        y_label = function(value) {
+            return(
+                glue("{self$ComparisonAnalyteLabel} log<sub>2</sub>({self$ComparisonMeasurement})")
+            )
+        },
+        formatted_analyte_data = function(value) {
+            return(
+                self$prepared_data |>
+                    select(-c(Measurement.x, Measurement.y, xLabel, yLabel, x, y)) |>
+                    rename_with(~gsub("(?<!^|\\s)([A-Z]+)", " \\1", ., perl = TRUE), everything()) |>
+                    rename(`:=`(!!self$x_label, log2x), `:=`(!!self$y_label, log2y))
+            )
+        }
+    ),
     public = list(
         prepare = function(.data) {
             self$prepared_data <- .data |>
@@ -133,18 +174,72 @@ CorrelatesHeatmapPreparer <- R6Class(
     "CorrelatesHeatmapPreparer",
     inherit = PreparerBase,
     private = list(),
-    active = list(),
+    active = list(
+        CorrelationMeasureName = function(value) {
+            return(
+                self$source_data$CorrelationMeasure[1]
+            )
+        },
+        formatted_analyte_data = function(value) {
+            return(
+                self$prepared_data |>
+                    inner_join(self$source_data, by = "Analyte") |>
+                    select(QueryExperimentID, QueryAnalyte, ComparisonExperimentID, Analyte, CorrelationValue) |>
+                    rename(`:=`(!!self$CorrelationMeasureName, CorrelationValue)) |>
+                    rename_with(~gsub("(?<!^|\\s)([A-Z]+)", " \\1", ., perl = TRUE), everything())
+            )
+        }
+    ),
     public = list(
         prepare = function(.data) {
+            if (length(.data$Analyte) == 1) {
+                return(self$prepare_single(.data))
+            } else {
+                return(self$prepare_multi(.data))
+            }
+        },
+        prepare_single = function(.data) {
             self$prepared_data <- self$source_data |>
                 inner_join(.data, join_by(Analyte == ComparisonAnalyte)) |>
-                mutate(text = "test") |>
-                select(Analyte, ChangeValue = CorrelationValue, text) |>
+                select(Analyte, CorrelationValue, LabID, QueryAnalyteID, Measurement.x, Measurement.y, x, y) |>
                 distinct() |>
+                mutate(
+                    text = glue(
+                        "LabID: {LabID}
+                        Query Analyte: {QueryAnalyteID}
+                        {Measurement.y}: {x}
+                        Comparison Analyte: {Analyte}
+                        {Measurement.x}: {y}
+                        "
+                    )
+                ) |>
+                select(Analyte, ChangeValue = CorrelationValue, text) |>
                 arrange(-ChangeValue) |>
                 mutate(
                     Analyte = fct_inorder(Analyte),
-                    "ChangeVarName" = "rho",
+                    "ChangeVarName" = !!self$CorrelationMeasureName,
+                    "Analysis" = "T21vD21"
+                )
+            return(invisible(self$prepared_data))
+        },
+        prepare_multi = function(.data) {
+            self$prepared_data <- self$source_data |>
+                inner_join(.data |> select(Analyte), by = "Analyte") |>
+                select(Analyte, QueryAnalyte, CorrelationValue, CorrelationMeasureName) |>
+                distinct() |>
+                mutate(
+                    text = glue(
+                        "Query Analyte: {QueryAnalyte}
+                        Comparison Analyte: {Analyte}
+                        {CorrelationMeasureName}: {CorrelationValue}
+                        "
+                    )
+                ) |>
+                select(Analyte, ChangeValue = CorrelationValue, text) |>
+                arrange(-ChangeValue) |>
+                mutate(
+                    Analyte = fct_inorder(Analyte),
+                    "ChangeVarName" = !!self$CorrelationMeasureName,
                     "Analysis" = "T21vD21"
                 )
             return(invisible(self$prepared_data))

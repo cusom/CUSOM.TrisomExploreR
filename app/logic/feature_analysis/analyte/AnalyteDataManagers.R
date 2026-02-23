@@ -156,6 +156,7 @@ CorrelatesAnalyteDataSource <- R6Class(
     inherit = AnalyteDataSourceBase,
     private = list(),
     active = list(
+
         CompareExperiment = function(value) {
             if (missing(value)) {
                 return(
@@ -184,13 +185,20 @@ CorrelatesAnalyteDataSource <- R6Class(
                     pull() |>
                     as.integer()
             )
-        } 
+        }
     ),
     public = list(
         initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {
             super$initialize(analysis_config, app_config, study, study_data, analyte, summary_data)
         },
         get_data = function(analyte) {
+            if (length(analyte) > 1) {
+                return(self$get_multi_data(analyte))
+            } else {
+                return(self$get_single_data(analyte))
+            }
+        },
+        get_single_data = function(analyte) {
             self$analyte_data <- private$remote_db$getQuery(
                 "[shiny].[GetAnalyteDataByExperiment] ?, ?",
                 tibble(
@@ -213,7 +221,13 @@ CorrelatesAnalyteDataSource <- R6Class(
                     select(LabID, "QueryAnalyte" = Analyte, MeasuredValue, Measurement) |>
                     rename(x = MeasuredValue)
                 , by = "LabID"
-            ) 
+            )
+            return(invisible(self$analyte_data))
+        },
+        get_multi_data = function(analyte) {
+            self$analyte_data <- self$summary_data |>
+                filter(Analyte %in% analyte) |>
+                distinct()
             return(invisible(self$analyte_data))
         }
     )
