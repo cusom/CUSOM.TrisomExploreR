@@ -1,19 +1,20 @@
 box::use(
-  shiny[moduleServer, NS, tagList, tags, uiOutput, renderUI, actionButton, 
-      icon, selectizeInput, updateSelectizeInput, validate, need],
-  plotly[renderPlotly, event_data],
+  shiny[moduleServer, NS, tagList, reactive, observeEvent, validate, need],
+  plotly[plotlyOutput, renderPlotly, event_data],
   promises[future_promise, `%...>%`],
+  shinybusy[show_modal_spinner, remove_modal_spinner],
+  glue[glue],
 )
 
 box::use(
-  app/logic/shared/plot_utils[toggle_GSEA_volcano_plot_trace, object_is_rendered],
+  app/logic/shared/plot_utils[toggle_GSEA_volcano_plot_trace, object_is_rendered, set_plot_source],
 )
 
 #' @export
 ui <- function(id) {
-  ns <- shiny::NS(id)
-  shiny::tagList(
-    plotly::plotlyOutput(
+  ns <- NS(id)
+  tagList(
+    plotlyOutput(
       ns("plot"),
       height = "650px",
       width = "99%"
@@ -24,44 +25,46 @@ ui <- function(id) {
 #' @export
 server <- function(id, r6, gsea_data, parent) {
 
-  shiny::moduleServer(id, function(input, output, session) {
+  moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    output$plot <- plotly::renderPlotly({
-      shiny::validate(
-        shiny::need(!is.null(gsea_data()), "")
+    output$plot <- renderPlotly({
+      validate(
+        need(!is.null(gsea_data()), "")
       )
       gsea_data() |>
-        r6$getGSEAPlot(ns("plot"))
+        r6()$render_gsea_plot() |>
+        set_plot_source(ns("plot"))
     })
 
-    plot_click_data <- shiny::reactive({
-      shiny::validate(
-        shiny::need(object_is_rendered(session, ns("plot")), "")
+    plot_click_data <- reactive({
+      validate(
+        need(object_is_rendered(session, ns("plot")), "")
       )
-      plotly::event_data(
+      event_data(
         "plotly_click",
         priority = "event",
         source = ns("plot")
       )
     })
 
-    shiny::observeEvent(c(plot_click_data()), {
-      shiny::validate(
-        shiny::need(nrow(plot_click_data()) > 0, "")
+    observeEvent(c(plot_click_data()), {
+      validate(
+        need(nrow(plot_click_data()) > 0, "")
       )
 
-      r6$event_data <- plot_click_data()
+      r6()$set_event_data(plot_click_data())
 
-      shinybusy::show_modal_spinner(
+      show_modal_spinner(
         spin = "half-circle",
         color = "#3c8dbc",
-        text = glue::glue("Fetching {r6$GSEATraceName} data...")
+        text = glue("Fetching {r6()$gsea_trace_name} data...")
       )
+      on.exit(remove_modal_spinner(), add = TRUE)
 
       future_promise({
-        r6$set_GSEA_pathway_data(r6$GSEATraceName)
+        r6()$set_GSEA_pathway_data(r6()$gsea_trace_name)
       }) %...>% {
         toggle_GSEA_volcano_plot_trace(
           session = session,
@@ -69,13 +72,11 @@ server <- function(id, r6, gsea_data, parent) {
           namespace = ns(id),
           plot_name = "VolcanoPlot",
           expected_trace_count = 3,
-          analytes = r6$GSEAAnalytes,
-          trace_name = r6$GSEATraceName,
+          analytes = r6()$gsea_analytes,
+          trace_name = r6()$gsea_trace_name,
           action = "add"
         )
       }
-
-      shinybusy::remove_modal_spinner()
 
     }, ignoreNULL = TRUE, ignoreInit = TRUE, domain = session)
 
