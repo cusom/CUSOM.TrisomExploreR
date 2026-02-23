@@ -7,6 +7,7 @@ box::use(
     app/view/inputs/inputs_correlates,
     app/view/plots/plots_volcano,
     app/view/plots/plots_feature_analysis_analyte,
+    app/view/tables/table_volcano,
 )
 
 #' @export
@@ -36,8 +37,7 @@ ui <- function(id) {
                     ),
                     tabPanel(
                         title = "Volcano Plot Summary Data",
-                        tags$p("holder")
-                        #risomExploreR::volcano_data_table_ui(ns("volcano-summary"))
+                        table_volcano$ui(ns("summary-data"))
                     )
                 )
             ),
@@ -92,6 +92,15 @@ server <- function(id, app_config, analysis_config, input_config) {
             covariates = inputs$covariates,
             adjustment_method = inputs$adjustment_method,
             parent = session
+        )
+
+        table_volcano$server(
+            id = "summary-data",
+            summary_data = analyte$table_data,
+            fold_change_variable = inputs$fold_change_variable,
+            adjusted = inputs$adjusted,
+            stat_test = inputs$stat_test,
+            study = inputs$study,
         )
 
         # analyte plot
