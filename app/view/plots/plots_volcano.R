@@ -1,6 +1,6 @@
 box::use(
   shiny[NS, tagList, tags, moduleServer, reactive, validate, need, bindEvent,
-    isolate],
+    isolate, reactiveVal, observeEvent, req],
   shinydashboardPlus[box],
   shinycustomloader[withLoader],
   plotly[plotlyOutput, renderPlotly, event_data, toWebGL],
@@ -55,11 +55,11 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
 
     ns <- session$ns
 
-    r6_obj <- shiny::reactiveVal(NULL)
+    r6_obj <- reactiveVal(NULL)
 
     # Recreate the R6 instance when Feature changes
-    shiny::observeEvent(study_data(), {
-      shiny::req(study_data())
+    observeEvent(study_data(), {
+      req(study_data())
       inst <- getFeatureAnalysisSummary(
         analysis_config = analysis_config$get_analysis_config(feature()),
         app_config = app_config,
@@ -73,8 +73,8 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
     })
 
     #expose a reactive that always reads the current instance
-    r6 <- shiny::reactive({
-      shiny::req(r6_obj())
+    r6 <- reactive({
+      req(r6_obj())
       r6_obj()
     })
 
@@ -88,13 +88,10 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
           color = "#3c8dbc",
           text = "Calculating Statistics for Volcano Plot..."
         )
+      on.exit(remove_modal_spinner(), add = TRUE)
 
-      summary_data <- study_data() |>
+      study_data() |>
         r6()$get_summary_data()
-
-      remove_modal_spinner()
-
-      summary_data
 
     })
 
@@ -111,15 +108,12 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
           color = "#3c8dbc",
           text = "Rendering Volcano Plot..."
         )
+        on.exit(remove_modal_spinner(), add = TRUE)
 
-        p <- summary_data() |>
+        summary_data() |>
           r6()$get_summary_plot() |>
           set_plot_source(ns("plot")) |>
           toWebGL()
-
-        remove_modal_spinner()
-
-        p
 
       })
 
