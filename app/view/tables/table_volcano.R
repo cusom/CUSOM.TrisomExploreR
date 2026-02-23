@@ -7,12 +7,12 @@ box::use(
     DT[datatable, dataTableOutput, renderDataTable, JS, formatSignif],
     htmltools[HTML, em],
     glue[glue],
-    dplyr[select, filter, mutate, case_when, sym, summarise],
     stringr[str_replace]
 )
 
 box::use(
-    app/logic/shared/file_utils[download_file]
+    app/logic/shared/file_utils[download_file],
+    app/logic/shared/table_volcano_utils[get_fold_change_slider_settings, prepare_volcano_table_data]
 )
 
 #' @export
@@ -58,20 +58,22 @@ server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, 
                 need(!is.null(summary_data()), "")
             )
 
-            lim <- summary_data() |>
-                select(`Fold Change`) |>
-                filter(`Fold Change` != Inf) |>
-                summarise(m = max(`Fold Change`)) |>
-                ceiling() |>
-                as.integer()
+            slider_settings <- get_fold_change_slider_settings(
+                summary_df = summary_data(),
+                fold_change_label = fold_change_variable()
+            )
+
+            validate(
+                need(is.null(slider_settings$error), slider_settings$error)
+            )
 
             sliderInput(
                 inputId = ns("fold_change"),
-                label = "Fold Change",
-                min = -lim,
-                max = lim,
-                step = round(1 / (lim * 2), 1),
-                value = c(-lim, lim)
+                label = glue("Filter by {fold_change_variable()}"),
+                min = slider_settings$min,
+                max = slider_settings$max,
+                step = slider_settings$step,
+                value = slider_settings$value
             )
         })
 
@@ -80,15 +82,14 @@ server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, 
                 need(!is.null(summary_data()), "")
             )
 
-            label <- "Filter by p-value significance level"
+            label <- glue("Filter by {ifelse(adjusted(), 'q-value', 'p-value')} significance level")
             choices <- c("all", " * p &le; 0.05", " ** p &le; 0.01", " *** p &le; 0.001")
 
             if (adjusted()) {
-                label <- str_replace(label, "[/p+-]", "q")
                 choices <- str_replace(choices, "[/p+/]", "q")
             }
 
-            shinyWidgets::prettyRadioButtons(
+            prettyRadioButtons(
                 inputId = ns("significance_level"),
                 label = label,
                 choiceNames = lapply(choices, HTML),
@@ -102,23 +103,19 @@ server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, 
                 need(!is.null(summary_data()), "")
             )
 
-            sig_col <- ifelse(adjusted(), "q-value", "p.value")
+            table_result <- prepare_volcano_table_data(
+                summary_df = summary_data(),
+                fold_change_label = fold_change_variable(),
+                significance_level = input$significance_level,
+                fold_change_range = input$fold_change,
+                adjusted = adjusted()
+            )
 
-            summary_data() |>
-                mutate(
-                    p_cut = case_when(
-                        input$significance_level == "all" ~ 1,
-                        grepl("&le; 0.05", input$significance_level) ~ 0.05,
-                        grepl("&le; 0.01", input$significance_level) ~ 0.01,
-                        grepl("&le; 0.001", input$significance_level) ~ 0.001
-                    )
-                ) |>
-                filter(
-                    `Fold Change` >= min(input$fold_change),
-                    `Fold Change` <= max(input$fold_change),
-                    !!rlang::sym(sig_col) <= p_cut
-                ) |>
-                select(-c("p_cut"))
+            validate(
+                need(is.null(table_result$error), table_result$error)
+            )
+
+            table_result$data
 
         }) |>
             bindEvent(c(summary_data(), input$significance_level, input$fold_change),
@@ -130,12 +127,12 @@ server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, 
             validate(
                 need(!is.null(table_data()), "")
             )
-            numeric_cols <- table_data() |>
-                select(where(is.numeric)) |>
-                colnames()
+
+            table_df <- table_data()
+            numeric_cols <- names(table_df)[vapply(table_df, is.numeric, logical(1))]
 
             datatable(
-                data = table_data(),
+                data = table_df,
                 caption = tags$caption(
                     style = "caption-side: bottom; text-align: center;",
                     "Fold Change Data: ", em("Fold Change Data Used for Volcano Plot")
