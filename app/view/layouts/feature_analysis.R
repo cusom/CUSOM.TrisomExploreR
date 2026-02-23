@@ -1,5 +1,6 @@
 box::use(
-  shiny[tags]
+  shiny[NS, tagList, fluidRow, column, tabPanel, moduleServer, tags],
+  shinydashboard[tabBox]
 )
 
 box::use(
@@ -14,48 +15,48 @@ box::use(
 #' @export
 ui <- function(id) {
 
-  ns <- shiny::NS(id)
+  ns <- NS(id)
 
-  shiny::tagList(
-    shiny::fluidRow(
-      shiny::column(
+  tagList(
+    fluidRow(
+      column(
         width = 12,
         class = "col-lg-2 col-slim",
         inputs_feature_analysis$ui(ns("inputs"))
       ),
-      shiny::column(
+      column(
         width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
-        shinydashboard::tabBox(
+        tabBox(
           id = ns("VolcanoPlotBox"),
           title = "",
           height = "auto",
           width = NULL,
-          shiny::tabPanel(
+          tabPanel(
             title = "Volcano Plot",
-            shiny::tags$div(
+            tags$div(
               id = ns("VolcanoContent"),
               plots_volcano$ui(ns("volcano"))
             )
           ),
-          shiny::tabPanel(
+          tabPanel(
             title = "Volcano Plot Summary Data",
             table_volcano$ui(ns("summary-data"))
           )
         )
       ),
-      shiny::column(
+      column(
         width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
-        shinydashboard::tabBox(
+        tabBox(
           id = ns("AnalytePlotBox"),
           title = "",
           height = "auto",
           width = NULL,
-          shiny::tabPanel(
+          tabPanel(
             title = "Analyte Plot",
             value = "AnalytePlot",
             plots_feature_analysis_analyte$ui(ns("analyte"))
           ),
-          shiny::tabPanel(
+          tabPanel(
             title = "Analyte Sample Level Data",
             value = "AnalyteTable",
             table_analyte$ui(ns("analyte-data"))
@@ -63,7 +64,7 @@ ui <- function(id) {
         )
       )
     ),
-    shiny::tags$div(
+    tags$div(
       id = ns("GSEA-Placeholder")
     )
   )
@@ -72,7 +73,7 @@ ui <- function(id) {
 #' @export
 server <- function(id, app_config, analysis_config, input_config) {
 
-  shiny::moduleServer(id, function(input, output, session) {
+  moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
