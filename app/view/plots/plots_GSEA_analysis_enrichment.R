@@ -1,12 +1,22 @@
 
+box::use(
+  shiny[NS, tagList, tags, moduleServer, validate, need],
+  shinycustomloader[withLoader],
+  plotly[plotlyOutput, renderPlotly]
+)
+
+box::use(
+    app/logic/shared/plot_utils[object_is_rendered, set_plot_source],
+)
+
 #' @export
 ui <- function(id) {
-  ns <- shiny::NS(id)
-  shiny::tagList(
-    shiny::tags$div(
+  ns <- NS(id)
+  tagList(
+    tags$div(
       id = ns("GSEAEnrichment"),
-      shinycustomloader::withLoader(
-        plotly::plotlyOutput(
+      withLoader(
+        plotlyOutput(
           outputId = ns("plot"),
           width = "99%",
           height = "auto"
@@ -21,19 +31,17 @@ ui <- function(id) {
 #' @export
 server <- function(id, r6, pathway_data, parent) {
 
-  shiny::moduleServer(id, function(input, output, session) {
+  moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    output$plot <- plotly::renderPlotly({
-      shiny::validate(
-        shiny::need(nrow(pathway_data()) > 0, "")
+    output$plot <- renderPlotly({
+      validate(
+        need(nrow(pathway_data()) > 0, "")
       )
 
-      r6$getGSEAEnrichmentPlot(
-        pathway_data(),
-        ns
-      )
+      r6()$render_enrichment_plot() |>
+        set_plot_source(ns("plot"))
 
     })
 
