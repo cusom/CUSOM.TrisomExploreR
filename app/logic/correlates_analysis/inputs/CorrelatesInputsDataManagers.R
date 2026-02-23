@@ -22,6 +22,7 @@ InputsManagerCorrelates <- R6Class(
         CompareExperiment = NULL,
         QueryAnalytes = NULL,
         QueryAnalyte = NULL,
+        FoldChangeVar = "rho",
         CorrelationSourceData = NULL,
         initialize = function(app_config, analysis_config, input_config) {
             super$initialize(app_config, analysis_config, input_config)
@@ -54,7 +55,7 @@ InputsManagerCorrelates <- R6Class(
             )
         },
         set_correlation_source_data = function(
-            query_experiment_id, 
+            query_experiment_id,
             comparison_experiment_id,
             query_analyte_id
         ) {

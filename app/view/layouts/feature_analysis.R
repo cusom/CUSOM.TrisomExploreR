@@ -100,7 +100,7 @@ server <- function(id, app_config, analysis_config, input_config) {
     table_volcano$server(
       id = "summary-data",
       summary_data = analyte$table_data,
-      fold_change_variable = analyte$fold_change_var,
+      fold_change_variable = inputs$fold_change_variable,
       adjusted = inputs$adjusted,
       stat_test = inputs$stat_test,
       study = inputs$study,

@@ -45,7 +45,11 @@ getPreparer <- function(precalculated, analysis_type, analysis_config, app_confi
 CorrelatesAnalysisInputsRunner <- R6Class(
     "CorrelatesAnalysisInputsRunner",
     active = list(
-    
+        fold_change_variable = function() {
+            return(
+                self$data_source$FoldChangeVar %||% self$data_source$FoldChangeVar %||% "rho"
+            )
+        }
     ),
     public = list(
         precalculated = NULL,

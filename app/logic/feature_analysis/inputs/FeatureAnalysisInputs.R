@@ -127,6 +127,11 @@ FeatureAnalysisInputsRunner <- R6Class(
             return(
                 self$data_source$ConditionChoices
             )
+        },
+        fold_change_variable = function() {
+            return(
+                self$data_source$FoldChangeVar
+            )
         }
     ),
     public = list(

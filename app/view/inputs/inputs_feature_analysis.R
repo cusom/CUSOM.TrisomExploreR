@@ -437,6 +437,7 @@ server <- function(id, app_config, analysis_config) {
         stat_test = reactive(input$StatTest),
         covariates = reactive(input$Covariates),
         adjustment_method = reactive(input$AdjustmentMethod),
+        fold_change_variable = reactive({r6()$fold_change_variable}),
         adjusted = adjusted
       )
     )
