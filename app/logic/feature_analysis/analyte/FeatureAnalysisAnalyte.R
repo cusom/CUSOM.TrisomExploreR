@@ -98,7 +98,10 @@ FeatureAnalysisAnalyteRunner <- R6Class(
             self$plotter$render(.data)
         },
         get_table_data = function() {
-            self$preparer$prepared_data
+            if (is.null(self$preparer$prepared_data)) {
+                self$get_analyte_data(self$analyte)
+            }
+            self$preparer$formatted_analyte_data
         }
     )
 )
