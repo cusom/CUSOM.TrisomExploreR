@@ -155,8 +155,8 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
 
     inputs_GSEA_analysis$server(
       id = "gsea",
-      VolcanoSummaryData = summary_data,
-      Study = study,
+      summary_data = summary_data,
+      study = study,
       ...
     )
 
