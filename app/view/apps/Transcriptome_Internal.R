@@ -11,7 +11,7 @@ box::use(
     app/logic/shared/ui_utils[create_app_links],
     app/view/overviews/overview_transcriptome,
     app/view/layouts/cell_type_analysis,
-    app/view/layouts/feature_analysis,
+    app/view/layouts/precalc_feature_analysis,
 )
 
 #' @export
@@ -101,7 +101,7 @@ ui <- function(id) {
                 tabItem(
                     tabName = ns("feature"),
                     tags$div(
-                        feature_analysis$ui(ns("feature"))
+                        precalc_feature_analysis$ui(ns("feature"))
                     )
                 )
 
@@ -136,7 +136,7 @@ server <- function(id, app_config) {
             app_config$get_input_config("celltype")
         )
 
-        feature_analysis$server(
+        precalc_feature_analysis$server(
             "feature",
             app_config = app_config,
             analysis_config = app_config,
