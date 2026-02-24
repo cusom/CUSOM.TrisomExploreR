@@ -176,17 +176,17 @@ PreCalculatedFeatureAnalysisInputsPreparer <- R6Class(
         initialize = function(analysis_config, app_config) {
             super$initialize(analysis_config, app_config)
         },
-        prepare = function(data, study, karyotype, age, sex, params) {
+        prepare = function(data, study, karyotypes, ages, sexes, params, ...) {
             prepared <- data |>
                 filter(
-                    samples == str_c(karyotype, collapse = ";"),
+                    samples == str_c(karyotypes, collapse = ";"),
                     selected_parameters == params
                 ) |>
                 select(-c(samples, selected_parameters)) |>
                 mutate(
-                    karyotypes = self$collapse_values(karyotype),
-                    ages = self$collapse_values(age),
-                    sexes = self$collapse_values(sex)
+                    karyotypes = self$collapse_values(karyotypes),
+                    ages = self$collapse_values(ages),
+                    sexes = self$collapse_values(sexes)
                 )
 
             self$set_prepared_data(prepared)
