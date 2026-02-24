@@ -3,7 +3,7 @@ box::use(
   dplyr[select, filter, mutate, arrange, inner_join, group_by, summarize, summarise, ungroup,
     rowwise, pull, rename, distinct, n, n_distinct, add_count, summarise_at, vars,
     first, nth, row_number, top_n, case_when],
-  rlang[enquo, quo_name, `:=`, `!!!`, sym],
+  rlang[enquo, quo_name, `:=`, `!!!`, sym, enquos],
   stats[lm, p.adjust],
   broom[tidy],
   tidyr[pivot_longer, pivot_wider, separate_rows, nest, unnest],
@@ -11,10 +11,6 @@ box::use(
   tibble[tibble, as_tibble],
   stringr[str_detect],
   glue[glue, glue_collapse]
-)
-
-box::use(
-
 )
 
 #' @export
