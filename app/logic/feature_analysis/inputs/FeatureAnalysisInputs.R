@@ -1,12 +1,9 @@
 box::use(
-    dplyr[if_else],
-)
-
-box::use(
     app/logic/shared/factory_routing[resolve_class],
     app/logic/shared/global_utils[`%||%`],
     app/logic/feature_analysis/inputs/InputsDataManagers[
         InputsManagerKaryotype,
+        InputsManagerPrecalculatedKaryotype,
         InputsManagerSex,
         InputsManagerAge,
         InputsManagerComorbidity,
@@ -27,10 +24,14 @@ box::use(
     tibble[tibble]
 )
 
-getDataSource <- function(app_config, analysis_type, analysis_config, input_config, ...) {
-    type <- analysis_config$AnalysisVariableName
+getDataSource <- function(precalculated, app_config, analysis_type, analysis_config, input_config, ...) {
+    type <- paste0(
+        if (isTRUE(precalculated)) "Precalc" else "",
+        analysis_config$AnalysisVariableName
+    )
     map <- list(
         Karyotype =             InputsManagerKaryotype,
+        PrecalcKaryotype =      InputsManagerPrecalculatedKaryotype,
         Sex =                   InputsManagerSex,
         Age =                   InputsManagerAge,
         HasAnyConditionFlag =   InputsManagerComorbidity,
@@ -47,10 +48,15 @@ getDataSource <- function(app_config, analysis_type, analysis_config, input_conf
 }
 
 getPreparer <- function(precalculated, analysis_config, app_config, ...) {
-    type <- if_else(
-        analysis_config$AnalysisVariableName == "HasAnyConditionFlag", "Comorbidity",
-        if (isTRUE(precalculated)) "Precalc" else "Runtime"
-    )
+    type <- if (
+        analysis_config$AnalysisVariableName == "HasAnyConditionFlag"
+    ) {
+        "Comorbidity"
+    } else if (isTRUE(precalculated)) {
+        "Precalc"
+    } else {
+        "Runtime"
+    }
     map <- list(
         Runtime     = FeatureAnalysisInputsDataPreparer,
         Comorbidity = FeatureAnalysisInputsComorbidityDataPreparer,
@@ -59,7 +65,6 @@ getPreparer <- function(precalculated, analysis_config, app_config, ...) {
     cls <- resolve_class(map, type, "Preparer")
     cls$new(analysis_config = analysis_config, app_config = app_config, ...)
 }
-
 
 FeatureAnalysisInputsRunner <- R6Class(
     "FeatureAnalysisInputsRunner",
@@ -179,7 +184,7 @@ getFeatureAnalysisInputs <- function(
 
     precalculated <- analysis_config$UsesPreCalculatedData
     analysis_type <- analysis_config$AnalysisType
-    data_src   <- getDataSource(app_config, analysis_type, analysis_config, input_config, ...)
+    data_src   <- getDataSource(precalculated, app_config, analysis_type, analysis_config, input_config, ...)
     preparer   <- getPreparer(precalculated, analysis_config, app_config, ...)
 
     FeatureAnalysisInputsRunner$new(

@@ -208,6 +208,52 @@ InputsManagerKaryotype <- R6Class(
     )
 )
 
+# karyotype inuts - only show karyotypes collapsed
+#' @export
+InputsManagerPrecalculatedKaryotype <- R6Class(
+    "InputsManagerPrecalculatedKaryotype",
+    inherit = InputsManagerBase,
+    active = list(
+        StudyData = function(value) {
+            return(
+                self$remote_files$get_pre_calculated_data(self$analysisVariable)
+            )
+        },
+        Karyotypes = function(value) {
+            karyotypes <- self$input_config$karyotypes
+            return(
+                tibble(
+                    choiceNames = make_comparison_html(
+                        karyotypes,
+                        "Test for differences between Trisomy 21 & Controls"
+                    ),
+                    choiceValues = str_c(karyotypes, collapse = ";")
+                )
+            )
+        },
+        StatTestNames = function(value) {
+            return(
+                "DESeq2 model"
+            )
+        },
+        StatTestValues = function(value) {
+            return(
+                "linear model"
+            )
+        },
+        AdjustmentMethodNames = function(value) {
+            return(
+                "Benjamini-Hochberg (FDR)"
+            )
+        },
+        AdjustmentMethodValues = function(value) {
+            return(
+                "BH"
+            )
+        }
+    )
+)
+
 # Age inputs - do not show age as covariate
 #' @export
 InputsManagerAge <- R6Class(
