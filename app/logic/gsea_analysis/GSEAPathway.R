@@ -46,7 +46,7 @@ GSEAAnalysisRunner <- R6Class(
             return(self$plotter$gsea_trace_name)
         },
         gsea_analytes = function(value) {
-            return(self$plotter$analytes)
+            return(self$plotter$gsea_analytes)
         }
     ),
     public = list(
