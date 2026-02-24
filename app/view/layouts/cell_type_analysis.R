@@ -1,5 +1,5 @@
 box::use(
-    shiny[NS, moduleServer, tagList, tags, fluidRow, column],
+    shiny[NS, moduleServer, tagList, tags, fluidRow, column, reactive],
     shinydashboardPlus[box],
     shinyjs[hidden],
     shinyWidgets[prettyRadioButtons, awesomeCheckboxGroup, numericRangeInput],
@@ -39,11 +39,13 @@ server <- function(id, app_config, analysis_config, input_config) {
 
         ns <- session$ns
 
-        r6 <- CellTypesInputsManager$new(
+        r6 <- reactive({
+            CellTypesInputsManager$new(
                 app_config = app_config,
                 analysis_config = analysis_config,
                 input_config = input_config
             )
+        })
 
         inputs <- inputs_cell_type_analysis$server(
             "inputs",
