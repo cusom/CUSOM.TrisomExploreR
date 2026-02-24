@@ -25,7 +25,8 @@ box::use(
   shinycustomloader[withLoader],
   shinyWidgets[awesomeCheckboxGroup, numericRangeInput, prettyRadioButtons],
   shinybusy[remove_modal_spinner, show_modal_spinner],
-  glue[glue]
+  glue[glue],
+  dplyr[arrange, filter, pull],
 )
 
 box::use(
@@ -164,10 +165,18 @@ server <- function(id, app_config, analysis_config) {
     ns <- session$ns
 
     output$Feature <- renderUI({
+      choices <- analysis_config$namespace_config |>
+        filter(
+          grepl("feature", ModuleServerName, ignore.case = TRUE),
+          !is.na(AnalysisVariableName)
+        ) |>
+        arrange(DisplayOrder) |>
+        pull(AnalysisVariableName)
+
       selectizeInput(
         inputId = ns("Feature"),
         label = "Set Analysis Option:",
-        choices = c("Karyotype", "Age", "Sex", "Comorbidity", "BMI"),
+        choices = choices,
         selected = NULL,
         multiple = FALSE,
         options = list(
