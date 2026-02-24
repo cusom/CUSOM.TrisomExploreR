@@ -142,7 +142,6 @@ get_volcano_multi_select_text <- function(plot_data, analyte) {
 #' @export
 toggle_GSEA_volcano_plot_trace <- function(
     session,
-    ns,
     namespace,
     plot_name = "VolcanoPlot",
     expected_trace_count = 3,
