@@ -10,6 +10,7 @@ box::use(
 
 box::use(
   app/logic/gsea_analysis/GSEAPathway[getGSEAPathwayAnalysis],
+  app/logic/shared/plot_utils[toggle_GSEA_volcano_plot_trace],
   app/view/plots/plots_GSEA_analysis,
   app/view/plots/plots_GSEA_analysis_enrichment
 )
@@ -23,14 +24,14 @@ ui <- function(id, input_config) {
 }
 
 #' @export
-server <-  function(id, Study, VolcanoSummaryData, parent) {
+server <-  function(id, study, summary_data, parent) {
 
   moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
     is_supported_study <- reactive({
-      study_value <- Study()
+      study_value <- study()
       !is.null(study_value) &&
         nzchar(study_value) &&
         grepl("SOMA|RNA", study_value, ignore.case = TRUE)
@@ -38,8 +39,8 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
 
     output$ConfigureGSEA <- renderUI({
       validate(
-        need(!is.null(Study()), ""),
-        need(!is.null(VolcanoSummaryData()), "")
+        need(!is.null(study()), ""),
+        need(!is.null(summary_data()), "")
       )
 
       if (!is_supported_study()) {
@@ -97,24 +98,13 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
         need(is_supported_study(), "")
       )
 
-      # # Recreate the R6 instance when Feature changes
-      # observeEvent(c(Study(), VolcanoSummaryData()), ignoreInit = TRUE, {
-      #   req(Study())
-      #   req(VolcanoSummaryData())
-
-      #   if (!is_supported_study()) {
-      #     r6_obj(NULL)
-      #     return(invisible(NULL))
-      #   }
-
       inst <- getGSEAPathwayAnalysis(
         app_config = app_config,
-        study = Study(),
-        summary_data = VolcanoSummaryData()
+        study = study(),
+        summary_data = summary_data()
       )
 
       r6_obj(inst)
-      # })
 
       insertTab(
         session = parent,
@@ -137,26 +127,6 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
         target = NULL,
         select = FALSE
       )
-
-      # shiny::insertUI(
-      #   session = parent,
-      #   selector = paste0("#", parent$ns("GSEA-Placeholder")),
-      #   where = "afterEnd",
-      #   ui = shiny::tags$div(
-      #     id = parent$ns("GSEA-Content"),
-      #     shiny::fluidRow(
-      #       shiny::column(
-      #         width = 12, class = "col-lg-5", offset = 2,
-      #         #feature_analysis_GSEA_summary_data_ui(ns("GSEA-summary-data"))
-      #       ),
-      #       shiny::column(
-      #         width = 12, class = "col-lg-5",
-      #         plots_GSEA_analysis_enrichment$ui(ns("GSEA-enrichment-plot"))
-      #       )
-      #     )
-      #   )
-      # )
-
 
       click("configure")
 
@@ -186,19 +156,19 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
         target = "GSEA Enrichment"
       )
 
-      # toggle_GSEA_volcano_plot_trace(
-      #   session = session,
-      #   ns = ns,
-      #   plot_name = "VolcanoPlot",
-      #   r6 = r6,
-      #   action = "remove"
-      # )
+      toggle_GSEA_volcano_plot_trace(
+        session = session,
+        namespace = parent$ns(""),
+        plot_name = "plot",
+        expected_trace_count = 3,
+        analytes = NULL,
+        trace_name = NULL,
+        action = "clear"
+      )
 
       click("configure")
 
     }, ignoreInit = TRUE)
-
-
 
     gsea_data <- reactive({
       show_modal_spinner(
@@ -215,6 +185,7 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
       id = "hallmarks",
       r6 = r6,
       gsea_data = gsea_data,
+      target_plot_name = "plot",
       parent = parent
     )
 
@@ -241,12 +212,6 @@ server <-  function(id, Study, VolcanoSummaryData, parent) {
       pathway_data = gsea_plot_output$plot_click_data,
       parent = parent
     )
-
-    # feature_analysis_GSEA_summary_data_server(
-    #   id = "GSEA-summary-data",
-    #   r6 = r6,
-    #   parent = parent
-    # )
 
   })
 
