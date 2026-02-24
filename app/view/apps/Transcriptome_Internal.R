@@ -67,17 +67,9 @@ ui <- function(id) {
                     selected = FALSE
                 ),
                 menuItem(
-                    text = "Effect of Trisomy 21",
-                    icon = icon("dna"),
-                    tabName = ns("karyotype"),
-                    href = NULL,
-                    newtab = TRUE,
-                    selected = FALSE
-                ),
-                menuItem(
-                    text = "Effect of Age",
+                    text = "Feature Analysis",
                     icon = icon("chart-line"),
-                    tabName = ns("age"),
+                    tabName = ns("feature"),
                     href = NULL,
                     newtab = TRUE,
                     selected = FALSE
@@ -107,15 +99,9 @@ ui <- function(id) {
                     )
                 ),
                 tabItem(
-                    tabName = ns("karyotype"),
+                    tabName = ns("feature"),
                     tags$div(
-                        feature_analysis$ui(ns("karyotype"))
-                    )
-                ),
-                tabItem(
-                    tabName = ns("age"),
-                    tags$div(
-                        feature_analysis$ui(ns("age"))
+                        feature_analysis$ui(ns("feature"))
                     )
                 )
 
@@ -150,18 +136,12 @@ server <- function(id, app_config) {
             app_config$get_input_config("celltype")
         )
 
-        sapply(c("karyotype", "age"), function(x) {
-        #sapply(c("karyotype"), function(x) {
-            do.call(
-                what = eval(parse(text = "feature_analysis$server")),
-                args = list(
-                    id = x,
-                    app_config = app_config,
-                    analysis_config = app_config$get_analysis_config(x),
-                    input_config = app_config$get_input_config(x)
-                )
-            )
-        })
+        feature_analysis$server(
+            "feature",
+            app_config = app_config,
+            analysis_config = app_config,
+            input_config = app_config
+        )
 
     })
 }
