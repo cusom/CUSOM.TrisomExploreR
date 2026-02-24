@@ -286,3 +286,47 @@ CorrelatesSummaryPreparer <- R6Class(
         }
     )
 )
+
+#' @export
+PreCalculatedSummaryPreparer <- R6Class(
+    "PreCalculatedSummaryPreparer",
+    inherit = SummaryDataPreparerBase,
+    private = list(),
+    active = list(),
+    public = list(
+        initialize = function(analysis_config, app_config, study, study_data,
+            stat_test, covariates, adjustment_method) {
+            super$initialize(analysis_config, app_config, study, study_data,
+                stat_test, covariates, adjustment_method)
+        },
+        set_summary_data = function(source_data) {
+            self$summary_data <- self$set_source_data(source_data)
+        },
+        prepare = function(source_data) {
+            self$prepared_data <- self$set_summary_data(source_data) |>
+                select("AnalyteID" = Geneid, "Analyte" = Gene_name, FoldChange, pvalue, padj) |>
+                rename(
+                    "p.value.original" = pvalue,
+                    "p.value" = padj
+                ) |>
+                mutate(
+                    shape = "circle",
+                    selectedPoint = 0L,
+                    log2FoldChange = log2(FoldChange),
+                    `-log10pvalue` = -log10(p.value),
+                    `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
+                    formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
+                    text = glue(
+                        "Gene: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"
+                    ),
+                    lmFormula = "
+                    <a
+                        href='https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html'
+                        target='_blank'>DESeq2 model
+                    </a>",
+                    ivs = ""
+                )
+            return(invisible(self$prepared_data))
+        }
+    )
+)
