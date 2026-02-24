@@ -1,5 +1,5 @@
 box::use(
-  shiny[moduleServer, NS, tagList, reactive, observeEvent, validate, need],
+  shiny[moduleServer, NS, tagList, reactive, reactiveVal, observeEvent, validate, need],
   plotly[plotlyOutput, renderPlotly, event_data],
   promises[future_promise, `%...>%`],
   shinybusy[show_modal_spinner, remove_modal_spinner],
@@ -23,11 +23,13 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, r6, gsea_data, parent) {
+server <- function(id, r6, gsea_data, target_plot_name, parent) {
 
   moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
+
+    last_click_key <- reactiveVal(NULL)
 
     output$plot <- renderPlotly({
       validate(
@@ -49,10 +51,22 @@ server <- function(id, r6, gsea_data, parent) {
       )
     })
 
-    observeEvent(c(plot_click_data()), {
+    observeEvent(plot_click_data(), {
       validate(
         need(nrow(plot_click_data()) > 0, "")
       )
+
+      click_key <- paste0(
+        paste(names(plot_click_data()), collapse = "|"),
+        "::",
+        paste(unlist(plot_click_data(), use.names = FALSE), collapse = "|")
+      )
+
+      if (identical(last_click_key(), click_key)) {
+        return(invisible(NULL))
+      }
+
+      last_click_key(click_key)
 
       r6()$set_event_data(plot_click_data())
 
@@ -68,9 +82,8 @@ server <- function(id, r6, gsea_data, parent) {
       }) %...>% {
         toggle_GSEA_volcano_plot_trace(
           session = session,
-          ns = ns,
-          namespace = ns(id),
-          plot_name = "VolcanoPlot",
+          namespace = parent$ns(""),
+          plot_name = target_plot_name,
           expected_trace_count = 3,
           analytes = r6()$gsea_analytes,
           trace_name = r6()$gsea_trace_name,
