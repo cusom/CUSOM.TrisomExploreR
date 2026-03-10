@@ -7,7 +7,6 @@ box::use(
     icon,
     moduleServer,
     need,
-    observe,
     observeEvent,
     reactive,
     reactiveVal,
@@ -19,9 +18,8 @@ box::use(
     validate,
     tags
   ],
-  shinydashboardPlus[box],
-  shinyjs[addClass, disable, disabled, enable, removeClass],
-  bsplus[bs_embed_tooltip],
+  shinyjs[disabled, click],
+  bsplus[bs_embed_tooltip, bs_accordion, bs_set_opts, bs_append],
   shinycustomloader[withLoader],
   shinyWidgets[awesomeCheckboxGroup, numericRangeInput, prettyRadioButtons],
   shinybusy[remove_modal_spinner, show_modal_spinner],
@@ -41,120 +39,98 @@ box::use(
 ui <- function(id) {
   ns <- NS(id)
   tagList(
-    box(
-      title = HTML(
-        "<div class=\"dataset-options-title\">Dataset Options
-          <span
-            data-toggle=\"tooltip\"
-            data-placement=\"auto right\"
-            title = \"\"
-            class = \"fas fa-filter\"
-            data-original-title=\"Set options below to generate volcano plot\">
-          </span>
-        </div>"
-      ),
-      height = "auto",
-      width = NULL,
-      closable = FALSE,
-      solidHeader = FALSE,
-      collapsible = FALSE,
-      headerBorder = FALSE,
-      disabled(
-        actionButton(
-          ns("PrimaryTutorial"),
-          label = "Take Tutorial",
-          class = "tutorial-btn",
-          icon = icon("question-circle")
+    tags$h3("Inputs"),
+    bs_accordion(id = ns("AccordionInputs")) |>
+        bs_set_opts(panel_type = "default", use_heading_link = TRUE) |>
+        bs_append(
+          title = "1) Set Analysis",
+          content = list(
+            withLoader(
+              uiOutput(ns("Feature")),
+              type = "html",
+              loader = "loader6",
+              proxy.height = "20px"
+            )
+          )
         ) |>
-        bs_embed_tooltip(
-          title = "Click here to learn about setting dataset options to generate the volcano plot",
-          placement = "top",
-          html = TRUE
-        )
-      ),
-      tags$div(
-        id = ns("scrollableOptions"),
-        style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
-        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        tags$div(
-          id = ns("Features"),
-          withLoader(
-            uiOutput(ns("Feature")),
-            type = "html",
-            loader = "loader6",
-            proxy.height = "20px"
+        bs_append(
+          title = "2) Choose Study",
+          content = list(
+            withLoader(
+              uiOutput(ns("Study")),
+              type = "html",
+              loader = "loader6",
+              proxy.height = "20px"
+            )
+          )
+        ) |>
+        bs_append(
+          title = "3) Set Participant Attributes",
+          content = list(
+            tagList(
+              withLoader(
+                uiOutput(ns("Karyotype")),
+                type = "html",
+                loader = "loader6",
+                proxy.height = "20px"
+              ),
+              tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+              uiOutput(ns("ConditionsInputs")),
+              tags$b("Sex"),
+              withLoader(
+                uiOutput(ns("Sex")),
+                type = "html",
+                loader = "loader6",
+                proxy.height = "20px"
+              ),
+              tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+              withLoader(
+                uiOutput(ns("Age")),
+                type = "html",
+                loader = "loader6",
+                proxy.height = "20px"
+              )
+            )
+          )
+        ) |>
+        bs_append(
+          title = "4) Set Statistics",
+          content = list(
+            tagList(
+              withLoader(
+                uiOutput(ns("StatTest")),
+                type = "html",
+                loader = "loader6",
+                proxy.height = "20px"
+              ),
+              tags$br(),
+              tags$b("Adjust for covariates"),
+              withLoader(
+                uiOutput(ns("Covariates")),
+                type = "html",
+                loader = "loader6",
+                proxy.height = "20px"
+              ),
+              withLoader(
+                uiOutput(ns("AdjustmentMethod")),
+                type = "html",
+                loader = "loader6",
+                proxy.height = "20px"
+              )
+            )
           )
         ),
-        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         tags$div(
-          id = ns("Studies"),
-          withLoader(
-            uiOutput(ns("Study")),
-            type = "html",
-            loader = "loader6",
-            proxy.height = "20px"
-          )
-        ),
-        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        tags$b("Karyotype"),
-        withLoader(
-          uiOutput(ns("Karyotype")),
-          type = "html",
-          loader = "loader6",
-          proxy.height = "20px"
-        ),
-        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        uiOutput(ns("ConditionsInputs")),
-        tags$b("Sex"),
-        withLoader(
-          uiOutput(ns("Sex")),
-          type = "html",
-          loader = "loader6",
-          proxy.height = "20px"
-        ),
-        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        withLoader(
-          uiOutput(ns("Age")),
-          type = "html",
-          loader = "loader6",
-          proxy.height = "20px"
-        ),
-        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        withLoader(
-          uiOutput(ns("StatTest")),
-          type = "html",
-          loader = "loader6",
-          proxy.height = "20px"
-        ),
-        tags$br(),
-        tags$b("Adjust for covariates"),
-        withLoader(
-          uiOutput(ns("Covariates")),
-          type = "html",
-          loader = "loader6",
-          proxy.height = "20px"
-        ),
-        withLoader(
-          uiOutput(ns("AdjustmentMethod")),
-          type = "html",
-          loader = "loader6",
-          proxy.height = "20px"
-        ),
-        tags$hr(style = "margin-top:5px;margin-bottom:10px;")
-      ),
-      footer = tagList(
-        disabled(
-          actionButton(
-            ns("getData"),
-            label = "Analyze & Plot",
-            class = "refresh-btn",
-            icon = icon("play")
+          disabled(
+            actionButton(
+              ns("getData"),
+              label = "Analyze & Plot",
+              class = "refresh-btn",
+              icon = icon("play")
+            )
           )
         )
-      )
-    )
   )
-
 }
 
 #' @export
@@ -216,6 +192,11 @@ server <- function(id, app_config, analysis_config) {
       parent_input = input
     )
 
+    observeEvent(c(input$Feature), {
+      req(input$Feature)
+      click(glue("AccordionInputs-1-heading"), asis = FALSE)
+    }, ignoreInit = TRUE)
+
     output$Study <- renderUI({
       validate(
         need(input$Feature != "", "")
@@ -242,6 +223,11 @@ server <- function(id, app_config, analysis_config) {
     study_label <- reactive({
       r6()$StudyLabel
     })
+
+    observeEvent(c(input$Study), {
+      req(input$Study)
+      click(glue("AccordionInputs-2-heading"), asis = FALSE)
+    }, ignoreInit = TRUE)
 
     karyotypes <- reactive({
       r6()$Karyotypes
