@@ -1,13 +1,15 @@
 
 box::use(
-    shiny[NS, tagList, tags, moduleServer, reactive, renderUI, validate, need, observeEvent,
-        fluidRow, column, uiOutput, bindEvent, sliderInput],
+    shiny[NS, tagList, tags, moduleServer, reactive, renderUI, validate, need, observe, observeEvent,
+        fluidRow, column, uiOutput, bindEvent, sliderInput, actionButton, icon],
     shinyWidgets[prettyRadioButtons],
     shinycustomloader[withLoader],
     DT[datatable, dataTableOutput, renderDataTable, JS, formatSignif],
     htmltools[HTML, em],
     glue[glue],
-    stringr[str_replace]
+    stringr[str_replace],
+    bsplus[bs_attach_modal, bs_modal],
+    shinyjs[disabled, toggleState],
 )
 
 box::use(
@@ -16,33 +18,58 @@ box::use(
 )
 
 #' @export
-ui <- function(id) {
+ui <- function(
+    id,
+    button_label = "Summary Data",
+    button_icon = "database",
+    button_class = "",
+    tooltip_text = "",
+    ...
+    ) {
     ns <- NS(id)
     tagList(
-        fluidRow(
-        column(
-            width = 12, class = "col-md-5",
-            uiOutput(ns("fold_change"))
-        ),
-        column(
-            offset = 1,
-            width = 12, class = "col-md-5",
-            uiOutput(ns("significance_level"))
-        )
-        ),
-        tags$hr(),
-        fluidRow(
-            column(
-                width = 12,
-                withLoader(
-                    dataTableOutput(
-                        ns("table")
+        bs_modal(
+            id = ns("volcano-data-modal"),
+            title = tags$h3("Volcano Plot Data"),
+            size = "large",
+            body = list(
+                tagList(
+                    fluidRow(
+                        column(
+                            width = 12, class = "col-md-5",
+                            uiOutput(ns("fold_change"))
+                        ),
+                        column(
+                            offset = 1,
+                            width = 12, class = "col-md-5",
+                            uiOutput(ns("significance_level"))
+                        )
                     ),
-                    type = "html",
-                    loader = "dnaspin"
+                    tags$hr(),
+                    fluidRow(
+                        column(
+                            width = 12,
+                            withLoader(
+                                dataTableOutput(
+                                    ns("table")
+                                ),
+                                type = "html",
+                                loader = "dnaspin"
+                            )
+                        )
+                    )
                 )
             )
-        )
+        ),
+        disabled(
+            actionButton(
+                ns("data"),
+                label = button_label,
+                class = button_class,
+                icon = icon(button_icon)
+            )
+        ) |>
+            bs_attach_modal(id_modal = ns("volcano-data-modal"))
     )
 }
 
@@ -52,6 +79,10 @@ server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, 
     moduleServer(id, function(input, output, session) {
 
         ns <- session$ns
+
+        observe({
+            toggleState(id = "data", condition = !is.null(summary_data()))
+        })
 
         output$fold_change <- renderUI({
             validate(

@@ -3,36 +3,51 @@ box::use(
 )
 
 box::use(
-    shiny[NS, moduleServer, tagList, validate, need, observeEvent],
+    shiny[NS, moduleServer, tagList, validate, need, observe, observeEvent, actionButton, icon, tags],
     shinycustomloader[withLoader],
+    bsplus[bs_attach_modal, bs_modal],
+    shinyjs[disabled, toggleState],
     DT[dataTableOutput, renderDataTable, datatable],
     glue[glue]
 )
 
 
 #' @export
-ui <- function(id) {
+ui <- function(
+    id,
+    button_label = "Sample-Level Data",
+    button_icon = "database",
+    button_class = "",
+    tooltip_text = "",
+    ...
+) {
     ns <- NS(id)
     tagList(
-        shinydashboardPlus::box(
-            title = "",
-            id = ns("AnalyteDataTablePanelBox"),
-            height = "auto",
-            width = NULL,
-            closable = FALSE,
-            solidHeader = FALSE,
-            collapsible = FALSE,
-            headerBorder = FALSE,
-            withLoader(
-                dataTableOutput(
-                    ns("table"),
-                    height = "650px",
-                    width = "99%"
-                ),
-                type = "html",
-                loader = "dnaspin"
+        bs_modal(
+            id = ns("analyte-data-modal"),
+            title = tags$h3("Analyte Data"),
+            size = "large",
+            body = list(
+                withLoader(
+                    dataTableOutput(
+                        ns("table"),
+                        height = "650px",
+                        width = "99%"
+                    ),
+                    type = "html",
+                    loader = "dnaspin"
+                )
             )
-        )
+        ),
+        disabled(
+            actionButton(
+                ns("data"),
+                label = button_label,
+                class = button_class,
+                icon = icon(button_icon)
+            )
+        ) |>
+            bs_attach_modal(id_modal = ns("analyte-data-modal"))
     )
 }
 
@@ -42,6 +57,10 @@ server <- function(id, analyte, table_data) {
     moduleServer(id, function(input, output, session) {
 
         ns <- session$ns
+
+        observe({
+            toggleState(id = "data", condition = !is.null(table_data()))
+        })
 
         output$table <- renderDataTable({
             validate(
