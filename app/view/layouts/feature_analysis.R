@@ -21,7 +21,7 @@ ui <- function(id) {
     fluidRow(
       column(
         width = 12,
-        class = "col-lg-2 col-slim",
+        class = "col-lg-2",
         inputs_feature_analysis$ui(ns("inputs"))
       ),
       column(

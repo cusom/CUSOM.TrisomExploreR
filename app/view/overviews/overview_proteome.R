@@ -12,7 +12,8 @@ ui <- function(id) {
   tagList(
     fluidRow(
       column(
-        width = 12, class = "col-lg-12",
+        width = 12, class = "col-lg-8",
+        offset = 1,
         box(
           id = ns("Overview"),
           title = "",
