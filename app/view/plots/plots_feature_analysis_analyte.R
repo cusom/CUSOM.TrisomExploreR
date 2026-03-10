@@ -1,7 +1,7 @@
 box::use(
-  shiny[NS, tagList, tags, uiOutput, htmlOutput, icon, moduleServer, reactive,
-    reactiveVal, observeEvent, req, validate, need, bindEvent, renderUI,
-    actionButton],
+  shiny[NS, tagList, tags, fluidRow, column, uiOutput, htmlOutput, icon, 
+    moduleServer, reactive,reactiveVal, observeEvent, req, validate, need, 
+    bindEvent, renderUI, actionButton],
   shinydashboardPlus[box, boxSidebar, updateBoxSidebar],
   shinyWidgets[actionBttn],
   shinycustomloader[withLoader],
@@ -14,7 +14,9 @@ box::use(
 
 box::use(
   app/logic/feature_analysis/analyte/FeatureAnalysisAnalyte[getFeatureAnalysisForAnalyte],
-  app/logic/shared/string_utils[parse_delimited_string]
+  app/logic/shared/string_utils[parse_delimited_string],
+  app/view/inputs/inputs_analyte_links,
+  app/view/tables/table_analyte,
 )
 
 #' @export
@@ -22,48 +24,52 @@ ui <- function(id) {
   ns <- NS(id)
   tagList(
     tags$div(
-      id = ns("AnalyteContent"),
-      box(
-        id = ns("AnalyteContentBox"),
-        title = tags$div(
-          id = ns("AnalyteContentBoxTitle"),
-          style = "font-size:12px;display:flex;align-items:center",
-          uiOutput(ns("toggleSidebarLinks")) |>
-          bs_embed_tooltip(
-            title = "Click here to learn more about the selected analyte",
-            placement = "right",
-            html = TRUE
+      class = "align-items-center justify-content-center",
+      tags$h4("Sample Level Data and Analyte Plot"),
+      tags$div(
+        class = "align-items-center mx-auto mt-2",
+        fluidRow(
+          column(
+            width = 12,
+            offset = 0,
+            class = "col-xs-12 col-lg-12 vh-95 pl-0 pr-0 ml-0 mr-0",
+            tags$div(
+              class = "container-fluid plot-toolbar-row",
+              style = "padding-bottom: 10px;",
+              tags$div(
+                class = "container d-flex align-items-left justify-content-between flex-wrap",
+                tags$ul(
+                  class = "nav navdcc d-flex align-items-center justify-content-between flex-wrap mx-auto",
+                  tags$li(
+                    inputs_analyte_links$ui(
+                      ns("analyte-links")
+                    )
+                  ),
+                  tags$li(
+                    table_analyte$ui(ns("analyte-data"))
+                  )
+                )
+              )
+            )
           )
         ),
-        height = "auto",
-        width = NULL,
-        closable = FALSE,
-        solidHeader = FALSE,
-        collapsible = FALSE,
-        headerBorder = FALSE,
-        sidebar = boxSidebar(
-          id = ns("sidebarLinks"),
-          icon = icon("cogs", class = "hidden"),
-          width = 50,
-          actionBttn(
-            inputId = ns("sidebarLinksCloseBar"),
-            label = "close",
-            style = "simple",
-            color = "primary",
-            icon = icon("bars")
-          ),
-          tags$hr(),
-          htmlOutput(ns("ExternalLinksText")),
-          uiOutput(ns("ExternalLinks"))
-        ),
-        withLoader(
-          plotlyOutput(
-            ns("AnalytePlot"),
-            height = "605px",
-            width = "99%"
-          ),
-          type = "html",
-          loader = "dnaspin"
+        fluidRow(
+          column(
+            width = 12,
+            offset = 0,
+            class = "col-xs-12 col-lg-12 vh-95 pl-0 pr-0 ml-0 mr-0",
+            tags$div(
+              withLoader(
+                plotlyOutput(
+                  ns("AnalytePlot"),
+                  height = "605px",
+                  width = "99%"
+                ),
+                type = "html",
+                loader = "dnaspin"
+              )
+            )
+          )
         )
       )
     )
@@ -133,96 +139,20 @@ server <- function(id, analysis_config, app_config, analyte, feature, study, stu
         r6()$get_analyte_plot()
     })
 
-    # shiny::observeEvent(
-    #   plotly::event_data(
-    #     "plotly_click",
-    #     priority = "event",
-    #     source = ns("HeatmapPlot"),
-    #     session = session
-    #   ), {
-    #   shiny::validate(
-    #     shiny::need(!is.null(analyte_data()), ""),
-    #     shiny::need(!is.null(r6$HeatmapData), "")
-    #   )
-
-    #   e <- plotly::event_data(
-    #     "plotly_click",
-    #     priority = "event",
-    #     source = ns("HeatmapPlot"),
-    #     session = session
-    #   )
-
-    #   key <- r6$HeatmapData |>
-    #     dplyr::mutate(z = round(z, 6)) |>
-    #     dplyr::filter(
-    #       r == e$y,
-    #       z == round(e$z, 6)
-    #     ) |>
-    #     dplyr::select(Analyte) |>
-    #     dplyr::pull() |>
-    #     as.character()
-
-    #   # update analyte source input
-    #   shiny::updateSelectizeInput(
-    #     session = analyte_session,
-    #     inputId = analyte_input_name,
-    #     selected = key
-    #   )
-
-    # }, domain = session)
-
-    analyteSearchName <- reactive({
-        parse_delimited_string(analyte(), 1)
-    }) |>
-      bindEvent(analyte(), ignoreInit = FALSE)
-
-    output$toggleSidebarLinks <- renderUI({
-      validate(
-        need(!is.null(analyteSearchName()), "")
-      )
-      btn <- actionButton(
-        ns("toggleSidebarLinks"),
-        label = glue("Learn more about {analyteSearchName()}"),
-        class = "toggle-btn"
-      )
-
-      if (length(analyte()) > 1) {
-        tags$div(
-          style = "padding-bottom: 65px;",
-          hidden(
-            btn
-          )
-        )
-      } else {
-        btn
-      }
-    })
-
-    # output$ExternalLinksText <- shiny::renderText({
-    #   CUSOMShinyHelpers::getExternalLinkTooltip(analyteSearchName())
-    # })
-
-    observeEvent(input$toggleSidebarLinks, {
-      updateBoxSidebar(
-        id = "sidebarLinks",
-        session = session
-      )
-    })
-
-    observeEvent(c(input$sidebarLinksCloseBar), {
-      updateBoxSidebar(
-        id = "sidebarLinks",
-        session = session
-      )
-    }, ignoreInit = TRUE)
-
-    # output$ExternalLinks <- shiny::renderUI({
-    #   CUSOMShinyHelpers::getExternalLinkActionLinks(analyteSearchName(), ns)
-    # })
-
     table_data <- reactive({
       r6()$get_table_data()
     })
+
+    inputs_analyte_links$server(
+      id = "analyte-links",
+      analyte = analyte
+    )
+
+    table_analyte$server(
+      id = "analyte-data",
+      analyte = analyte,
+      table_data = table_data
+    )
 
     return(
       list(
