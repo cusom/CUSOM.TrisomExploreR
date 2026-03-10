@@ -135,6 +135,27 @@
 	grid-gap: 65%;
 }
 
+.navdcc {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	gap: 1rem;
+	width: 100%;
+}
+
+.navdcc > li {
+	display: inline-flex;
+	align-items: center;
+}
+
+.align-items-left {
+	align-items: flex-start !important;
+}
+
 .dropdown-header {
 	color: #000;
 	font-size:14px;
@@ -223,6 +244,44 @@ section.sidebar .shiny-input-container {
 
 .action-button-externallink:hover, .action-button-externallink:focus {
 	color:#ccc;
+}
+
+.plot-toolbar-row {
+	min-height: 72px;
+	display: flex;
+	align-items: flex-start;
+}
+
+.plot-toolbar-row > .container {
+	width: 100%;
+}
+
+.plot-toolbar-row .form-group,
+.plot-toolbar-row .shiny-input-container,
+.plot-toolbar-row .selectize-control {
+	margin-top: 0;
+	margin-bottom: 0;
+}
+
+.plot-toolbar-row [id$='AnalyteInput'] {
+	display: flex;
+	align-items: center;
+}
+
+.plot-toolbar-row [id$='AnalyteInput'] .selectize-control {
+	min-width: 260px;
+}
+
+.plot-toolbar-row [id$='AnalyteInput'] .selectize-input {
+	min-height: 36px;
+	padding-top: 7px;
+	padding-bottom: 7px;
+}
+
+@media (max-width: 1199px) {
+	.plot-toolbar-row {
+		min-height: auto;
+	}
 }
 
 
