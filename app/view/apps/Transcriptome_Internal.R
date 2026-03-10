@@ -11,7 +11,8 @@ box::use(
     app/logic/shared/ui_utils[create_app_links],
     app/view/overviews/overview_transcriptome,
     app/view/layouts/cell_type_analysis,
-    app/view/layouts/precalc_feature_analysis,
+    app/view/layouts/precalc_feature_analysis,,
+    app/view/layouts/correlates_analysis
 )
 
 #' @export
@@ -73,6 +74,14 @@ ui <- function(id) {
                     href = NULL,
                     newtab = TRUE,
                     selected = FALSE
+                ),
+                menuItem(
+                    text = "Cross Omics Correlates",
+                    icon = icon("circle-nodes"),
+                    tabName = ns("correlates"),
+                    href = NULL,
+                    newtab = TRUE,
+                    selected = FALSE
                 )
             )
         ),
@@ -102,6 +111,12 @@ ui <- function(id) {
                     tabName = ns("feature"),
                     tags$div(
                         precalc_feature_analysis$ui(ns("feature"))
+                    )
+                ),
+                tabItem(
+                    tabName = ns("correlates"),
+                    tags$div(
+                        correlates_analysis$ui(ns("correlates"))
                     )
                 )
 
@@ -138,6 +153,13 @@ server <- function(id, app_config) {
 
         precalc_feature_analysis$server(
             "feature",
+            app_config = app_config,
+            analysis_config = app_config,
+            input_config = app_config
+        )
+
+        correlates_analysis$server(
+            "correlates",
             app_config = app_config,
             analysis_config = app_config,
             input_config = app_config
