@@ -2,6 +2,24 @@ export function setPageTitle(title) {
   document.title = title;
 }
 
+export function initHashRouter(inputId, defaultRoute = "overview") {
+  function pushRoute() {
+    if (!window.location.hash || window.location.hash === "#") {
+      window.location.hash = `#/${defaultRoute}`;
+    }
+
+    const route = window.location.hash.replace(/^#\/?/, "");
+    Shiny.setInputValue(inputId, route, { priority: "event" });
+  }
+
+  window.addEventListener("hashchange", pushRoute);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", pushRoute, { once: true });
+  } else {
+    pushRoute();
+  }
+}
+
 export function launchTutorial(id,tutorialName){
     Shiny.setInputValue(id +"-TutorialName", tutorialName);
   }
