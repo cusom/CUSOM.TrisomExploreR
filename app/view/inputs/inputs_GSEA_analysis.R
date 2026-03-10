@@ -38,13 +38,27 @@ server <-  function(id, study, summary_data, parent) {
     })
 
     output$ConfigureGSEA <- renderUI({
-      validate(
-        need(!is.null(study()), ""),
-        need(!is.null(summary_data()), "")
+
+      is_button_disabled <- !is_supported_study() || is.null(summary_data())
+
+      configure_button <- actionButton(
+        inputId = ns("configure"),
+        label = "Pathways",
+        icon = icon("network-wired")
       )
 
-      if (!is_supported_study()) {
-        return(tagList())
+      if (is_button_disabled) {
+        disabled_tooltip <- if (!is_supported_study()) {
+          "Pathway analysis is available only for studies containing SOMA or RNA"
+        } else {
+          "Pathway analysis is unavailable until summary data is loaded"
+        }
+
+        configure_button <- configure_button |>
+          tagAppendAttributes(
+            disabled = "disabled",
+            title = disabled_tooltip
+          )
       }
 
       tagList(
@@ -72,11 +86,7 @@ server <-  function(id, study, summary_data, parent) {
           ),
           footer = bs_modal_closebutton(label = "Cancel")
         ),
-        actionButton(
-          inputId = ns("configure"),
-          label = "Pathways",
-          icon = icon("network-wired")
-        ) |>
+        configure_button |>
           #tagAppendAttributes(class = r6$addGSEAInputClass()) |>
           bs_attach_modal(id_modal = ns("configure-GSEA"))
       )
