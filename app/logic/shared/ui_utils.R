@@ -130,6 +130,54 @@ create_app_links <- function(linkData) {
 
 }
 
+#' @export
+create_app_dropdown_links <- function(linkData) {
+  requiredColumns <- c("label", "link", "IsCurrentApplication")
+
+  if (!all(requiredColumns %in% colnames(linkData))) {
+    missingColumns <- requiredColumns[!requiredColumns %in% colnames(linkData)]
+    stop(paste0("Missing the following required columns: ", paste(missingColumns, collapse = ", ")))
+  }
+
+  links <- lapply(seq_len(nrow(linkData)), function(i) {
+    label <- as.character(linkData$label[[i]])
+    href <- as.character(linkData$link[[i]])
+    is_current <- suppressWarnings(as.integer(linkData$IsCurrentApplication[[i]]) == 1)
+    description <- if ("description" %in% colnames(linkData)) {
+      as.character(linkData$description[[i]])
+    } else {
+      "Open this TrisomExplorer app"
+    }
+
+    if (is.na(href) || !nzchar(href)) {
+      return(
+        shiny::tags$div(
+          class = "dropdown-entry app-switcher-tile is-disabled",
+          shiny::tags$h5(class = "font-weight-bold mb-1", label),
+          shiny::tags$p(class = "mb-0 small text-light", description)
+        )
+      )
+    }
+
+    shiny::tags$a(
+      class = "dropdown-entry app-switcher-tile",
+      href = href,
+      target = "_blank",
+      rel = "noopener noreferrer",
+      shiny::tags$h5(class = "font-weight-bold mb-1", label),
+      shiny::tags$p(
+        class = "mb-0 small text-light",
+        if (isTRUE(is_current)) "Current application" else description
+      )
+    )
+  })
+
+  shiny::tags$div(
+    class = "app-switcher-grid",
+    shiny::tagList(links)
+  )
+}
+
 
 getActionButtonLink <- function(x) {
 
