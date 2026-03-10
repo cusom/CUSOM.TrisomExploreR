@@ -1,9 +1,10 @@
 box::use(
   shiny[NS, tagList, tags, moduleServer, reactive, validate, need, bindEvent,
     isolate, selectizeInput, updateSelectizeInput, htmlOutput, insertUI,
-    observeEvent, renderText],
+    observe, observeEvent, renderText, actionButton, icon],
   htmltools[HTML],
-  bsplus[bs_embed_tooltip],
+  bsplus[bs_modal, bs_modal_closebutton, bs_attach_modal],
+  shinyjs[disabled, toggleState, runjs],
   dplyr[select, distinct, arrange, pull],
 
 )
@@ -14,46 +15,64 @@ box::use(
 )
 
 #' @export
-ui <- function(id) {
+ui <- function(
+  id,
+  button_label = "Select Analyte",
+  button_icon = "vial",
+  button_class = "",
+  ...
+) {
   ns <- NS(id)
   tagList(
-    tags$span(
-      id = ns("AnalyteInput"),
-      selectizeInput(
-        inputId = ns("analyte"),
-        label = "",
-        choices = NULL,
-        multiple = TRUE,
-        options = list(
-          placeholder = "Select analyte below",
-          onInitialize = I('function() { this.setValue(""); }'),
-          closeAfterSelect = TRUE,
-          selectOnTab = TRUE,
-          persist = FALSE,
-          `live-search` = TRUE,
-          dropupAuto = FALSE,
-          onType = I(paste0("
-            function (str) {
-              if(this.currentResults.total == 0) {
-                Shiny.setInputValue(
-                  '", ns("analyteSearchResults"), "',
-                  {
-                    query: this.currentResults.query,
-                    total: this.currentResults.total
-                  },
-                  { priority: 'event' }
-                );
-              };
-            }"))
+    bs_modal(
+      id = ns("analyte-picker-modal"),
+      title = tags$h4("Select Analyte"),
+      size = "large",
+      body = list(
+        tags$span(
+          id = ns("AnalyteInput"),
+          selectizeInput(
+            inputId = ns("analyte"),
+            label = "",
+            choices = NULL,
+            multiple = TRUE,
+            options = list(
+              placeholder = "Select analyte below",
+              onInitialize = I('function() { this.setValue(""); }'),
+              closeAfterSelect = TRUE,
+              selectOnTab = TRUE,
+              persist = FALSE,
+              `live-search` = TRUE,
+              dropupAuto = FALSE,
+              onType = I(paste0("
+                function (str) {
+                  if(this.currentResults.total == 0) {
+                    Shiny.setInputValue(
+                      '", ns("analyteSearchResults"), "',
+                      {
+                        query: this.currentResults.query,
+                        total: this.currentResults.total
+                      },
+                      { priority: 'event' }
+                    );
+                  };
+                }"))
+            )
+          ),
+          htmlOutput(ns("AnalyteSearchError"))
         )
-      ) |>
-        bs_embed_tooltip(
-          title = "Select from this dropdown",
-          placement = "left",
-          html = TRUE
-        ),
-      htmlOutput(ns("AnalyteSearchError"))
-    )
+      ),
+      footer = bs_modal_closebutton(label = "Close")
+    ),
+    disabled(
+      actionButton(
+        inputId = ns("open"),
+        label = button_label,
+        class = button_class,
+        icon = icon(button_icon)
+      )
+    ) |>
+      bs_attach_modal(id_modal = ns("analyte-picker-modal"))
   )
 }
 
@@ -63,6 +82,10 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
   moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
+
+    observe({
+      toggleState(id = "open", condition = !is.null(summary_data()))
+    })
 
     insertUI(
       session = parent,
@@ -116,6 +139,12 @@ server <- function(id, r6, summary_data, plot_click_data, plot_selected_data, su
         )
 
     }, domain = session)
+
+    observeEvent(input$analyte, {
+      if (!is.null(input$analyte) && length(input$analyte) > 0) {
+        runjs(paste0("$('#", ns("analyte-picker-modal"), "').modal('hide');"))
+      }
+    }, ignoreInit = TRUE)
 
     volcano_multi_select_text <- reactive({
       get_volcano_multi_select_text(
