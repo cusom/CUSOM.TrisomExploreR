@@ -1,5 +1,5 @@
 box::use(
-  shiny[NS, tagList, tags, moduleServer, reactive, validate, need, bindEvent,
+  shiny[NS, fluidRow, column, tagList, tags, moduleServer, reactive, validate, need, bindEvent,
     isolate, reactiveVal, observeEvent, req],
   shinydashboardPlus[box],
   shinycustomloader[withLoader],
@@ -11,6 +11,7 @@ box::use(
 box::use(
   app/logic/feature_analysis/summary/FeatureAnalysisSummary[getFeatureAnalysisSummary],
   app/logic/shared/plot_utils[set_plot_source, object_is_rendered],
+  app/view/tables/table_volcano,
   app/view/inputs/inputs_volcano_plot_analyte,
   app/view/inputs/inputs_GSEA_analysis,
 )
@@ -19,29 +20,59 @@ box::use(
 ui <- function(id) {
   ns <- NS(id)
   tagList(
-    box(
-      title = tags$div(
-        class = "volcano-top-input-panel",
-        inputs_volcano_plot_analyte$ui(ns("volcano-analyte")),
-        inputs_GSEA_analysis$ui(ns("gsea"))
-      ),
-      height = "auto",
-      width = NULL,
-      closable = FALSE,
-      solidHeader = FALSE,
-      collapsible = FALSE,
-      headerBorder = FALSE,
-      withLoader(
-        plotlyOutput(
-          ns("plot"),
-          height = "600px",
-          width = "99%"
-        ),
-        type = "html",
-        loader = "dnaspin"
-      ),
+    tags$div(
+      class = "align-items-center justify-content-center",
+      tags$h4("Summary Data and Volcano Plot"),
       tags$div(
-        id = ns("volcanoMultiSelectTextPlaceholder")
+        class = "align-items-center mx-auto mt-2",
+        fluidRow(
+          column(
+            width = 12,
+            offset = 0,
+            class = "col-xs-12 col-lg-12 vh-95 pl-0 pr-0 ml-0 mr-0",
+            tags$div(
+              class = "container-fluid plot-toolbar-row",
+              style = "padding-bottom: 10px;",
+              tags$div(
+                class = "container d-flex align-items-left justify-content-between flex-wrap",
+                tags$ul(
+                  class = "nav navdcc d-flex align-items-center justify-content-between flex-wrap mx-auto",
+                  tags$li(
+                    inputs_volcano_plot_analyte$ui(ns("volcano-analyte")),
+                  ),
+                  tags$li(
+                    table_volcano$ui(ns("summary-data"))
+                  ),
+                  tags$li(
+                    inputs_GSEA_analysis$ui(ns("gsea"))
+                  )
+                )
+              )
+            )
+          )
+        ),
+        fluidRow(
+          column(
+            width = 12,
+            offset = 0,
+            class = "col-xs-12 col-lg-12 vh-95 pl-0 pr-0 ml-0 mr-0",
+            tags$div(
+              withLoader(
+                plotlyOutput(
+                  ns("plot"),
+                  height = "600px",
+                  width = "99%"
+                ),
+                type = "html",
+                loader = "dnaspin"
+              ),
+              tags$br(),
+              tags$div(
+                id = ns("volcanoMultiSelectTextPlaceholder")
+              )
+            )
+          )
+        )
       )
     )
   )
@@ -49,7 +80,7 @@ ui <- function(id) {
 
 #' @export
 server <- function(id, analysis_config, app_config, feature, study, study_data, stat_test,
-  covariates, adjustment_method, ...) {
+  covariates, adjustment_method, adjusted, fold_change_variable, ...) {
 
   moduleServer(id, function(input, output, session) {
 
@@ -163,6 +194,15 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
     table_data <- reactive({
       r6()$get_table_data()
     })
+
+    table_volcano$server(
+      id = "summary-data",
+      summary_data = table_data,
+      fold_change_variable = fold_change_variable,
+      adjusted = adjusted,
+      stat_test = stat_test,
+      study = study,
+    )
 
     return(
       list(
