@@ -125,8 +125,8 @@ server <- function(id, r6) {
             pickerInput(
                 inputId = ns("CellType"),
                 label = "",
-                choices = r6$CellTypes,
-                selected = r6$CellTypes,
+                choices = r6()$CellTypes,
+                selected = r6()$CellTypes,
                 options = list(
                     `actions-box` = TRUE
                 ),
@@ -137,7 +137,7 @@ server <- function(id, r6) {
         observeEvent(input$CellType, {
             disable(id = "Analyte")
             future_promise(
-                r6$Analytes
+                r6()$Analytes
             )  %...!% warning() %...>% {
                 updateSelectizeInput(
                     session = session,
@@ -154,8 +154,8 @@ server <- function(id, r6) {
             awesomeCheckboxGroup(
                 inputId = ns("Sex"),
                 label = "Sex",
-                choices = r6$Sexes,
-                selected = r6$Sexes,
+                choices = r6()$Sexes,
+                selected = r6()$Sexes,
                 inline = TRUE,
                 width = "90%"
             )
@@ -165,7 +165,7 @@ server <- function(id, r6) {
             numericRangeInput(
                 inputId = ns("Age"),
                 label = "Age range",
-                value = r6$Ages,
+                value = r6()$Ages,
                 width = "90%"
             )
         })
@@ -180,8 +180,8 @@ server <- function(id, r6) {
                 icon = NULL,
                 inline = FALSE,
                 width = "90%",
-                choiceNames = r6$StatTestNames,
-                choiceValues = r6$StatTestValues
+                choiceNames = r6()$StatTestNames,
+                choiceValues = r6()$StatTestValues
             )
         })
 
@@ -190,7 +190,7 @@ server <- function(id, r6) {
                 need(input$StatTest != "", "")
             )
             if (input$StatTest == "Linear Model") {
-                choices <- r6$CovariateChoices
+                choices <- r6()$CovariateChoices
                 tagList(
                     awesomeCheckboxGroup(
                         inputId = ns("Covariates"),
@@ -217,8 +217,8 @@ server <- function(id, r6) {
                 icon = NULL,
                 inline = FALSE,
                 width = "90%",
-                choiceNames = r6$AdjustmentMethodNames,
-                choiceValues = r6$AdjustmentMethodValues
+                choiceNames = r6()$AdjustmentMethodNames,
+                choiceValues = r6()$AdjustmentMethodValues
             )
         })
 
@@ -237,7 +237,7 @@ server <- function(id, r6) {
         }, ignoreInit = TRUE, domain = session)
 
         cell_type_data <- reactive({
-            r6$cell_type_data()
+            r6()$cell_type_data()
         }) |>
             bindEvent(input$Refresh, ignoreInit = TRUE, ignoreNULL = TRUE)
 

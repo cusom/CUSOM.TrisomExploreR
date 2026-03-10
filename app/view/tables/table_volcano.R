@@ -1,28 +1,41 @@
+
 box::use(
-    app/logic/shared/file_utils[download_file]
+    shiny[NS, tagList, tags, moduleServer, reactive, renderUI, validate, need, observeEvent,
+        fluidRow, column, uiOutput, bindEvent, sliderInput],
+    shinyWidgets[prettyRadioButtons],
+    shinycustomloader[withLoader],
+    DT[datatable, dataTableOutput, renderDataTable, JS, formatSignif],
+    htmltools[HTML, em],
+    glue[glue],
+    stringr[str_replace]
+)
+
+box::use(
+    app/logic/shared/file_utils[download_file],
+    app/logic/shared/table_volcano_utils[get_fold_change_slider_settings, prepare_volcano_table_data]
 )
 
 #' @export
 ui <- function(id) {
-    ns <- shiny::NS(id)
-    shiny::tagList(
-        shiny::fluidRow(
-        shiny::column(
+    ns <- NS(id)
+    tagList(
+        fluidRow(
+        column(
             width = 12, class = "col-md-5",
-            shiny::uiOutput(ns("fold_change"))
+            uiOutput(ns("fold_change"))
         ),
-        shiny::column(
+        column(
             offset = 1,
             width = 12, class = "col-md-5",
-            shiny::uiOutput(ns("significance_level"))
+            uiOutput(ns("significance_level"))
         )
         ),
-        shiny::tags$hr(),
-        shiny::fluidRow(
-            shiny::column(
+        tags$hr(),
+        fluidRow(
+            column(
                 width = 12,
-                shinycustomloader::withLoader(
-                    DT::dataTableOutput(
+                withLoader(
+                    dataTableOutput(
                         ns("table")
                     ),
                     type = "html",
@@ -36,93 +49,93 @@ ui <- function(id) {
 #' @export
 server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, study, ...) {
 
-    shiny::moduleServer(id, function(input, output, session) {
+    moduleServer(id, function(input, output, session) {
 
         ns <- session$ns
 
-        output$fold_change <- shiny::renderUI({
-            shiny::validate(
-                shiny::need(!is.null(summary_data()), "")
+        output$fold_change <- renderUI({
+            validate(
+                need(!is.null(summary_data()), "")
             )
 
-            lim <- summary_data() |>
-                dplyr::select(`Fold Change`) |>
-                dplyr::filter(`Fold Change` != Inf) |>
-                dplyr::summarise(m = max(`Fold Change`)) |>
-                ceiling() |>
-                as.integer()
+            slider_settings <- get_fold_change_slider_settings(
+                summary_df = summary_data(),
+                fold_change_label = fold_change_variable()
+            )
 
-            shiny::sliderInput(
+            validate(
+                need(is.null(slider_settings$error), slider_settings$error)
+            )
+
+            sliderInput(
                 inputId = ns("fold_change"),
-                label = "Fold Change",
-                min = -lim,
-                max = lim,
-                step = round(1 / (lim * 2), 1),
-                value = c(-lim, lim)
+                label = glue("Filter by {fold_change_variable()}"),
+                min = slider_settings$min,
+                max = slider_settings$max,
+                step = slider_settings$step,
+                value = slider_settings$value
             )
         })
 
-        output$significance_level <- shiny::renderUI({
-            shiny::validate(
-                shiny::need(!is.null(summary_data()), "")
+        output$significance_level <- renderUI({
+            validate(
+                need(!is.null(summary_data()), "")
             )
 
-            label <- "Filter by p-value significance level"
+            label <- glue("Filter by {ifelse(adjusted(), 'q-value', 'p-value')} significance level")
             choices <- c("all", " * p &le; 0.05", " ** p &le; 0.01", " *** p &le; 0.001")
 
             if (adjusted()) {
-                label <- stringr::str_replace(label, "[/p+-]", "q")
-                choices <- stringr::str_replace(choices, "[/p+/]", "q")
+                choices <- str_replace(choices, "[/p+/]", "q")
             }
 
-            shinyWidgets::prettyRadioButtons(
+            prettyRadioButtons(
                 inputId = ns("significance_level"),
                 label = label,
-                choiceNames = lapply(choices, shiny::HTML),
+                choiceNames = lapply(choices, HTML),
                 choiceValues = choices,
                 status = "primary"
             )
         })
 
-        table_data <- shiny::reactive({
-            shiny::validate(
-                shiny::need(!is.null(summary_data()), "")
+        table_data <- reactive({
+            validate(
+                need(!is.null(summary_data()), "")
             )
 
-            sig_col <- ifelse(adjusted(), "q-value", "p.value")
+            table_result <- prepare_volcano_table_data(
+                summary_df = summary_data(),
+                fold_change_label = fold_change_variable(),
+                significance_level = input$significance_level,
+                fold_change_range = input$fold_change,
+                adjusted = adjusted()
+            )
 
-            summary_data() |>
-                dplyr::mutate(
-                    p_cut = dplyr::case_when(
-                        input$significance_level == "all" ~ 1,
-                        grepl("&le; 0.05", input$significance_level) ~ 0.05,
-                        grepl("&le; 0.01", input$significance_level) ~ 0.01,
-                        grepl("&le; 0.001", input$significance_level) ~ 0.001
-                    )
-                ) |>
-                dplyr::filter(
-                    `Fold Change` >= min(input$fold_change),
-                    `Fold Change` <= max(input$fold_change),
-                    !!rlang::sym(sig_col) <= p_cut
-                ) |>
-                dplyr::select(-c("p_cut"))
+            validate(
+                need(is.null(table_result$error), table_result$error)
+            )
+
+            table_result$data
 
         }) |>
-            shiny::bindEvent(c(summary_data(), input$significance_level, input$fold_change),
+            bindEvent(c(summary_data(), input$significance_level, input$fold_change),
                 ignoreInit = TRUE,
                 ignoreNULL = TRUE
             )
 
-        output$table <- DT::renderDataTable({
-            shiny::validate(
-                shiny::need(!is.null(table_data()), "")
+        output$table <- renderDataTable({
+            validate(
+                need(!is.null(table_data()), "")
             )
 
-            DT::datatable(
-                data = table_data(),
-                caption = htmltools::tags$caption(
+            table_df <- table_data()
+            numeric_cols <- names(table_df)[vapply(table_df, is.numeric, logical(1))]
+
+            datatable(
+                data = table_df,
+                caption = tags$caption(
                     style = "caption-side: bottom; text-align: center;",
-                    "Fold Change Data: ", htmltools::em("Fold Change Data Used for Volcano Plot")
+                    "Fold Change Data: ", em("Fold Change Data Used for Volcano Plot")
                 ),
                 extensions = list(
                     "Buttons" = NULL,
@@ -142,29 +155,29 @@ server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, 
                     scrollX = TRUE,
                     scroller = TRUE,
                     buttons = list(
-                    "colvis",
-                    list(
-                        extend = "collection",
-                        text = "Download Data",
-                        action = DT::JS(
-                            paste0(
-                                "function ( e, dt, node, config ) {
-                                    Shiny.setInputValue('", ns("data_download"), "', true, {priority: 'event'});
-                                }"
+                        "colvis",
+                        list(
+                            extend = "collection",
+                            text = "Download Data",
+                            action = JS(
+                                paste0(
+                                    "function ( e, dt, node, config ) {
+                                        Shiny.setInputValue('", ns("data_download"), "', true, {priority: 'event'});
+                                    }"
+                                )
                             )
                         )
                     )
-                    )
                 )
-                )
-            },
-            server = FALSE
-        )
+            ) |>
+                formatSignif(columns = numeric_cols, digits = 4)
 
-        shiny::observeEvent(c(input$data_download), {
+        }, server = FALSE)
+
+        observeEvent(c(input$data_download), {
             download_file(
                 id = ns("download"),
-                file_name = glue::glue('{study()}_Summary_Data_{format(Sys.time(),\"%Y%m%d_%H%M%S\")}'),
+                file_name = glue('{study()}_Summary_Data_{format(Sys.time(),"%Y%m%d_%H%M%S")}'),
                 download_data = table_data()
             )
         })

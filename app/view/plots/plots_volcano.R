@@ -1,6 +1,6 @@
 box::use(
   shiny[NS, tagList, tags, moduleServer, reactive, validate, need, bindEvent,
-    isolate],
+    isolate, reactiveVal, observeEvent, req],
   shinydashboardPlus[box],
   shinycustomloader[withLoader],
   plotly[plotlyOutput, renderPlotly, event_data, toWebGL],
@@ -48,19 +48,20 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, analysis_config, app_config, study, study_data, stat_test, covariates, adjustment_method, ...) {
+server <- function(id, analysis_config, app_config, feature, study, study_data, stat_test,
+  covariates, adjustment_method, ...) {
 
   moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    r6 <- reactive({
-      validate(
-        need(study_data() != "", "")
-      )
+    r6_obj <- reactiveVal(NULL)
 
-      getFeatureAnalysisSummary(
-        analysis_config = analysis_config,
+    # Recreate the R6 instance when Feature changes
+    observeEvent(study_data(), {
+      req(study_data())
+      inst <- getFeatureAnalysisSummary(
+        analysis_config = analysis_config$get_analysis_config(feature()),
         app_config = app_config,
         study = study(),
         study_data = study_data(),
@@ -68,8 +69,14 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
         covariates = covariates(),
         adjustment_method = adjustment_method()
       )
-    }) |>
-      bindEvent(study_data())
+      r6_obj(inst)
+    })
+
+    #expose a reactive that always reads the current instance
+    r6 <- reactive({
+      req(r6_obj())
+      r6_obj()
+    })
 
     summary_data <- reactive({
       validate(
@@ -81,13 +88,10 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
           color = "#3c8dbc",
           text = "Calculating Statistics for Volcano Plot..."
         )
+      on.exit(remove_modal_spinner(), add = TRUE)
 
-      summary_data <- study_data() |>
+      study_data() |>
         r6()$get_summary_data()
-
-      remove_modal_spinner()
-
-      summary_data
 
     })
 
@@ -104,15 +108,12 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
           color = "#3c8dbc",
           text = "Rendering Volcano Plot..."
         )
+        on.exit(remove_modal_spinner(), add = TRUE)
 
-        p <- summary_data() |>
+        summary_data() |>
           r6()$get_summary_plot() |>
           set_plot_source(ns("plot")) |>
           toWebGL()
-
-        remove_modal_spinner()
-
-        p
 
       })
 
@@ -144,7 +145,7 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
 
     analyte <- inputs_volcano_plot_analyte$server(
       id = "volcano-analyte",
-      r6 = r6(),
+      r6 = r6,
       summary_data = summary_data,
       plot_click_data = plot_click_data,
       plot_selected_data = plot_selected_data,
@@ -154,8 +155,8 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
 
     inputs_GSEA_analysis$server(
       id = "gsea",
-      VolcanoSummaryData = summary_data,
-      Study = study,
+      summary_data = summary_data,
+      study = study,
       ...
     )
 
@@ -168,7 +169,6 @@ server <- function(id, analysis_config, app_config, study, study_data, stat_test
         summary_data = summary_data,
         table_data = table_data,
         fold_change_var = reactive({r6()$fold_change_var}),
-        adjusted = reactive({r6()$adjusted}),
         stat_test = reactive({r6()$stat_test}),
         analyte = analyte$analyte,
         analyte_input_name = analyte$analyte_input_name,

@@ -69,19 +69,85 @@
 #' @export
 FeatureAnalysisManager <- R6::R6Class(
   "FeatureAnalysisManager",
-  private = list(),
+  private = list(
+    namespace_config = tibble::tibble(),
+    analysis_variable = ""
+  ),
+  active = list(
+    analysisVariables = function(value) {
+      return(
+        private$namespace_config |>
+          dplyr::filter(!is.na(AnalysisVariableName)) |>
+          dplyr::select(
+            AnalysisVariableName,
+            AnalysisVariableLabel,
+            AnalysisType,
+            AnalysisVariableBaselineLabel,
+            AnalysisVolcanoPlotTopAnnotation
+          )
+      )
+    },
+    analysisVariable = function(value) {
+      if (missing(value)) {
+        return(private$analysis_variable)
+      } else {
+        private$analysis_variable <- value
+      }
+    },
+    analysisVariableConfig = function(value) {
+      return(
+        private$namespace_config |>
+          dplyr::filter(AnalysisVariableName == self$analysisVariable)
+      )
+    },
+    namespace = function(value) {
+      return(
+        self$analysisVariableConfig$Namespace
+      )
+    },
+    analysisVariableName = function(value) {
+      return(
+        self$analysisVariableConfig$AnalysisVariableName
+      )
+    },
+    analysisVariableLabel = function(value) {
+      return(
+        self$analysisVariableConfig$AnalysisVariableLabel
+      )
+    },
+    analysisType = function(value) {
+      return(
+        self$analysisVariableConfig$AnalysisType
+      )
+    },
+    experimentIDs = function(value) {
+      return(
+        stringr::str_split_1(self$analysisVariableConfig$ExperimentIDs, "\\|")
+      )
+    },
+    groupBaselineLabel = function(value) {
+      return(
+        self$analysisVariableConfig$AnalysisVariableBaselineLabel
+      )
+    },
+    volcanoTopAnnotationLabel = function(value) {
+      return(
+        self$analysisVariableConfig$AnalysisVolcanoPlotTopAnnotation
+      )
+    }
+  ),
   public = list(
     applicationName = NULL,
-    namespace = NULL,
+    #namespace = NULL,
     remoteDB = NULL,
     localDB = NULL,
 
-    analysisVariable = "",
-    analysisVariableLabel = "",
-    analysisType = "",
-    experimentIDs = "",
+
+    # analysisVariableLabel = "",
+    # analysisType = "",
+    # experimentIDs = "",
     analytesLabel = "Analytes",
-    groupBaselineLabel = "",
+    #groupBaselineLabel = "",
     FoldChangeVar = "log2FoldChange",
     SignificanceVariable = "-log10pvalue",
 
@@ -106,7 +172,6 @@ FeatureAnalysisManager <- R6::R6Class(
     VolcanoSummaryDataYAxisLabel = "",
     VolcanoSummaryMaxFoldChange = 0,
     VolcanoPlotTitle = "",
-    volcanoTopAnnotationLabel = "",
     volcanoPlotExpectedTraceCount = 3,
     volcanoSourceData = NULL,
     volcanoEventData = tibble::tibble(
@@ -146,17 +211,16 @@ FeatureAnalysisManager <- R6::R6Class(
 
       self$applicationName <- applicationName
       self$remoteDB <- remoteDB
+      private$namespace_config <- namespace_config
 
-      namespace_config <- namespace_config |>
-        dplyr::filter(Namespace == id)
-      self$namespace <- namespace_config$Namespace
-      self$analysisVariable <- namespace_config$AnalysisVariableName
-      self$analysisVariableLabel <- namespace_config$AnalysisVariableLabel
-      self$analysisType <- namespace_config$AnalysisType
-      self$experimentIDs <- stringr::str_split_1(namespace_config$ExperimentIDs, "\\|")
-      self$groupBaselineLabel <- namespace_config$AnalysisVariableBaselineLabel
-      self$volcanoTopAnnotationLabel <- namespace_config$AnalysisVolcanoPlotTopAnnotation
+    },
 
+    getAnalyses = function() {
+      return(
+        self$analysisVariables |>
+          dplyr::select(AnalysisVariableLabel, AnalysisVariableName) |>
+          tibble::deframe()
+      )
     },
 
     #' @description

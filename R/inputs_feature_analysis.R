@@ -49,6 +49,18 @@ feature_analysis_inputs_ui <- function(id, input_config) {
         id = ns("scrollableOptions"),
         style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
         shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        tags$b("Analysis"),
+        shiny::tags$div(
+          id = ns("Analyses"),
+          shinycustomloader::withLoader(
+            shiny::uiOutput(ns("Analysis")),
+            type = "html",
+            loader = "loader6",
+            proxy.height = "20px"
+          )
+        ),
+        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        tags$b("Studies"),
         shiny::tags$div(
           id = ns("Studies"),
           shinycustomloader::withLoader(
@@ -163,9 +175,47 @@ feature_analysis_inputs_server <- function(id, r6, input_config) {
       parent_input = input
     )
 
+    output$Analysis <- shiny::renderUI({
+
+      choices <- r6$getAnalyses()
+
+      shiny::selectizeInput(
+        inputId = ns("Analysis"),
+        label = "",
+        choices = choices,
+        multiple = FALSE,
+        options = list(
+          placeholder = "Select Analysis",
+          onInitialize = I('function() { this.setValue(""); }'),
+          closeAfterSelect = TRUE,
+          selectOnTab = TRUE,
+          persist = FALSE,
+          `live-search` = TRUE,
+          dropupAuto = FALSE
+        )
+      ) |>
+        bsplus::bs_embed_tooltip(
+          title = "Select an Analysis below",
+          placement = "top",
+          html = TRUE
+        )
+    })
+
+    shiny::observeEvent(c(input$Analysis), {
+      r6$analysisVariable <- input$Analysis
+    }, ignoreInit = TRUE)
+
+    Studies <- shiny::reactive({
+      shiny::validate(
+        shiny::need(input$Analysis != "", "")
+      )
+      r6$getStudies()
+    }) |>
+    shiny::bindEvent(input$Analysis, ignoreInit = TRUE, ignoreNULL = TRUE)
+
     output$Study <- shiny::renderUI({
 
-      choices <- r6$getStudies()
+      choices <- Studies()
 
       selected <- ifelse(nrow(choices) == 1, choices, character(0))
 

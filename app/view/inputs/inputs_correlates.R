@@ -1,20 +1,22 @@
 box::use(
     shiny[NS, moduleServer, tags, tagList, bindEvent, actionButton, icon, uiOutput,
         selectizeInput, renderUI, reactive, updateSelectizeInput, observeEvent,
-        validate, need],
+        validate, need, showNotification],
     shinydashboardPlus[box],
     htmltools[HTML],
+    shinyWidgets[virtualSelectInput, updateVirtualSelect, prepare_choices],
     shinyjs[disabled, disable, enable, removeClass, addClass, hidden],
     bsplus[bs_embed_tooltip],
     shinycustomloader[withLoader],
     shinybusy[show_modal_spinner, remove_modal_spinner],
-    glue[glue]
+    glue[glue],
 )
 
 box::use(
+    app/logic/shared/input_locking_utils,
     app/logic/shared/server_utils,
     app/view/custom_ui/input_widgets[prettyRadioButtonsFieldSet],
-    app/view/inputs/inputs_conditions_feature_analysis
+    app/logic/correlates_analysis/inputs/CorrelatesInputs[getCorrelatesAnalysisInputs],
 )
 
 #' @export
@@ -81,19 +83,13 @@ ui <- function(id) {
                 tags$b("3) Select Query Analyte"),
                 tags$div(
                     id = ns("QueryAnalyteInput"),
-                    selectizeInput(
+                    virtualSelectInput(
                         inputId = ns("QueryAnalyte"),
-                        label = "",
+                        label = NULL,
                         choices = NULL,
-                        options = list(
-                            placeholder = "Please select below",
-                            onInitialize = I('function() { this.setValue(""); }'),
-                            closeAfterSelect = TRUE,
-                            selectOnTab = TRUE,
-                            persist = FALSE,
-                            `live-search` = TRUE,
-                            maxoptions = 1
-                        )
+                        position = "auto",
+                        search = TRUE,
+                        maxOptions = 1
                     )
                 ),
                 hidden(
@@ -134,22 +130,24 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, r6) {
+server <- function(id, app_config, analysis_config) {
 
     moduleServer(id, function(input, output, session) {
 
         ns <- session$ns
 
-        server_utils$bind_events(
-            ids = c("QueryExperiment", "CompareExperiment", "QueryAnalyte"),
-            r6 = r6,
-            session = session,
-            parent_input = input
-        )
+        #expose a reactive that always reads the current instance
+        r6 <- reactive({
+            getCorrelatesAnalysisInputs(
+                app_config = app_config,
+                analysis_config = app_config$get_analysis_config("correlates"),
+                input_config = app_config$get_input_config("correlates")
+            )
+        })
 
         output$QueryExperiment <- renderUI({
 
-            choices <- r6$getQueryExperiments()
+            choices <- r6()$getQueryExperiments()
 
             selected <- ifelse(nrow(choices) == 1, choices, character(0))
 
@@ -174,12 +172,9 @@ server <- function(id, r6) {
                 color = "#3c8dbc",
                 text = glue("Getting Comparison Experiments...")
             )
+            on.exit(remove_modal_spinner(), add = TRUE)
 
-            comparison_experiments <- r6$getComparisonExperiments()
-
-            remove_modal_spinner()
-
-            comparison_experiments
+            r6()$getComparisonExperiments(input$QueryExperiment)
 
         }) |>
             bindEvent(c(input$QueryExperiment), ignoreInit = TRUE, ignoreNULL = TRUE)
@@ -214,26 +209,24 @@ server <- function(id, r6) {
                 color = "#3c8dbc",
                 text = glue("Getting Query Analytes...")
             )
+            on.exit(remove_modal_spinner(), add = TRUE)
 
-            analyte_choices <- r6$getQueryAnalytes()
-
-            updateSelectizeInput(
-                session = session,
-                inputId = "QueryAnalyte",
-                label = "",
-                choices = analyte_choices,
-                options = list(
-                placeholder = "Choose Query Analyte",
-                onInitialize = I('function() { this.setValue(""); }'),
-                closeAfterSelect = TRUE,
-                selectOnTab = TRUE,
-                persist = FALSE,
-                `live-search` = TRUE,
-                maxoptions = 1
-                )
+            choice_data <- r6()$getQueryAnalytes(
+                input$QueryExperiment,
+                input$CompareExperiment
             )
 
-            remove_modal_spinner()
+            updateVirtualSelect(
+                inputId = "QueryAnalyte",
+                label = "",
+                choices = prepare_choices(
+                    choice_data,
+                    label = QueryAnalyte,
+                    value = QueryAnalyteKey
+                ),
+                selected = NULL,
+                session = session
+            )
 
         }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
@@ -260,24 +253,23 @@ server <- function(id, r6) {
 
         }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
-        observeEvent(c(input$QueryExperiment, input$QueryAnalyte, input$CompareExperiment), {
-
-            if (any(length(input$QueryExperiment) != 1 |
-                input$QueryAnalyte == "" |
-                is.null(input$CompareExperiment))
-            ) {
-                disable("getData")
-                removeClass(id = "getData", class = "refresh-ready-btn")
-                addClass(id = "getData", class = "refresh-btn")
-            } else {
-                enable("getData")
-                removeClass(id = "getData", class = "refresh-btn")
-                addClass(id = "getData", class = "refresh-ready-btn")
+        input_locking_utils$bind_action_button_state(
+            session = session,
+            button_id = "getData",
+            is_ready_fn = function() {
+                length(input$QueryExperiment) == 1
+            },
+            can_enable_fn = function() {
+                length(input$QueryExperiment) == 1 &&
+                    !is.null(input$QueryAnalyte) &&
+                    input$QueryAnalyte != "" &&
+                    !is.null(input$CompareExperiment) &&
+                    length(input$CompareExperiment) > 0 &&
+                    input$CompareExperiment != ""
             }
-        }, ignoreInit = TRUE, ignoreNULL = TRUE)
+        )
 
         correlation_data <- reactive({
-
             validate(
                 need(input$getData > 0, ""),
                 need(input$QueryExperiment != "", ""),
@@ -290,23 +282,27 @@ server <- function(id, r6) {
                 color = "#3c8dbc",
                 text = "Getting Correlation Data..."
             )
+            on.exit(remove_modal_spinner(), add = TRUE)
 
-            data <- r6$get_correlation_data()
-
-            remove_modal_spinner()
-
-            data
+            r6()$get_correlation_data(
+                input$QueryExperiment,
+                input$CompareExperiment,
+                input$QueryAnalyte
+            )
 
         }) |>
             bindEvent(c(input$getData), ignoreInit = TRUE)
 
         return(
             list(
+                feature = reactive({"correlates"}),
                 study = reactive({input$QueryExperiment}),
                 study_data = correlation_data,
                 stat_test = reactive({input$stat_test}),
                 covariates = reactive({input$covariates}),
-                adjustment_method = reactive({input$adjustment_method})
+                adjustment_method = reactive({input$adjustment_method}),
+                fold_change_variable = reactive({r6()$fold_change_variable}),
+                adjusted = reactive({TRUE})
             )
         )
 

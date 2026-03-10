@@ -353,3 +353,5 @@ __pycache__/
 *.odx.cs
 *.xsd.cs
 .Rproj.user
+
+renv/activate.R

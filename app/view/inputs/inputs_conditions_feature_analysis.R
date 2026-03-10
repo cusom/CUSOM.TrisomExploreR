@@ -1,145 +1,161 @@
 box::use(
-  shiny[tags]
+  shiny[
+    NS,
+    actionButton,
+    column,
+    eventReactive,
+    fluidRow,
+    htmlOutput,
+    moduleServer,
+    need,
+    observe,
+    observeEvent,
+    reactive,
+    renderText,
+    renderUI,
+    tagList,
+    uiOutput,
+    validate,
+    icon,
+    tags
+  ],
+  bsplus[bs_attach_modal, bs_modal],
+  glue[glue],
+  shinyTree[get_selected, renderTree, shinyTree],
+  shinyWidgets[actionBttn],
+  shinyjs[disable, enable, reset, runjs]
 )
 
 box::use(
   app/logic/shared/server_utils,
-  app/view/custom_ui/input_widgets[dfToTree],
+  app/view/custom_ui/input_widgets[dfToTree, treeToDf],
 )
-
-
 
 #' @export
 ui <- function(id) {
-  ns <- shiny::NS(id)
-  shiny::tagList(
-    shiny::uiOutput(ns("ConditionsInputs"))
+  ns <- NS(id)
+  tagList(
+    uiOutput(ns("ConditionsInputs"))
   )
 }
 
 #' @export
 server <- function(id, r6, parent) {
 
-  shiny::moduleServer(id, function(input, output, session) {
+  moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    server_utils$bind_events(
-      ids = c(
-        "Conditions"
-      ),
-      r6 = r6,
-      session = session,
-      parent_input = input
-    )
 
-    output$ConditionsInputs <- shiny::renderUI({
+    output$ConditionsInputs <- renderUI({
 
-      if (r6$namespace  == "Comorbidity") {
-        shiny::tagList(
-          bsplus::bs_modal(
-            id = ns("Conditions-Picker"),
-            title = shiny::tags$h3(glue::glue("Set Co-Occuring Conditions:")),
-            size = "large",
-            body = list(
-              shiny::tagList(
-                shiny::fluidRow(
-                  shiny::column(
-                    width = 12,
-                    class = "col-lg-6",
-                    shiny::tags$b("Search for Co-Occuring Conditions"),
-                    shiny::tags$div(
-                      id = ns("Conditions-Picker"),
-                      shinyTree::shinyTree(
-                        outputId = ns("Conditions"),
-                        search = TRUE,
-                        multiple = TRUE,
-                        theme = "proton",
-                        themeIcons = FALSE,
-                        themeDots = FALSE,
-                        checkbox = TRUE
-                      )
+      tagList(
+        bs_modal(
+          id = ns("Conditions-Picker"),
+          title = tags$h3(glue("Set Co-Occuring Conditions:")),
+          size = "large",
+          body = list(
+            tagList(
+              fluidRow(
+                column(
+                  width = 12,
+                  class = "col-lg-6",
+                  tags$b("Search for Co-Occuring Conditions"),
+                  tags$div(
+                    id = ns("Conditions-Picker"),
+                    shinyTree(
+                      outputId = ns("Conditions"),
+                      search = TRUE,
+                      multiple = TRUE,
+                      theme = "proton",
+                      themeIcons = FALSE,
+                      themeDots = FALSE,
+                      checkbox = TRUE
                     )
-                  ),
-                  shiny::column(
-                    width = 12,
-                    class = "col-lg-6",
-                    tags$b("Selected Co-Occuring Conditions"),
-                    shiny::htmlOutput(ns("selectedConditions"), placeholder = TRUE)
                   )
                 ),
-                shiny::tags$hr(),
-                shinyWidgets::actionBttn(
-                  inputId = ns("ConditionsReset"),
-                  label = "Reset Selected Conditions",
-                  icon = shiny::icon("undo"),
-                  style = "minimal",
-                  size = "xs",
-                  color = "primary",
-                  block = TRUE
+                column(
+                  width = 12,
+                  class = "col-lg-6",
+                  tags$b("Selected Co-Occuring Conditions"),
+                  htmlOutput(ns("selectedConditions"), placeholder = TRUE)
                 )
+              ),
+              tags$hr(),
+              actionBttn(
+                inputId = ns("ConditionsReset"),
+                label = "Reset Selected Conditions",
+                icon = icon("undo"),
+                style = "minimal",
+                size = "xs",
+                color = "primary",
+                block = TRUE
               )
             )
-          ),
-          shiny::actionButton(
-            inputId = ns("SetConditions"),
-            label = "Choose Co-Occuring Conditions",
-            icon = shiny::icon("file-medical"),
-            width = "99%"
-          ) |>
-            bsplus::bs_attach_modal(id_modal = ns("Conditions-Picker")),
-          shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;")
-        )
-      } else {
-        shiny::tagList(
-        )
-      }
+          )
+        ),
+        actionButton(
+          inputId = ns("SetConditions"),
+          label = "Choose Co-Occuring Conditions",
+          icon = icon("file-medical"),
+          width = "99%"
+        ) |>
+          bs_attach_modal(id_modal = ns("Conditions-Picker")),
+        tags$hr(style = "margin-top:5px;margin-bottom:10px;")
+      )
 
     })
 
-    shiny::observeEvent(c(input$ConditionsReset), {
+    observeEvent(c(input$ConditionsReset), {
 
-      shinyjs::reset("ConditionsInputs")
-      shinyjs::runjs(paste0("$('#", ns("Conditions"), "').jstree('deselect_all');"))
+      reset("ConditionsInputs")
+      runjs(paste0("$('#", ns("Conditions"), "').jstree('deselect_all');"))
 
     }, ignoreInit = TRUE)
 
-    conditions <- shiny::eventReactive(c(input$SetConditions), {
-      r6$ConditionChoices
+    conditions <- eventReactive(c(input$SetConditions), {
+      r6()$ConditionChoices
     })
 
-    output$Conditions <- shinyTree::renderTree({
-
+    output$Conditions <- renderTree({
       conditions() |>
-        dfToTree() |>
-        r6$setConditionTreeAttributes()
+        r6()$getConditionTree()
 
     })
 
-    selectedConditionList <- shiny::eventReactive(c(input$Conditions), {
-      shiny::validate(
-        shiny::need(length(shinyTree::get_selected(input$Conditions)) > 0, "")
+    selectedConditionList <- eventReactive(c(input$Conditions), {
+      validate(
+        need(length(get_selected(input$Conditions)) > 0, "")
       )
-      r6$SelectedConditionList
+      r6()$get_selected_condition_list(input$Conditions)
     })
 
-    output$selectedConditions <- shiny::renderText({
+    output$selectedConditions <- renderText({
       selectedConditionList()
     })
 
-    shiny::observe({
-      if (length(shinyTree::get_selected(input$Conditions)) > 0) {
-        shinyjs::enable(
+    observe({
+      if (length(get_selected(input$Conditions)) > 0) {
+        enable(
           selector = paste0("#", parent$ns("getData"))
         )
 
       } else {
-        shinyjs::disable(
+        disable(
           selector = paste0("#", parent$ns("getData"))
         )
       }
     })
 
+    selected_conditions <- reactive({
+      r6()$get_selected_conditions(input$Conditions)
+    })
+
+    return(
+      list(
+        selected_conditions = selected_conditions
+      )
+    )
   })
 
 }

@@ -1,21 +1,35 @@
 box::use(
+  shiny[NS, tagList, tags, uiOutput, htmlOutput, icon, moduleServer, reactive,
+    reactiveVal, observeEvent, req, validate, need, bindEvent, renderUI,
+    actionButton],
+  shinydashboardPlus[box, boxSidebar, updateBoxSidebar],
+  shinyWidgets[actionBttn],
+  shinycustomloader[withLoader],
+  plotly[plotlyOutput, renderPlotly],
+  shinybusy[show_modal_spinner, remove_modal_spinner],
+  glue[glue],
+  bsplus[bs_embed_tooltip],
+  shinyjs[hidden]
+)
+
+box::use(
   app/logic/feature_analysis/analyte/FeatureAnalysisAnalyte[getFeatureAnalysisForAnalyte],
   app/logic/shared/string_utils[parse_delimited_string]
 )
 
 #' @export
 ui <- function(id) {
-  ns <- shiny::NS(id)
-  shiny::tagList(
-    shiny::tags$div(
+  ns <- NS(id)
+  tagList(
+    tags$div(
       id = ns("AnalyteContent"),
-      shinydashboardPlus::box(
+      box(
         id = ns("AnalyteContentBox"),
-        title = shiny::tags$div(
+        title = tags$div(
           id = ns("AnalyteContentBoxTitle"),
           style = "font-size:12px;display:flex;align-items:center",
-          shiny::uiOutput(ns("toggleSidebarLinks")) |>
-          bsplus::bs_embed_tooltip(
+          uiOutput(ns("toggleSidebarLinks")) |>
+          bs_embed_tooltip(
             title = "Click here to learn more about the selected analyte",
             placement = "right",
             html = TRUE
@@ -27,23 +41,23 @@ ui <- function(id) {
         solidHeader = FALSE,
         collapsible = FALSE,
         headerBorder = FALSE,
-        sidebar = shinydashboardPlus::boxSidebar(
+        sidebar = boxSidebar(
           id = ns("sidebarLinks"),
-          icon = shiny::icon("cogs", class = "hidden"),
+          icon = icon("cogs", class = "hidden"),
           width = 50,
-          shinyWidgets::actionBttn(
+          actionBttn(
             inputId = ns("sidebarLinksCloseBar"),
             label = "close",
             style = "simple",
             color = "primary",
-            icon = shiny::icon("bars")
+            icon = icon("bars")
           ),
-          shiny::tags$hr(),
-          shiny::htmlOutput(ns("ExternalLinksText")),
-          shiny::uiOutput(ns("ExternalLinks"))
+          tags$hr(),
+          htmlOutput(ns("ExternalLinksText")),
+          uiOutput(ns("ExternalLinks"))
         ),
-        shinycustomloader::withLoader(
-          plotly::plotlyOutput(
+        withLoader(
+          plotlyOutput(
             ns("AnalytePlot"),
             height = "605px",
             width = "99%"
@@ -57,54 +71,62 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, analysis_config, app_config, analyte, study, study_data, summary_data, analyte_input_name, analyte_session) {
+server <- function(id, analysis_config, app_config, analyte, feature, study, study_data,
+  summary_data, analyte_input_name, analyte_session) {
 
-  shiny::moduleServer(id, function(input, output, session) {
+  moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    r6 <- shiny::reactive({
-      shiny::validate(
-        shiny::need(analyte() != "", "")
-      )
-      getFeatureAnalysisForAnalyte(
-        analysis_config = analysis_config,
+    r6_obj <- reactiveVal(NULL)
+
+    # Recreate the R6 instance when Feature changes
+    observeEvent(analyte(), {
+      req(analyte())
+      inst <- getFeatureAnalysisForAnalyte(
+        analysis_config = analysis_config$get_analysis_config(feature()),
         analyte = analyte(),
         app_config = app_config,
         study = study(),
         study_data = study_data(),
         summary_data = summary_data()
       )
-    }) |>
-      shiny::bindEvent(analyte())
+      r6_obj(inst)
+    })
 
-    analyte_data <- shiny::reactive({
-      shiny::validate(
-        shiny::need(analyte() != "", "")
+    #expose a reactive that always reads the current instance
+    r6 <- reactive({
+      req(r6_obj())
+      r6_obj()
+    })
+
+    analyte_data <- reactive({
+      validate(
+        need(analyte() != "", "")
       )
       # Get Analyte Data
-      shinybusy::show_modal_spinner(
+      show_modal_spinner(
         spin = "half-circle",
         color = "#3c8dbc",
         text = ifelse(
           length(analyte()) == 1,
-          glue::glue("Fetching {analyte()} Data..."),
+          glue("Fetching {analyte()} Data..."),
           "Fetching Data..."
         )
       )
 
       data <- r6()$get_analyte_data(analyte())
 
-      shinybusy::remove_modal_spinner()
+      remove_modal_spinner()
 
       data
 
     }) |>
-      shiny::bindEvent(analyte())
+      bindEvent(analyte())
 
-    output$AnalytePlot <- plotly::renderPlotly({
-      shiny::validate(
-        shiny::need(!is.null(analyte_data()), "")
+    output$AnalytePlot <- renderPlotly({
+      validate(
+        need(!is.null(analyte_data()), "")
       )
 
       analyte_data() |>
@@ -149,25 +171,25 @@ server <- function(id, analysis_config, app_config, analyte, study, study_data, 
 
     # }, domain = session)
 
-    analyteSearchName <- shiny::reactive({
+    analyteSearchName <- reactive({
         parse_delimited_string(analyte(), 1)
     }) |>
-      shiny::bindEvent(analyte(), ignoreInit = FALSE)
+      bindEvent(analyte(), ignoreInit = FALSE)
 
-    output$toggleSidebarLinks <- shiny::renderUI({
-      shiny::validate(
-        shiny::need(!is.null(analyteSearchName()), "")
+    output$toggleSidebarLinks <- renderUI({
+      validate(
+        need(!is.null(analyteSearchName()), "")
       )
-      btn <- shiny::actionButton(
+      btn <- actionButton(
         ns("toggleSidebarLinks"),
-        label = glue::glue("Learn more about {analyteSearchName()}"),
+        label = glue("Learn more about {analyteSearchName()}"),
         class = "toggle-btn"
       )
 
       if (length(analyte()) > 1) {
-        shiny::tags$div(
+        tags$div(
           style = "padding-bottom: 65px;",
-          shinyjs::hidden(
+          hidden(
             btn
           )
         )
@@ -180,15 +202,15 @@ server <- function(id, analysis_config, app_config, analyte, study, study_data, 
     #   CUSOMShinyHelpers::getExternalLinkTooltip(analyteSearchName())
     # })
 
-    shiny::observeEvent(input$toggleSidebarLinks, {
-      shinydashboardPlus::updateBoxSidebar(
+    observeEvent(input$toggleSidebarLinks, {
+      updateBoxSidebar(
         id = "sidebarLinks",
         session = session
       )
     })
 
-    shiny::observeEvent(c(input$sidebarLinksCloseBar), {
-      shinydashboardPlus::updateBoxSidebar(
+    observeEvent(c(input$sidebarLinksCloseBar), {
+      updateBoxSidebar(
         id = "sidebarLinks",
         session = session
       )
@@ -198,7 +220,7 @@ server <- function(id, analysis_config, app_config, analyte, study, study_data, 
     #   CUSOMShinyHelpers::getExternalLinkActionLinks(analyteSearchName(), ns)
     # })
 
-    table_data <- shiny::reactive({
+    table_data <- reactive({
       r6()$get_table_data()
     })
 

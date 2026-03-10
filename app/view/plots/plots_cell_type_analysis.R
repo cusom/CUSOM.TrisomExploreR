@@ -47,12 +47,12 @@ server <- function(id, cell_type_data, r6) {
 
             get_cell_type_plot(
                 cell_type_data(),
-                r6$CellTypes,
-                r6$Analyte,
-                r6$StatTest,
-                r6$Covariates,
-                r6$AdjustmentMethod,
-                r6$applicationName,
+                r6()$CellTypes,
+                r6()$Analyte,
+                r6()$StatTest,
+                r6()$Covariates,
+                r6()$AdjustmentMethod,
+                r6()$applicationName,
                 ns
             )
         })

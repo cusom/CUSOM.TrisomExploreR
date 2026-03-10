@@ -39,7 +39,9 @@ conditions_feature_analysis_inputs_server <- function(id, r6, input_config, pare
     )
 
     output$ConditionsInputs <- shiny::renderUI({
-
+      shiny::validate(
+        shiny::need(length(r6$namespace) > 0, "")
+      )
       if (r6$namespace  == "Comorbidity") {
         shiny::tagList(
           bsplus::bs_modal(

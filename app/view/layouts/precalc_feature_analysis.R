@@ -4,7 +4,7 @@ box::use(
 )
 
 box::use(
-  app/view/inputs/inputs_feature_analysis,
+  app/view/inputs/inputs_precalculated_feature_analysis,
   app/view/inputs/inputs_volcano_plot_analyte,
   app/view/plots/plots_volcano,
   app/view/tables/table_volcano,
@@ -22,7 +22,7 @@ ui <- function(id) {
       column(
         width = 12,
         class = "col-lg-2 col-slim",
-        inputs_feature_analysis$ui(ns("inputs"))
+        inputs_precalculated_feature_analysis$ui(ns("inputs"))
       ),
       column(
         width = 12, class = "col-lg-5 col-slim", style = "width:40%;",
@@ -78,7 +78,7 @@ server <- function(id, app_config, analysis_config, input_config) {
     ns <- session$ns
 
     #base inputs
-    inputs <- inputs_feature_analysis$server(
+    inputs <- inputs_precalculated_feature_analysis$server(
       id = "inputs",
       app_config = app_config,
       analysis_config = analysis_config

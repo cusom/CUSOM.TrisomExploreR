@@ -416,7 +416,8 @@ HeatmapPlotStrategy <- R6Class(
             if (missing(value)) {
                 return(
                     self$analyte_data |>
-                        select(name = Analyte, variable = Analysis, value = ChangeValue)
+                        select(name = Analyte, variable = Analysis, value = ChangeValue) |>
+                        distinct()
                 )
             }
         },
@@ -430,6 +431,22 @@ HeatmapPlotStrategy <- R6Class(
                         mutate(r = row_number())
                 )
             }
+        },
+        heatmap_text = function(value) {
+            return(
+                as.matrix(
+                    self$long_data |>
+                        select(name, value) |>
+                        mutate(
+                            text = glue(
+                                "{name}
+                                {self$change_var_label}: {round(value, 3)}
+                                "
+                            )
+                        ) |>
+                        select(text)
+                )
+            )
         },
         heatmap_title = function(value) {
             if (self$analyte_count == 1) {
@@ -500,9 +517,7 @@ HeatmapPlotStrategy <- R6Class(
                 colorbar_len = 0.5,
                 colorbar_yanchor = "middle",
                 colorbar_ypos = 0.5,
-                custom_hovertext = as.matrix(
-                    self$analyte_data$text
-                )
+                custom_hovertext = self$heatmap_text
             ) |>
             colorbar(
                 tick0 = -self$data_limit,

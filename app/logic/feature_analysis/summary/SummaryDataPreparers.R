@@ -2,12 +2,12 @@ box::use(
     R6[R6Class],
     glue[glue, glue_collapse],
     tibble[tibble],
-    dplyr[select, mutate, mutate_at, group_by, summarise, ungroup, rename_with, distinct, n,
-            pull, arrange, dense_rank, row_number, vars, filter, if_else, slice_max],
+    dplyr[select, mutate, mutate_at, group_by, summarise, ungroup, rename_with, rename,
+            distinct, n, pull, arrange, dense_rank, row_number, vars, filter, if_else, slice_max],
     forcats[fct_relevel],
     purrr[pmap, map2_chr],
-    stringr[str_split_1],
-    rlang[sym],
+    stringr[str_split_1, str_replace],
+    rlang[sym]
 )
 
 box::use(
@@ -28,6 +28,20 @@ SummaryDataPreparerBase <- R6Class(
                 return(self$adjustment_method != "none")
             }
         },
+        p_val_label = function(value) {
+            label <- "p-value"
+            if (self$adjusted) {
+                label <- str_replace(label, "[/p+-]", "q")
+            }
+            return(label)
+        },
+        log_10_p_val_label = function(value) {
+            label <- "-log<sub>10</sub>(p-value)"
+            if (self$adjusted) {
+                label <- str_replace(label, "(?<=\\()p", "q")
+            }
+            return(label)
+        },
         analysis_variable = function(value) {
             return(
                 private$analysis_config$AnalysisVariableName
@@ -36,6 +50,37 @@ SummaryDataPreparerBase <- R6Class(
         group_baseline_label = function(value) {
             return(
                 private$analysis_config$AnalysisVariableBaselineLabel
+            )
+        },
+        measure_name = function(value) {
+            return(
+                prepared_data() |>
+                    distinct(Measurement) |>
+                    pull() |>
+                    as.character()
+            )
+        },
+        raw_column_names = function(value) {
+            return(
+                c(
+                    "FoldChange", "p.value.original", "p.value.adjustment.method",
+                    "log2FoldChange", "p.value", "-log10pvalue", "lmFormula"
+                )
+            )
+        },
+        formatted_column_names = function(value) {
+            return(
+                c(
+                    "Fold Change", "p-value (original)", "Multiple hypothesis correction method",
+                    "log<sub>2</sub>(Fold Change)", self$p_val_label, self$log_10_p_val_label, "Model"
+                )
+            )
+        },
+        formatted_summary_data = function(value) {
+            return(
+                self$prepared_data |>
+                    rename_with(~ self$formatted_column_names, all_of(self$raw_column_names)) |>
+                    select(-c(text, ivs, shape, selectedPoint, formattedPValue))
             )
         }
     ),
@@ -143,7 +188,8 @@ ContinuousSummaryPreparer <- R6Class(
                 mutate(
                     shape = "circle",
                     selectedPoint = 0
-                )
+                ) |>
+                select(-self$analysis_variable)
             return(invisible(self$summary_data))
         }
     )
@@ -170,7 +216,33 @@ CorrelatesSummaryPreparer <- R6Class(
             return(
                 self$source_data |>
                     distinct(CorrelationMeasureName) |>
-                    pull()
+                    pull() |>
+                    as.character()
+            )
+        },
+        raw_column_names = function(value) {
+            return(
+                c(
+                    "QueryExperimentID", "QueryAnalyte", "ComparisonExperimentID",
+                    "Analyte", "p.value", "-log10pvalue"
+                )
+            )
+        },
+        formatted_column_names = function(value) {
+            return(
+                c(
+                    "Query Experiment ID", "Query Analyte", "Comparison Experiment ID",
+                    "Comparison Analyte", "q-value (BH Adjusted)", "-log10(q-value)"
+                )
+            )
+        },
+        formatted_summary_data = function(value) {
+            return(
+                self$prepared_data |>
+                    rename_with(~ self$formatted_column_names, all_of(self$raw_column_names)) |>
+                    rename(`:=`(!!sym(self$measure_name), CorrelationValue)) |>
+                    select(-c(QueryAnalyteKey, QueryAnalyteID, ComparisonAnalyteKey, CorrelationMeasureName, text,
+                        AnalyteID, p.value.original, shape, selectedPoint, p.value.adjustment.method, formattedPValue))
             )
         }
     ),
@@ -209,6 +281,50 @@ CorrelatesSummaryPreparer <- R6Class(
                         "Analyte: {Analyte} <br />{self$measure_name}: \\
                         {round(CorrelationValue, 2)} <br />{formattedPValue}"
                     )
+                )
+            return(invisible(self$prepared_data))
+        }
+    )
+)
+
+#' @export
+PreCalculatedSummaryPreparer <- R6Class(
+    "PreCalculatedSummaryPreparer",
+    inherit = SummaryDataPreparerBase,
+    private = list(),
+    active = list(),
+    public = list(
+        initialize = function(analysis_config, app_config, study, study_data,
+            stat_test, covariates, adjustment_method) {
+            super$initialize(analysis_config, app_config, study, study_data,
+                stat_test, covariates, adjustment_method)
+        },
+        set_summary_data = function(source_data) {
+            self$summary_data <- self$set_source_data(source_data)
+        },
+        prepare = function(source_data) {
+            self$prepared_data <- self$set_summary_data(source_data) |>
+                select("AnalyteID" = Geneid, "Analyte" = Gene_name, FoldChange, pvalue, padj) |>
+                rename(
+                    "p.value.original" = pvalue,
+                    "p.value" = padj
+                ) |>
+                mutate(
+                    shape = "circle",
+                    selectedPoint = 0L,
+                    log2FoldChange = log2(FoldChange),
+                    `-log10pvalue` = -log10(p.value),
+                    `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
+                    formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
+                    text = glue(
+                        "Gene: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"
+                    ),
+                    lmFormula = "
+                    <a
+                        href='https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html'
+                        target='_blank'>DESeq2 model
+                    </a>",
+                    ivs = ""
                 )
             return(invisible(self$prepared_data))
         }

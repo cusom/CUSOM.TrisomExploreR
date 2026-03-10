@@ -1,8 +1,37 @@
 box::use(
-  shiny[tags, bindEvent]
+  shiny[
+    NS,
+    actionButton,
+    bindEvent,
+    HTML,
+    icon,
+    moduleServer,
+    need,
+    observe,
+    observeEvent,
+    reactive,
+    reactiveVal,
+    renderUI,
+    req,
+    selectizeInput,
+    tagList,
+    uiOutput,
+    validate,
+    tags
+  ],
+  shinydashboardPlus[box],
+  shinyjs[addClass, disable, disabled, enable, removeClass],
+  bsplus[bs_embed_tooltip],
+  shinycustomloader[withLoader],
+  shinyWidgets[awesomeCheckboxGroup, numericRangeInput, prettyRadioButtons],
+  shinybusy[remove_modal_spinner, show_modal_spinner],
+  glue[glue],
+  dplyr[arrange, filter, pull],
 )
 
 box::use(
+  app/logic/feature_analysis/inputs/FeatureAnalysisInputs[getFeatureAnalysisInputs],
+  app/logic/shared/input_locking_utils,
   app/logic/shared/server_utils,
   app/view/custom_ui/input_widgets[prettyRadioButtonsFieldSet],
   app/view/inputs/inputs_conditions_feature_analysis
@@ -10,10 +39,10 @@ box::use(
 
 #' @export
 ui <- function(id) {
-  ns <- shiny::NS(id)
-  shiny::tagList(
-    shinydashboardPlus::box(
-      title = shiny::HTML(
+  ns <- NS(id)
+  tagList(
+    box(
+      title = HTML(
         "<div class=\"dataset-options-title\">Dataset Options
           <span
             data-toggle=\"tooltip\"
@@ -30,86 +59,96 @@ ui <- function(id) {
       solidHeader = FALSE,
       collapsible = FALSE,
       headerBorder = FALSE,
-      shinyjs::disabled(
-        shiny::actionButton(
+      disabled(
+        actionButton(
           ns("PrimaryTutorial"),
           label = "Take Tutorial",
           class = "tutorial-btn",
-          icon = shiny::icon("question-circle")
+          icon = icon("question-circle")
         ) |>
-        bsplus::bs_embed_tooltip(
+        bs_embed_tooltip(
           title = "Click here to learn about setting dataset options to generate the volcano plot",
           placement = "top",
           html = TRUE
         )
       ),
-      shiny::tags$div(
+      tags$div(
         id = ns("scrollableOptions"),
         style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
-        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        shiny::tags$div(
-          id = ns("Studies"),
-          shinycustomloader::withLoader(
-            shiny::uiOutput(ns("Study")),
+        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        tags$div(
+          id = ns("Features"),
+          withLoader(
+            uiOutput(ns("Feature")),
             type = "html",
             loader = "loader6",
             proxy.height = "20px"
           )
         ),
-        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        tags$div(
+          id = ns("Studies"),
+          withLoader(
+            uiOutput(ns("Study")),
+            type = "html",
+            loader = "loader6",
+            proxy.height = "20px"
+          )
+        ),
+        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
         tags$b("Karyotype"),
-        shinycustomloader::withLoader(
-          shiny::uiOutput(ns("Karyotype")),
+        withLoader(
+          uiOutput(ns("Karyotype")),
           type = "html",
           loader = "loader6",
           proxy.height = "20px"
         ),
-        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        inputs_conditions_feature_analysis$ui(ns("conditions")),
+        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        uiOutput(ns("ConditionsInputs")),
         tags$b("Sex"),
-        shinycustomloader::withLoader(
-          shiny::uiOutput(ns("Sex")),
+        withLoader(
+          uiOutput(ns("Sex")),
           type = "html",
           loader = "loader6",
           proxy.height = "20px"
         ),
-        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        shinycustomloader::withLoader(
-          shiny::uiOutput(ns("Age")),
+        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        withLoader(
+          uiOutput(ns("Age")),
           type = "html",
           loader = "loader6",
           proxy.height = "20px"
         ),
-        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-        shinycustomloader::withLoader(
-          shiny::uiOutput(ns("StatTest")),
+        tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        withLoader(
+          uiOutput(ns("StatTest")),
           type = "html",
           loader = "loader6",
           proxy.height = "20px"
         ),
         tags$br(),
         tags$b("Adjust for covariates"),
-        shinycustomloader::withLoader(
-          shiny::uiOutput(ns("Covariates")),
+        withLoader(
+          uiOutput(ns("Covariates")),
           type = "html",
           loader = "loader6",
           proxy.height = "20px"
         ),
-        shinycustomloader::withLoader(
-          shiny::uiOutput(ns("AdjustmentMethod")),
+        withLoader(
+          uiOutput(ns("AdjustmentMethod")),
           type = "html",
           loader = "loader6",
           proxy.height = "20px"
         ),
-        shiny::tags$hr(style = "margin-top:5px;margin-bottom:10px;")
+        tags$hr(style = "margin-top:5px;margin-bottom:10px;")
       ),
-      footer = shiny::tagList(
-        shinyjs::disabled(
-          shiny::actionButton(
+      footer = tagList(
+        disabled(
+          actionButton(
             ns("getData"),
             label = "Analyze & Plot",
             class = "refresh-btn",
-            icon = shiny::icon("play")
+            icon = icon("play")
           )
         )
       )
@@ -119,39 +158,80 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, r6) {
+server <- function(id, app_config, analysis_config) {
 
-  shiny::moduleServer(id, function(input, output, session) {
+  moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
+    output$Feature <- renderUI({
+      choices <- analysis_config$namespace_config |>
+        filter(
+          grepl("feature", ModuleServerName, ignore.case = TRUE),
+          !is.na(AnalysisVariableName)
+        ) |>
+        arrange(DisplayOrder) |>
+        pull(AnalysisVariableName)
+
+      selectizeInput(
+        inputId = ns("Feature"),
+        label = "Set Analysis Option:",
+        choices = choices,
+        selected = NULL,
+        multiple = FALSE,
+        options = list(
+          placeholder = "Select analysis below",
+          onInitialize = I('function() { this.setValue(""); }'),
+          closeAfterSelect = TRUE,
+          selectOnTab = TRUE,
+          persist = FALSE,
+          dropupAuto = FALSE
+        )
+      )
+    })
+
+    r6_obj <- reactiveVal(NULL)
+
+    # Recreate the R6 instance when Feature changes
+    observeEvent(input$Feature, ignoreInit = TRUE, {
+      req(input$Feature)
+      inst <- getFeatureAnalysisInputs(
+        app_config = app_config,
+        analysis_config = app_config$get_analysis_config(input$Feature),
+        input_config = app_config$get_input_config(input$Feature)
+      )
+      r6_obj(inst)
+    })
+
+    #expose a reactive that always reads the current instance
+    r6 <- reactive({
+      req(r6_obj())
+      r6_obj()
+    })
+
     server_utils$bind_events(
-      ids = c("Study",
-        "Karyotype",
-        "Sex",
-        "Age",
-        "StatTest",
-        "Covariates",
-        "AdjustmentMethod"
-      ),
+      ids = c("Study"),
       r6 = r6,
       session = session,
       parent_input = input
     )
 
-    output$Study <- shiny::renderUI({
+    output$Study <- renderUI({
+      validate(
+        need(input$Feature != "", "")
+      )
 
-      choices <- r6$Studies #r6$getStudies()
+      choices <- r6()$Studies
 
       selected <- ifelse(nrow(choices) == 1, choices, character(0))
-      
+
       prettyRadioButtonsFieldSet(
         input_id = ns("Study"),
         label = NULL,
         field_set_data = choices,
         selected = selected
       ) |>
-        bsplus::bs_embed_tooltip(
+        bs_embed_tooltip(
           title = "Select a study below",
           placement = "top",
           html = TRUE
@@ -159,103 +239,83 @@ server <- function(id, r6) {
 
     })
 
-    shiny::observeEvent(c(input$Study), {
+    study_label <- reactive({
+      r6()$StudyLabel
+    })
 
-      shiny::validate(
-        shiny::need(!is.null(input$Study), ""),
-        shiny::need(input$Study != "", "")
-      )
-
-      shinyjs::removeClass(
-        class = "refresh-btn",
-        selector = paste0("#", ns("getData"))
-      )
-      shinyjs::addClass(
-        class = "refresh-ready-btn",
-        selector = paste0("#", ns("getData"))
-      )
-
-      if (r6$namespace == "Comorbidity" & is.null(r6$Conditions)) {
-        shinyjs::disable(
-          selector = paste0("#", ns("getData"))
-        )
-      } else {
-        shinyjs::enable(
-          selector = paste0("#", ns("getData"))
-        )
-      }
-
-      #gargoyle::trigger("validate_GSEA", session = session)
-
-    }, ignoreInit = TRUE)
-
-    karyotypes <- shiny::reactive({
-      r6$Karyotypes
+    karyotypes <- reactive({
+      r6()$Karyotypes
     }) |>
-      shiny::bindEvent(c(input$Study), ignoreNULL = TRUE)
+      bindEvent(c(input$Study), ignoreNULL = TRUE)
 
-    output$Karyotype <- shiny::renderUI({
+    output$Karyotype <- renderUI({
 
       karyotype_choices <- karyotypes()
 
-      input <- shinyWidgets::prettyRadioButtons(
+      input <- prettyRadioButtons(
         inputId = ns("Karyotype"),
         label = NULL,
-        choiceNames = lapply(karyotype_choices$choiceNames, shiny::HTML),
+        choiceNames = lapply(karyotype_choices$choiceNames, HTML),
         choiceValues = karyotype_choices$choiceValues,
         inline = FALSE,
         width = "90%"
       )
 
       if (nrow(karyotype_choices) == 1) {
-        shinyjs::disabled(
+        disabled(
           input
         )
       } else {
-        input |>
-          shiny::tagAppendAttributes(
-            class = r6$addInputSpecialClass("Karyotype", "disabled")
-          )
+        input
       }
-
     })
 
-    output$Sex <- shiny::renderUI({
+    sexes <- reactive({
+      r6()$Sexes
+    }) |>
+      bindEvent(c(input$Study), ignoreNULL = TRUE)
 
-      shinyWidgets::awesomeCheckboxGroup(
+    output$Sex <- renderUI({
+
+      awesomeCheckboxGroup(
         inputId = ns("Sex"),
         label = NULL,
-        choices = r6$Sexes,#r6$getSexes(),
-        selected = r6$Sexes, #r6$getSexes(),
+        choices = sexes(),
+        selected = sexes(),
         inline = TRUE,
         width = "90%"
-      ) |>
-      shiny::tagAppendAttributes(
-        class = r6$addInputSpecialClass("Sex", "disabled")
       )
-
     })
 
-    output$Age <- shiny::renderUI({
+    ages <- reactive({
+      r6()$Ages
+    }) |>
+      bindEvent(c(input$Study), ignoreNULL = TRUE)
 
-      shinyWidgets::numericRangeInput(
+    output$Age <- renderUI({
+      numericRangeInput(
         inputId = ns("Age"),
         label = "Age range",
-        value = r6$Ages, #r6$getAgeRange(),
+        value = ages(),
         width = "90%"
       )
-
     })
 
-    inputs_conditions_feature_analysis$server(
+    # Only show conditions UI when Feature is Comorbidity
+    output$ConditionsInputs <- renderUI({
+      req(input$Feature == "Comorbidity")
+      inputs_conditions_feature_analysis$ui(ns("conditions"))
+    })
+
+    conditions <- inputs_conditions_feature_analysis$server(
       id = "conditions",
       r6 = r6,
       parent = session
     )
 
-    output$StatTest <- shiny::renderUI({
+    output$StatTest <- renderUI({
 
-      shinyWidgets::prettyRadioButtons(
+      prettyRadioButtons(
         inputId = ns("StatTest"),
         label = "Statistical test",
         choices = NULL,
@@ -264,22 +324,22 @@ server <- function(id, r6) {
         icon = NULL,
         inline = FALSE,
         width = "90%",
-        choiceNames = r6$StatTestNames,
-        choiceValues = r6$StatTestValues
+        choiceNames = r6()$StatTestNames,
+        choiceValues = r6()$StatTestValues
       )
 
     })
 
-    output$Covariates <- shiny::renderUI({
-      shiny::validate(
-        shiny::need(input$StatTest != "", "")
+    output$Covariates <- renderUI({
+      validate(
+        need(input$StatTest != "", "")
       )
       if (input$StatTest == "Linear Model") {
 
-        choices <- r6$CovariateChoices #r6$getCovariateChoices()
+        choices <- r6()$CovariateChoices
 
-        shiny::tagList(
-          shinyWidgets::awesomeCheckboxGroup(
+        tagList(
+          awesomeCheckboxGroup(
             inputId = ns("Covariates"),
             label = NULL,
             choices = choices,
@@ -288,15 +348,15 @@ server <- function(id, r6) {
           )
         )
       } else {
-        shiny::tagList(
+        tagList(
 
         )
       }
     })
 
-    output$AdjustmentMethod <- shiny::renderUI({
+    output$AdjustmentMethod <- renderUI({
 
-      shinyWidgets::prettyRadioButtons(
+      prettyRadioButtons(
         inputId = ns("AdjustmentMethod"),
         label = "Multiple hypothesis correction",
         choices = NULL,
@@ -305,54 +365,89 @@ server <- function(id, r6) {
         icon = NULL,
         inline = FALSE,
         width = "90%",
-        choiceNames = r6$AdjustmentMethodNames,
-        choiceValues = r6$AdjustmentMethodValues
+        choiceNames = r6()$AdjustmentMethodNames,
+        choiceValues = r6()$AdjustmentMethodValues
       )
 
     })
 
-    # Study <- shiny::eventReactive(c(input$Study), {
-    #   input$Study
-    # })
+    adjusted <- reactive({
+      input$AdjustmentMethod != "none"
+    })
 
-    StudyData <- shiny::reactive({#shiny::eventReactive(c(input$getData), {
-      shiny::validate(
-        shiny::need(input$getData > 0, ""),
-        shiny::need(r6$validate_study_data(), "")
+    feature_locked_inputs <- list(
+      Sex = c("Sex"),
+      Age = c("Age")
+    )
+
+    input_locking_utils$bind_feature_locked_inputs(
+      input = input,
+      session = session,
+      feature_locked_inputs = feature_locked_inputs,
+      trigger_ids = c("Study", "Feature"),
+      feature_input_id = "Feature"
+    )
+
+    input_locking_utils$bind_action_button_state(
+      session = session,
+      button_id = "getData",
+      is_ready_fn = function() {
+        !is.null(input$Study) && input$Study != ""
+      },
+      can_enable_fn = function() {
+        has_study <- !is.null(input$Study) && input$Study != ""
+        if (!has_study) {
+          return(FALSE)
+        }
+
+        if (input$Feature != "Comorbidity") {
+          return(TRUE)
+        }
+
+        selected_conditions <- conditions$selected_conditions()
+        !is.null(selected_conditions) && length(selected_conditions) > 0
+      }
+    )
+
+    StudyData <- reactive({
+      validate(
+        need(input$getData > 0, ""),
+        need(input$Study != "", ""),
+        need(input$Karyotype != "", ""),
+        need(input$Sex != "", ""),
+        need(input$Age[1] != "", ""),
+        need(input$Age[2] != "", "")
       )
 
-      shinybusy::show_modal_spinner(
+      show_modal_spinner(
           spin = "atom",
           color = "#3c8dbc",
-          text = glue::glue("Fetching {input$Study} data...")
+          text = glue("Fetching {study_label()} data...")
         )
+      on.exit(remove_modal_spinner(), add = TRUE)
 
-      data <- r6$get_study_data()
-
-      shinybusy::remove_modal_spinner()
-
-      data
+      r6()$get_study_data(
+        study = input$Study,
+        karyotypes = input$Karyotype,
+        sexes = input$Sex,
+        ages = input$Age,
+        conditions = if (input$Feature == "Comorbidity") conditions$selected_conditions() else NULL
+      )
 
     }) |>
-      shiny::bindEvent(input$getData, ignoreInit = TRUE)
-
-    # StatisticalParameters <- shiny::reactive({#shiny::eventReactive(c(input$getData), {
-    #   # shiny::validate(
-    #   #   shiny::need(input$getData > 0, "")
-    #   # )
-    #   browser()
-    #   r6$get_selected_statistical_parameters()
-
-    # }) |>
-    #   shiny::bindEvent(input$getData, ignoreInit = TRUE)
+      bindEvent(input$getData, ignoreInit = TRUE)
 
     return(
       list(
-        study = shiny::reactive(input$Study),
+        feature = reactive(input$Feature),
+        study = reactive(input$Study),
+        study_label = study_label,
         study_data = StudyData,
-        stat_test = shiny::reactive(input$StatTest),
-        covariates = shiny::reactive(input$Covariates),
-        adjustment_method = shiny::reactive(input$AdjustmentMethod)
+        stat_test = reactive(input$StatTest),
+        covariates = reactive(input$Covariates),
+        adjustment_method = reactive(input$AdjustmentMethod),
+        fold_change_variable = reactive({r6()$fold_change_variable}),
+        adjusted = adjusted
       )
     )
 

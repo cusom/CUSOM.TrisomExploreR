@@ -19,9 +19,129 @@ set_plot_source <- function(p, source_name) {
 }
 
 #' @export
+annotate_volcano_from_events <- function(
+    plot_name,
+    analyte,
+    plot_click_data = NULL,
+    plot_selected_data = NULL,
+    marker_size = 5
+  ) {
+
+  if (is.null(analyte) || length(analyte) == 0 || all(analyte == "")) {
+    runjs(glue('App.annotatePointByKey("{plot_name}","",{marker_size});'))
+    return(invisible(NULL))
+  }
+
+  keys <- glue_collapse(analyte, sep = "|")
+
+  if (!is.null(plot_selected_data) && nrow(plot_selected_data) > 1 && length(analyte) > 1) {
+    runjs(
+      glue(
+        'App.annotatePointByKey(
+          "{plot_name}",
+          -1,
+          -1,
+          "",
+          {marker_size}
+        );'
+      )
+    )
+    runjs(glue('App.updateSelectedKeys("{plot_name}","{keys}");'))
+    return(invisible(NULL))
+  }
+
+  if (!is.null(plot_click_data) && length(analyte) == 1) {
+    runjs(
+      glue(
+        'App.annotatePointByKey(
+          "{plot_name}",
+          {plot_click_data$curveNumber[[1]]},
+          {plot_click_data$pointNumber[[1]]},
+          "{keys}",
+          {marker_size}
+        );'
+      )
+    )
+    return(invisible(NULL))
+  }
+
+  if (!is.null(plot_selected_data) && nrow(plot_selected_data) >= 1 && length(analyte) == 1) {
+    runjs(
+      glue(
+        'App.annotatePointByKey(
+          "{plot_name}",
+          {plot_selected_data$curveNumber[[1]]},
+          {plot_selected_data$pointNumber[[1]]},
+          "{keys}",
+          {marker_size}
+        );'
+      )
+    )
+    return(invisible(NULL))
+  }
+
+  runjs(
+    glue(
+      'App.annotatePointByKey(
+        "{plot_name}",
+        -1,
+        -1,
+        "",
+        {marker_size}
+      );'
+    )
+  )
+  runjs(glue('App.updateSelectedKeys("{plot_name}","{keys}");'))
+  invisible(NULL)
+}
+
+#' @export
+get_volcano_multi_select_text <- function(plot_data, analyte) {
+  if (is.null(analyte) || length(analyte) <= 1 || all(analyte == "")) {
+    return("")
+  }
+
+  if (is.null(plot_data)) {
+    return("")
+  }
+
+  fc_col <- if ("FoldChange" %in% names(plot_data)) {
+    "FoldChange"
+  } else if ("CorrelationValue" %in% names(plot_data)) {
+    "CorrelationValue"
+  } else {
+    NULL
+  }
+
+  if (is.null(fc_col)) {
+    return("")
+  }
+
+  subset_data <- plot_data |>
+    filter(Analyte %in% analyte)
+
+  if (nrow(subset_data) == 0) {
+    return("")
+  }
+
+  vals <- subset_data[[fc_col]]
+  vals <- vals[!is.na(vals)]
+
+  if (length(vals) == 0) {
+    return("")
+  }
+
+  label <- if (identical(fc_col, "CorrelationValue")) "rho" else "Fold Change"
+
+  glue(
+    "<center>{nrow(subset_data)} points selected. Min {label}: \\
+    {round(min(vals), 4)}, Max {label}: {round(max(vals), 4)}</center>"
+  )
+}
+
+#' @export
 toggle_GSEA_volcano_plot_trace <- function(
     session,
-    ns,
     namespace,
     plot_name = "VolcanoPlot",
     expected_trace_count = 3,
