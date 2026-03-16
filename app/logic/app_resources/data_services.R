@@ -422,7 +422,8 @@ AzureRemoteDataFileManager <- R6::R6Class(
         self$download_files()
       }
     },
-    set_blob_metadata = function() {
+    set_blob_metadata = function(ignore_archive = TRUE) {
+
       self$blobs <- AzureStor::list_blobs(private$container) |>
         tidyr::separate(
           col = name,
@@ -436,7 +437,8 @@ AzureRemoteDataFileManager <- R6::R6Class(
                 grepl(".parquet", sub_folder) ~ NA,
                 TRUE ~ sub_folder
             ),
-            file_type = stringr::str_extract(name, "(json|parquet|txt|csv)$")
+            file_type = stringr::str_extract(name, "(json|parquet|txt|csv)$"),
+            is_archive = grepl("archive", data_group) | grepl("archive", sub_folder)
         ) |>
         tidyr::separate(
           col = sub_folder,
@@ -453,6 +455,9 @@ AzureRemoteDataFileManager <- R6::R6Class(
           ExperimentID = ifelse(
             !is.na(namespace), NA, ExperimentID
           )
+        ) |>
+        dplyr::filter(
+          if (ignore_archive) is_archive == FALSE else TRUE
         ) |>
         dplyr::select(data_group, sub_folder, ExperimentID, namespace, name, file_type, size)
 
