@@ -5,7 +5,7 @@ box::use(
 )
 
 box::use(
-  app/logic/app_resources/app_configs[TrisomExplorerAppManager]
+  app/logic/app_resources/app_configs[create_app_settings]
 )
 
 #load configs
@@ -15,8 +15,9 @@ app_config <- config::get(file = "app/app_configs.yml", config = application_id)
 # dynamically load entrypoint module
 eval(parse(text = glue("box::use({app_config$entry_point_path}/{app_config$entry_point})")))
 
-app_settings <- TrisomExplorerAppManager$new(
-  application_id = application_id
+app_settings <- create_app_settings(
+  application_id = application_id,
+  app_config = app_config
 )
 
 #' @export
