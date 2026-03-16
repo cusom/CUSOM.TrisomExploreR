@@ -344,11 +344,41 @@ TOFAAppManager <- R6::R6Class(
       return(
         self$remote_files$get_remote_file_data("VISITS")
       )
+    },
+    datasets = function(value) {
+      return(
+        self$remote_files$get_remote_file_data("DATASETS")
+      )
+    },
+    conditions = function(value) {
+        return(
+            self$participant_data |>
+                select("condition" = Qualifying_feature) |>
+                separate_rows(condition, sep = "; ") |>
+                distinct()
+        )
+    },
+    participant_conditions = function(value) {
+        return(
+            self$participant_data |>
+                select(External_ParticipantID, Internal_ParticipantID, "condition" = Qualifying_feature) |>
+                separate_rows(condition, sep = "; ") |>
+                distinct()
+        )
+    },
+
+    all_data = function(value) {
+      return(
+          self$participant_data |>
+              inner_join(self$encounter_data, join_by(Internal_ParticipantID, External_ParticipantID)) |>
+              left_join(self$datasets, join_by(Internal_ParticipantID, External_ParticipantID,
+                  RecordID, TOFA_LabID, HTP_LabID, External_VisitID, Event_Name))
+      )
     }
   ),
   public = list(
     initialize = function(application_id, config_file_name = "config.yml") {
-      super$initialize(application_id, config_file_name, TRUE, TRUE, TRUE, FALSE)
+      super$initialize(application_id, config_file_name, FALSE, FALSE, FALSE, FALSE)
 
       # additional initialization for TOFA app can go here
 
