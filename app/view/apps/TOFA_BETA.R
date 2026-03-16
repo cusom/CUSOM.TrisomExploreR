@@ -10,6 +10,7 @@ box::use(
 box::use(
     app/logic/shared/ui_utils[create_app_links],
     app/view/overviews/overview_tofa,
+    app/view/layouts/tofa_timeseries_analysis,
 )
 
 #' @export
@@ -18,13 +19,13 @@ ui <- function(id) {
     ns <- NS(id)
 
     dashboardPage(
-        # preloader = list(
-        #     html = tagList(
-        #         spin_orbiter(),
-        #         glue("Loading TrisomExplorer...")
-        #     ),
-        #     color = "#3c8dbc"
-        # ),
+        preloader = list(
+            html = tagList(
+                spin_orbiter(),
+                glue("Loading TrisomExplorer...")
+            ),
+            color = "#3c8dbc"
+        ),
         title = "",
         header = dashboardHeader(
             title = tags$a(
@@ -82,7 +83,7 @@ ui <- function(id) {
                 tabItem(
                     tabName = "analysis_tab",
                     tags$div(
-                        tags$p("Analysis content coming soon...")
+                        tofa_timeseries_analysis$ui(ns("analysis"))
                     )
                 )
             )
@@ -111,6 +112,10 @@ server <- function(id, app_config) {
 
         overview_tofa$server(ns("overview"))
 
+        tofa_timeseries_analysis$server(
+            id = "analysis",
+            analysis_config = app_config
+        )
 
     })
 }
