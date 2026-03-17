@@ -1,13 +1,18 @@
-#' R6 Class to manage ODBC Database connections
-#' @description
-#' Manage ODBC Database connections
-#'
-#' @field connection_open - logical - whether the connection is currently is open or not
-#' @importFrom DBI dbConnect
-#' @importFrom DBI dbDisconnect
-#' @importFrom odbc odbc
+box::use(
+  R6[R6Class],
+  DBI[dbConnect, dbDisconnect, dbSendQuery, dbBind, dbFetch, dbClearResult, Id, dbAppendTable, dbGetQuery],
+  odbc[odbc],
+  dplyr[mutate_if, mutate, across, filter, distinct, pull, arrange, case_when, select],
+  tidyr[pivot_longer, separate],
+  tidyselect[everything],
+  stringr[str_detect, str_split, str_extract],
+  glue[glue, glue_sql],
+  AzureStor[storage_endpoint, storage_container, list_blobs, storage_download],
+  purrr[map]
+)
+
 #' @export
-ODBCConnectionManager <- R6::R6Class(
+ODBCConnectionManager <- R6Class(
   "ODBCConnectionManager",
   private = list(
     conn_args = NULL,
@@ -15,23 +20,14 @@ ODBCConnectionManager <- R6::R6Class(
   ),
   public = list(
     connection_open = FALSE,
-
-    #' @description
-    #' Create a new instance of ODBCConnectionManager object
-    #' @param conn_args list - list of connection arguments to connect to database
-    #' @return A new `ODBCConnectionManager` object.
-    initialize = function(conn_args){
-      private$conn_args = conn_args
+    initialize = function(conn_args) {
+      private$conn_args <<- conn_args
     },
-
-    #' @description
-    #' Connect to target database
-    #' @return none
     connect = function() {
       conn_args <- private$conn_args
       before <- getTaskCallbackNames()
-      private$dbhandle <- DBI::dbConnect(
-        odbc::odbc(),
+      private$dbhandle <- dbConnect(
+        odbc(),
         Driver   = conn_args$driver,
         Server   = conn_args$server,
         Database = conn_args$database,
@@ -44,54 +40,31 @@ ODBCConnectionManager <- R6::R6Class(
       self$connection_open <- TRUE
     },
 
-    #' @description
-    #' Disconnect from target database
-    #' @return none
     disconnect = function() {
-      DBI::dbDisconnect(private$dbhandle)
+      dbDisconnect(private$dbhandle)
       self$connection_open <- FALSE
     }
   )
 )
 
-#' R6 Class to manage ODBC Database queries - subclass of OBBCQueryManager
-#' @description
-#' Manage ODBC Database queries
-#'
-#' @field queryString - string - Parameterized SQL Query to execute against target database
-#' @field parameters - tibble - tibble of parameter names and values
-#' @field convertFactorsToStrings - logical - whether to convert all factors to strings
-#' @field data - tibble - query result formatted as tibble
-#' @import dplyr
-#' @importFrom DBI dbSendQuery
-#' @importFrom DBI dbBind
-#' @importFrom DBI dbFetch
-#' @importFrom DBI dbClearResult
-#'
 #' @export
-ODBCQueryManager <- R6::R6Class(
+ODBCQueryManager <- R6Class(
   "ODBCQueryManager",
   inherit = ODBCConnectionManager,
   private = list(
-
-    #' @description
-    #' helper function to set parameters tibble
     setParameters = function(parameters) {
       if (!is.null(parameters)) {
         self$parameters <- parameters |>
-          dplyr::mutate_if(is.factor, as.character)
+          mutate_if(is.factor, as.character)
       } else {
         self$parameters <- parameters
       }
 
     },
-
-    #' @description
-    #' helper function to properly format query result
     formatData = function() {
       if (self$convertFactorsToStrings) {
         self$data <- self$data |>
-          dplyr::mutate_if(is.factor, as.character)
+          mutate_if(is.factor, as.character)
       }
     }
   ),
@@ -100,21 +73,10 @@ ODBCQueryManager <- R6::R6Class(
     parameters = NULL,
     convertFactorsToStrings = TRUE,
     data = NULL,
-
-    #' @description
-    #' Create a new instance of ODBCQueryManager object
-    #' @param conn_args list - list of connection arguments to connect to database
-    #' @return A new `ODBCQueryManager` object.
-    initialize = function(conn_args){
+    initialize = function(conn_args) {
       super$initialize(conn_args)
     },
 
-    #' @description
-    #' Execute parameterized query against target database
-    #' @param queryString - string - parameterized sql query string
-    #' @param parameters - tibble - parameter names and values
-    #' @param convertFactorsToStrings - logical - whether to convert factors to strings
-    #' @return tibble
     getQuery = function(queryString, parameters, convertFactorsToStrings = TRUE) {
 
       self$queryString <- queryString
@@ -125,13 +87,13 @@ ODBCQueryManager <- R6::R6Class(
 
       self$connect()
 
-      query <- DBI::dbSendQuery(private$dbhandle, self$queryString)
+      query <- dbSendQuery(private$dbhandle, self$queryString)
 
-      DBI::dbBind(query, self$parameters)
+      dbBind(query, self$parameters)
 
-      self$data <- DBI::dbFetch(query)
+      self$data <- dbFetch(query)
 
-      DBI::dbClearResult(query)
+      dbClearResult(query)
 
       self$disconnect()
 
@@ -141,10 +103,6 @@ ODBCQueryManager <- R6::R6Class(
 
     },
 
-    #' @description
-    #' insert data to table in target database
-    #' @param table_name - string - name of target table
-    #' @param values - tibble - tibble of values to insert to table. Should match target table schema.
     insertData = function(table_name, values) {
 
       stopifnot(class(table_name) %in% c("character"))
@@ -154,29 +112,29 @@ ODBCQueryManager <- R6::R6Class(
 
       tryCatch({
 
-      if (stringr::str_detect(table_name, ".")) {
+        if (str_detect(table_name, ".")) {
 
-        table_names <- stringr::str_split(table_name, pattern = "\\.", simplify = TRUE)
+          table_names <- str_split(table_name, pattern = "\\.", simplify = TRUE)
 
-        table_id <- DBI::Id(
-          schema = table_names[1],
-          table = table_names[2]
-        )
+          table_id <- Id(
+            schema = table_names[1],
+            table = table_names[2]
+          )
 
-        DBI::dbAppendTable(
-          conn = private$dbhandle,
-          name = table_id,
-          value = values
-        )
-      } else {
-        DBI::dbAppendTable(
-          conn = private$dbhandle,
-          name = table_name,
-          value = values
-        )
-      }
+          dbAppendTable(
+            conn = private$dbhandle,
+            name = table_id,
+            value = values
+          )
+        } else {
+          dbAppendTable(
+            conn = private$dbhandle,
+            name = table_name,
+            value = values
+          )
+        }
       }, error = function(e) {
-        print(glue::glue("an error occured {e}"))
+        print(glue("an error occured {e}"))
       })
 
       self$disconnect()
@@ -187,13 +145,7 @@ ODBCQueryManager <- R6::R6Class(
   )
 )
 
-#' R6 Class to manage SQLite Database connections
-#' @description
-#' Manage SQLite Database connections
-#'
-#' @field connection_open - logical - whether the connection is currently is open or not
-#' @export
-SQLiteConnectionManager <- R6::R6Class(
+SQLiteConnectionManager <- R6Class(
   "SQLiteConnectionManager",
   private = list(
     filepath = NULL,
@@ -202,66 +154,41 @@ SQLiteConnectionManager <- R6::R6Class(
   public = list(
     connection_open = FALSE,
 
-    #' @description
-    #' Create a new instance of SQLiteConnectionManager object
-    #' @param filepath string - path to `.sqlite` database file
-    #' @return A new `SQLiteConnectionManager` object.
     initialize = function(filepath) {
       .Deprecated(new = "N/A", old = "SQLiteConnectionManager")
     },
 
-    #' @description
-    #' Connect to target database
-    #' @return none
     connect = function() {
       .Deprecated(new = "N/A", old = "SQLiteConnectionManager")
     },
 
-    #' @description
-    #' Disconnect from target database
-    #' @return none
     disconnect = function() {
       .Deprecated(new = "N/A", old = "SQLiteConnectionManager")
     }
   )
 )
 
-#' R6 Class to manage SQLite Database queries - subclass of SQLiteConnectionManager
-#' @description
-#' Manage SQLite Database queries
-#'
-#' @field queryString - string - Parameterized SQL Query to execute against target database
-#' @field parameters - tibble - tibble of parameter names and values
-#' @field data - tibble - query result formatted as tibble
-#' @import dplyr
-#' @import tidyr
-#' @importFrom glue glue_sql
-#' @export
-SQLiteQueryManager <- R6::R6Class(
+SQLiteQueryManager <- R6Class(
   "SQLiteQueryManager",
   inherit = SQLiteConnectionManager,
   private = list(
 
-    #' @description
-    #' helper function to set/format parameters tibble
-    #' @param parameters tibble - tibble of parameter values
-    #' @param e - environment - ephemeral environment to load parameter values
     set_parameters = function(parameters, e) {
 
       if (!is.null(parameters)) {
 
         self$parameters <- parameters |>
-          dplyr::mutate(dplyr::across(tidyselect::everything(), as.character)) |>
-          tidyr::pivot_longer(cols = tidyselect::everything())
+          mutate(across(everything(), as.character)) |>
+          pivot_longer(cols = everything())
 
         # create / load env. object per parameter name / values
         sapply(
           unique(self$parameters$name),
           function(param_name) {
             param_vals <- self$parameters |>
-              dplyr::filter(name == param_name) |>
-              dplyr::distinct() |>
-              dplyr::pull()
+              filter(name == param_name) |>
+              distinct() |>
+              pull()
             assign(
               param_name,
               param_vals,
@@ -286,18 +213,10 @@ SQLiteQueryManager <- R6::R6Class(
     parameters = NULL,
     data = NULL,
 
-    #' @description
-    #' Create a new instance of SQLiteQueryManager object
-    #' @param filepath string - path to `.sqlite` database file
-    #' @return A new `SQLiteQueryManager` object.
     initialize = function(filepath) {
       .Deprecated(new = "N/A", old = "SQLiteQueryManager")
     },
 
-    #' @description
-    #' Execute parameterized query against target database
-    #' @param queryString - string - parameterized sql query string
-    #' @param parameters - tibble - parameter names and values
     getQuery = function(queryString, parameters = NULL) {
 
       self$queryString <- queryString
@@ -305,24 +224,24 @@ SQLiteQueryManager <- R6::R6Class(
       self$connect()
 
       if (is.null(parameters)) {
-        self$data <- DBI::dbGetQuery(private$dbhandle, self$queryString)
+        self$data <- dbGetQuery(private$dbhandle, self$queryString)
       } else {
 
         e <- new.env()
 
         private$set_parameters(parameters, e)
 
-        q <- glue::glue_sql(
+        q <- glue_sql(
           self$queryString,
           .con = private$dbhandle,
           .envir = e
         )
 
-        pq <- DBI::dbSendQuery(private$dbhandle, q)
+        pq <- dbSendQuery(private$dbhandle, q)
 
-        self$data <- DBI::dbFetch(pq)
+        self$data <- dbFetch(pq)
 
-        DBI::dbClearResult(pq)
+        dbClearResult(pq)
 
       }
 
@@ -334,16 +253,8 @@ SQLiteQueryManager <- R6::R6Class(
   )
 )
 
-#' R6 Class to download remote blob files from Azure Storage
-#' @description
-#' download remote blob files from Azure Storage
-#'
-#' @field local_data_directory - string - defaults to `data` - path to download remote files locally
-#' @field files_downloaded - logical - are the remote files downloaded?
-#' @importFrom glue glue
-#' @importFrom AzureStor storage_endpoint storage_container storage_download
 #' @export
-AzureRemoteDataFileManager <- R6::R6Class(
+AzureRemoteDataFileManager <- R6Class(
   "AzureRemoteDataFileManager",
   private = list(
     account_name = "",
@@ -355,14 +266,14 @@ AzureRemoteDataFileManager <- R6::R6Class(
   active = list(
     uri = function(value) {
       return(
-        glue::glue("https://{private$account_name}.blob.core.windows.net")
+        glue("https://{private$account_name}.blob.core.windows.net")
       )
     },
     file_type = function(value) {
       return(
         self$blobs |>
-          dplyr::filter(name == self$targeted_file) |>
-          dplyr::pull(file_type)
+          filter(name == self$targeted_file) |>
+          pull(file_type)
       )
     },
     local_file_exists = function(value) {
@@ -377,7 +288,7 @@ AzureRemoteDataFileManager <- R6::R6Class(
     },
     local_file_path = function(value) {
       return(
-        glue::glue("{self$local_data_directory}/{self$targeted_file}")
+        glue("{self$local_data_directory}/{self$targeted_file}")
       )
     },
     file_read_method = function(value) {
@@ -418,8 +329,8 @@ AzureRemoteDataFileManager <- R6::R6Class(
       private$container_name <- container_name
       self$download_mode <- download_mode
       self$local_data_directory <- local_data_directory
-      private$endpoint <- AzureStor::storage_endpoint(self$uri, private$key)
-      private$container <- AzureStor::storage_container(private$endpoint, private$container_name)
+      private$endpoint <- storage_endpoint(self$uri, private$key)
+      private$container <- storage_container(private$endpoint, private$container_name)
       unlink(self$local_data_directory, recursive = TRUE)
       self$set_blob_metadata()
       if (self$download_mode == "all") {
@@ -428,29 +339,29 @@ AzureRemoteDataFileManager <- R6::R6Class(
     },
     set_blob_metadata = function(ignore_archive = TRUE) {
 
-      self$blobs <- AzureStor::list_blobs(private$container) |>
-        tidyr::separate(
+      self$blobs <- list_blobs(private$container) |>
+        separate(
           col = name,
           into = c("data_group", "sub_folder"),
           sep = "\\/",
           remove = FALSE,
           extra = "drop"
         ) |>
-        dplyr::mutate(
-            sub_folder = dplyr::case_when(
+        mutate(
+            sub_folder = case_when(
                 grepl(".parquet", sub_folder) ~ NA,
                 TRUE ~ sub_folder
             ),
-            file_type = stringr::str_extract(name, "(json|parquet|txt|csv)$"),
+            file_type = str_extract(name, "(json|parquet|txt|csv)$"),
             is_archive = grepl("archive", data_group) | grepl("archive", sub_folder)
         ) |>
-        tidyr::separate(
+        separate(
           col = sub_folder,
           into = c("Remove", "ExperimentID"),
           sep = "\\=",
           remove = FALSE
         ) |>
-        dplyr::mutate(
+        mutate(
           namespace = ifelse(
             !is.na(ExperimentID) & Remove == "namespace",
             ExperimentID,
@@ -460,24 +371,24 @@ AzureRemoteDataFileManager <- R6::R6Class(
             !is.na(namespace), NA, ExperimentID
           )
         ) |>
-        dplyr::filter(
+        filter(
           if (ignore_archive) is_archive == FALSE else TRUE
         ) |>
-        dplyr::select(data_group, sub_folder, ExperimentID, namespace, name, file_type, size)
+        select(data_group, sub_folder, ExperimentID, namespace, name, file_type, size)
 
       return(invisible(self$blobs))
     },
     get_remote_file_data = function(file_name, read_method_args = list()) {
       self$targeted_file <- self$blobs |>
-        dplyr::filter(grepl(file_name, name)) |>
-        dplyr::pull(name)
+        filter(grepl(file_name, name)) |>
+        pull(name)
 
       self$read_file_data(read_method_args = read_method_args)
     },
     download_remote_file = function(file_name) {
       return(
         invisible(
-          AzureStor::storage_download(
+          storage_download(
             private$container,
             src = file_name,
             dest = self$local_file_path
@@ -507,20 +418,20 @@ AzureRemoteDataFileManager <- R6::R6Class(
     },
     get_experiment_data = function(experiment_id, read_method_args = list()) {
       self$targeted_file <- self$blobs |>
-        dplyr::filter(
+        filter(
           ExperimentID == experiment_id
         ) |>
-        dplyr::pull(name)
+        pull(name)
       return(
         self$read_file_data(read_method_args = read_method_args)
       )
     },
     get_pre_calculated_data = function(target_namespace, read_method_args = list()) {
       self$targeted_file <- self$blobs |>
-        dplyr::filter(
+        filter(
           namespace == target_namespace
         ) |>
-        dplyr::pull(name)
+        pull(name)
       return(
         self$read_file_data(read_method_args = read_method_args)
       )
@@ -531,22 +442,22 @@ AzureRemoteDataFileManager <- R6::R6Class(
         unlink(self$local_data_directory, recursive = TRUE)
         tryCatch({
           self$blobs |>
-            dplyr::arrange(size) |>
-            dplyr::pull(name) |>
-            purrr::map(function(x) {
-              dest <- glue::glue("{self$local_data_directory}/{x}")
+            arrange(size) |>
+            pull(name) |>
+            map(function(x) {
+              dest <- glue("{self$local_data_directory}/{x}")
               suppressMessages(
-                AzureStor::storage_download(container, src = x, dest = dest)
+                storage_download(container, src = x, dest = dest)
               )
             })
-          print(glue::glue("{length(list.files(self$local_data_directory, recursive = TRUE))} files downloaded"))
+          print(glue("{length(list.files(self$local_data_directory, recursive = TRUE))} files downloaded"))
           self$files_downloaded <- TRUE
         }, error = function(e) {
-            print(glue::glue("an error occured while downloading files: {e}"))
+            print(glue("an error occured while downloading files: {e}"))
             self$files_downloaded <- TRUE
         })
       } else {
-        print(glue::glue("{length(list.files(self$local_data_directory, recursive = TRUE))} existing files found"))
+        print(glue("{length(list.files(self$local_data_directory, recursive = TRUE))} existing files found"))
       }
     },
     get_file_group_directory = function(file_group) {
