@@ -41,7 +41,7 @@ ui <- function(id) {
             controlbarIcon = icon("bars"),
             tags$li(
                 class = "dropdown",
-                #uiOutput(ns("links"))
+                uiOutput(ns("links"))
             )
         ),
         sidebar = dashboardSidebar(
@@ -106,9 +106,9 @@ server <- function(id, app_config) {
             paste0(app_config$app_config$applicationTitle, "');")
         )
 
-        # output$links <- renderUI({
-        #     create_app_links(app_config$app_config$applicationLinks)
-        # })
+        output$links <- renderUI({
+            create_app_links(app_config$app_config$applicationLinks)
+        })
 
         overview_tofa$server(ns("overview"))
 
