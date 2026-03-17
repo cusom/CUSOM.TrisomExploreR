@@ -381,23 +381,18 @@ AzureRemoteDataFileManager <- R6::R6Class(
       )
     },
     file_read_method = function(value) {
-      if (self$file_type == "json") {
-        return(
-          "jsonlite::fromJSON"
-        )
-      } else if (self$file_type == "parquet") {
-        return(
-          "arrow::read_parquet"
-        )
-      } else if (self$file_type == "txt" | self$file_type == "csv") {
-        return(
-          "readr::read_delim"
-        )
-      } else {
-        return(
-          "unknown"
-        )
+      if (!self$file_type %in% names(self$file_type_read_method_map)) {
+        return("unknown")
       }
+
+      self$file_type_read_method_map[[self$file_type]]
+    },
+    default_read_method_args = function(value) {
+      if (!self$file_read_method %in% names(self$read_method_default_args_map)) {
+        return(list())
+      }
+
+      self$read_method_default_args_map[[self$file_read_method]]
     }
   ),
   public = list(
@@ -406,6 +401,15 @@ AzureRemoteDataFileManager <- R6::R6Class(
     files_downloaded = FALSE,
     targeted_file = NULL,
     blobs = NULL,
+    file_type_read_method_map = list(
+      json = "jsonlite::fromJSON",
+      parquet = "arrow::read_parquet",
+      txt = "readr::read_delim",
+      csv = "readr::read_delim"
+    ),
+    read_method_default_args_map = list(
+      "readr::read_delim" = list(show_col_types = FALSE, progress = FALSE)
+    ),
     initialize = function(account_name, key, container_name,
       download_mode = c("on demand", "all"), local_data_directory = "Remote_Data") {
       match.arg(download_mode)
@@ -463,12 +467,12 @@ AzureRemoteDataFileManager <- R6::R6Class(
 
       return(invisible(self$blobs))
     },
-    get_remote_file_data = function(file_name) {
+    get_remote_file_data = function(file_name, read_method_args = list()) {
       self$targeted_file <- self$blobs |>
         dplyr::filter(grepl(file_name, name)) |>
         dplyr::pull(name)
 
-      self$read_file_data()
+      self$read_file_data(read_method_args = read_method_args)
     },
     download_remote_file = function(file_name) {
       return(
@@ -481,35 +485,44 @@ AzureRemoteDataFileManager <- R6::R6Class(
         )
       )
     },
-    read_file_data = function() {
+    read_file_data = function(read_method_args = list()) {
       if (self$download_mode == "on demand" && !self$local_file_exists) {
         self$download_remote_file(self$targeted_file)
       }
+
+      if (!is.list(read_method_args)) {
+        stop("read_method_args must be a list.", call. = FALSE)
+      }
+
+      if (!is.list(self$default_read_method_args)) {
+        stop("default_read_method_args must resolve to a list.", call. = FALSE)
+      }
+
       return(
         do.call(
           eval(parse(text = self$file_read_method)),
-          list(self$local_file_path)
+          c(list(self$local_file_path), self$default_read_method_args, read_method_args)
         )
       )
     },
-    get_experiment_data = function(experiment_id) {
+    get_experiment_data = function(experiment_id, read_method_args = list()) {
       self$targeted_file <- self$blobs |>
         dplyr::filter(
           ExperimentID == experiment_id
         ) |>
         dplyr::pull(name)
       return(
-        self$read_file_data()
+        self$read_file_data(read_method_args = read_method_args)
       )
     },
-    get_pre_calculated_data = function(target_namespace) {
+    get_pre_calculated_data = function(target_namespace, read_method_args = list()) {
       self$targeted_file <- self$blobs |>
         dplyr::filter(
           namespace == target_namespace
         ) |>
         dplyr::pull(name)
       return(
-        self$read_file_data()
+        self$read_file_data(read_method_args = read_method_args)
       )
     },
     download_files = function(reload_files = TRUE) {
