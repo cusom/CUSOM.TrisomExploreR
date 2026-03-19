@@ -912,7 +912,7 @@ ClinicalDataAnalysisManager <- R6::R6Class(
         if (nrow(p[p$Karyotype == "Control", ]) == 0) {
           p <- dplyr::bind_rows(
             p,
-            tible::tibble(
+            tibble::tibble(
               Karyotype = "Control",
               n = 0
             )
