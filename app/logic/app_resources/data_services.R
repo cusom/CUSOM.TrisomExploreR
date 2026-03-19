@@ -33,7 +33,8 @@ ODBCConnectionManager <- R6Class(
         Database = conn_args$database,
         UID      = conn_args$uid,
         PWD      = conn_args$pwd,
-        Port     = conn_args$port
+        Port     = conn_args$port,
+        TDS_Version = conn_args$tds_version # added for shinyapps.io
       )
       after <- getTaskCallbackNames()
       removeTaskCallback(which(!after %in% before))
