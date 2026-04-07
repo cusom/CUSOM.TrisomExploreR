@@ -11,7 +11,8 @@ box::use(
     app/logic/shared/ui_utils[create_app_links],
     app/view/overviews/overview_proteome,
     app/view/layouts/feature_analysis,
-    app/view/layouts/correlates_analysis
+    app/view/layouts/correlates_analysis,
+    app/view/layouts/tofa_timeseries_analysis,
 )
 
 #' @export
@@ -73,6 +74,14 @@ ui <- function(id) {
                     href = NULL,
                     newtab = TRUE,
                     selected = FALSE
+                ),
+                menuItem(
+                    text = "TOFA Analysis",
+                    icon = icon("book-medical"),
+                    tabName = ns("tofa_timeseries"),
+                    href = NULL,
+                    newtab = TRUE,
+                    selected = FALSE
                 )
             )
         ),
@@ -102,6 +111,12 @@ ui <- function(id) {
                     tabName = ns("correlates"),
                     tags$div(
                         correlates_analysis$ui(ns("correlates"))
+                    )
+                ),
+                tabItem(
+                    tabName = ns("tofa_timeseries"),
+                    tags$div(
+                        tofa_timeseries_analysis$ui(ns("tofa_timeseries"))
                     )
                 )
             )
@@ -142,6 +157,11 @@ server <- function(id, app_config) {
             app_config = app_config,
             analysis_config = app_config,
             input_config = app_config
+        )
+
+        tofa_timeseries_analysis$server(
+            id = "tofa_timeseries",
+            app_config = app_config
         )
 
     })
