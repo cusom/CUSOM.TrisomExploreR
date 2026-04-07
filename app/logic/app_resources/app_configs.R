@@ -1,5 +1,11 @@
 box::use(
-  dplyr[select]
+  R6[R6Class],
+  config[get],
+  glue[glue],
+  dplyr[select, arrange, distinct, pull, filter, left_join, mutate, 
+    group_by, collect, summarise, n, n_distinct, reframe, case_when],
+  tibble[tibble, deframe],
+  tidyr[drop_na, separate_rows],
 )
 
 box::use(
@@ -29,7 +35,7 @@ create_app_settings <- function(application_id,
       identical(class_module, "app/logic/app_resources/app_configs")) {
     class_generator <- TrisomExplorerAppManager
   } else {
-    eval(parse(text = glue::glue("box::use({class_module}[{class_name}])")), envir = environment())
+    eval(parse(text = glue("box::use({class_module}[{class_name}])")), envir = environment())
     class_generator <- get(class_name, envir = environment(), inherits = TRUE)
   }
 
@@ -55,7 +61,7 @@ create_app_settings <- function(application_id,
 }
 
 #' @export
-TrisomExplorerAppManager <- R6::R6Class(
+TrisomExplorerAppManager <- R6Class(
   "TrisomExplorerAppManager",
   private = list(
 
@@ -95,7 +101,7 @@ TrisomExplorerAppManager <- R6::R6Class(
       applicationURL = NULL,
       applicationLinks = NULL,
       tutorials = NULL,
-      Namespaces = tibble::tibble()
+      Namespaces = tibble()
     ),
 
     module_config = NULL,
@@ -146,13 +152,13 @@ TrisomExplorerAppManager <- R6::R6Class(
       self$application_id <- application_id
 
       self$remote_db <- ODBCQueryManager$new(
-        conn_args = config::get(file = config_file_name, "database")
+        conn_args = get(file = config_file_name, "database")
       )
 
       self$remote_files <- AzureRemoteDataFileManager$new(
-        account_name = config::get(file = config_file_name, "remote_storage")$storage_account_name,
-        key = config::get(file = config_file_name, "remote_storage")$storage_key,
-        container_name = glue::glue("htp-{tolower(application_id)}"),
+        account_name = get(file = config_file_name, "remote_storage")$storage_account_name,
+        key = get(file = config_file_name, "remote_storage")$storage_key,
+        container_name = glue("htp-{tolower(application_id)}"),
         download_mode = "on demand"
       )
 
@@ -162,13 +168,13 @@ TrisomExplorerAppManager <- R6::R6Class(
         "SELECT * FROM [te].[vw_ApplicationNamespaceConfig]
           WHERE cast([ApplicationId] as nvarchar(256)) = CAST(? As nvarchar(256))
           ORDER BY DisplayOrder",
-        tibble::tibble("ApplicationId" = application_id)
+        tibble("ApplicationId" = application_id)
       )
 
       self$app_config$Namespaces <- self$namespace_config |>
-        dplyr::arrange(DisplayOrder) |>
-        dplyr::select(DisplayOrder, Namespace) |>
-        tibble::deframe()
+        arrange(DisplayOrder) |>
+        select(DisplayOrder, Namespace) |>
+        deframe()
 
       self$app_config$applicationTitle <- self$namespace_config$applicationName[1]
       self$app_config$applicationLabel <-  self$namespace_config$applicationLabel[1]
@@ -184,11 +190,11 @@ TrisomExplorerAppManager <- R6::R6Class(
           FROM [app].[vw_ShinyApplicationApplicationLinks]
           WHERE cast([ApplicationId] as nvarchar(256)) = CAST(? As nvarchar(256))
           ORDER BY LinkDisplayOrder",
-        tibble::tibble("ApplicationId" = application_id)
+        tibble("ApplicationId" = application_id)
       )
 
       self$module_config <- self$namespace_config |>
-        dplyr::select(ApplicationId, Namespace, TabText, TabIcon,
+        select(ApplicationId, Namespace, TabText, TabIcon,
         ModuleServerName, UseR6Class, R6ClassName)
 
       self$analysis_config <- self$namespace_config |>
@@ -237,81 +243,81 @@ TrisomExplorerAppManager <- R6::R6Class(
 
     load_participant_data = function() {
       self$input_config$karyotypes <- self$participant_data |>
-        dplyr::collect() |>
-        dplyr::distinct(Karyotype) |>
-        dplyr::pull()
+        collect() |>
+        distinct(Karyotype) |>
+        pull()
 
       self$input_config$sexes <- self$participant_data |>
-        dplyr::collect() |>
-        dplyr::distinct(Sex) |>
-        dplyr::pull()
+        collect() |>
+        distinct(Sex) |>
+        pull()
     },
 
     load_encounter_data = function() {
       self$input_config$ages <- self$encounter_data |>
-        dplyr::collect() |>
+        collect() |>
         tidyr::drop_na() |>
-        dplyr::summarise(
+        summarise(
           min = round(min(AgeAtTimeOfVisit)),
           max = round(max(AgeAtTimeOfVisit)) + 1
         ) |>
-        dplyr::reframe(
+        reframe(
           age = seq(min, max, 1)
         ) |>
-        dplyr::pull()
+        pull()
     },
 
     load_condition_data = function() {
       self$input_config$Conditions <- self$condition_data |>
-        dplyr::collect() |>
-        dplyr::distinct(Condition) |>
-        dplyr::pull()
+        collect() |>
+        distinct(Condition) |>
+        pull()
 
       self$input_config$ConditionClasses <- self$condition_data |>
-        dplyr::collect() |>
-        dplyr::distinct(ConditionClass) |>
+        collect() |>
+        distinct(ConditionClass) |>
         tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
         tidyr::drop_na() |>
-        dplyr::select(ConditionClass) |>
-        dplyr::distinct() |>
-        dplyr::pull()
+        select(ConditionClass) |>
+        distinct() |>
+        pull()
 
       self$input_config$ConditionChoices <- self$condition_data |>
-        dplyr::collect() |>
-        dplyr::filter(HasCondition == "True") |>
-        dplyr::select(LabID, ConditionClass, Condition) |>
-        dplyr::select(LabID, ConditionClass, Condition) |>
-        dplyr::group_by(ConditionClass, Condition) |>
-        dplyr::summarize(n = dplyr::n_distinct(LabID), .groups = "drop")  |>
-        dplyr::filter(n >= 5) |>
-        dplyr::left_join(
+        collect() |>
+        filter(HasCondition == "True") |>
+        select(LabID, ConditionClass, Condition) |>
+        select(LabID, ConditionClass, Condition) |>
+        group_by(ConditionClass, Condition) |>
+        summarise(n = n_distinct(LabID), .groups = "drop")  |>
+        filter(n >= 5) |>
+        left_join(
           self$condition_data |>
-            dplyr::collect() |>
-            dplyr::filter(!is.na(ConditionCensorshipAgeGroup)) |>
-            dplyr::distinct(Condition, ConditionCensorshipAgeGroup)
+            collect() |>
+            filter(!is.na(ConditionCensorshipAgeGroup)) |>
+            distinct(Condition, ConditionCensorshipAgeGroup)
 
           , by = "Condition"
         ) |>
-        dplyr::mutate(
-          AgeCensor = dplyr::case_when(
+        mutate(
+          AgeCensor = case_when(
             !is.na(ConditionCensorshipAgeGroup) ~ ConditionCensorshipAgeGroup,
             TRUE ~ ""
           )
         ) |>
-        dplyr::select(-ConditionCensorshipAgeGroup, n) |>
+        select(-ConditionCensorshipAgeGroup, n) |>
         tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE)
     },
 
     get_module_config = function(namespace) {
       self$app_module_config |>
-          dplyr::filter(tolower(Namespace) == tolower(namespace))
+          filter(tolower(Namespace) == tolower(namespace))
     },
 
     get_analysis_config = function(namespace) {
       return(
         self$analysis_config |>
-          dplyr::mutate(applicationName = self$app_config$applicationTitle) |>
-          dplyr::filter(tolower(Namespace) == tolower(namespace))
+          mutate(applicationName = self$app_config$applicationTitle) |>
+          filter(tolower(Namespace) == tolower(namespace))
       )
     },
 
@@ -385,24 +391,24 @@ TOFAAppManager <- R6::R6Class(
     },
     load_participant_data = function() {
       self$input_config$karyotypes <- self$participant_data |>
-        dplyr::distinct(DownSyndromeStatus) |>
-        dplyr::pull()
+        distinct(DownSyndromeStatus) |>
+        pull()
 
       self$input_config$sexes <- self$participant_data |>
-        dplyr::distinct(Sex) |>
-        dplyr::pull()
+        distinct(Sex) |>
+        pull()
     },
     load_encounter_data = function() {
       self$input_config$ages <- self$encounter_data |>
         tidyr::drop_na() |>
-        dplyr::summarise(
+        summarise(
           min = round(min(Age_at_visit_in_days)),
           max = round(max(Age_at_visit_in_days)) + 1
         ) |>
-        dplyr::reframe(
+        reframe(
           age = seq(min, max, 1)
         ) |>
-        dplyr::pull()
+        pull()
     }
   )
 )
