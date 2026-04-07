@@ -4,6 +4,7 @@ box::use(
 )
 
 box::use(
+    app/logic/app_resources/app_configs[TOFAAppManager],
     app/view/inputs/inputs_tofa_analysis,
     app/view/plots/plots_tofa_timeseries
 )
@@ -27,10 +28,12 @@ ui <- function(id) {
 
 
 #' @export
-server <- function(id, analysis_config) {
+server <- function(id, app_config) {
     moduleServer(id, function(input, output, session) {
 
         ns <- session$ns
+
+        analysis_config <- TOFAAppManager$new(app_config)
 
         inputs <- inputs_tofa_analysis$server(
             "inputs",
