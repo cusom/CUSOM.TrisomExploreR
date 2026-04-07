@@ -90,6 +90,7 @@ TrisomExplorerAppManager <- R6Class(
   ),
   public = list(
     application_id = NULL,
+    config_file_name = NULL,
     remote_db = NULL,
     remote_files = NULL,
     namespace_config = NULL,
@@ -150,14 +151,15 @@ TrisomExplorerAppManager <- R6Class(
       load_condition_data = TRUE
     ) {
       self$application_id <- application_id
+      self$config_file_name <- config_file_name
 
       self$remote_db <- ODBCQueryManager$new(
-        conn_args = get(file = config_file_name, "database")
+        conn_args = get(file = self$config_file_name, "database")
       )
 
       self$remote_files <- AzureRemoteDataFileManager$new(
-        account_name = get(file = config_file_name, "remote_storage")$storage_account_name,
-        key = get(file = config_file_name, "remote_storage")$storage_key,
+        account_name = get(file = self$config_file_name, "remote_storage")$storage_account_name,
+        key = get(file = self$config_file_name, "remote_storage")$storage_key,
         container_name = glue("htp-{tolower(application_id)}"),
         download_mode = "on demand"
       )
@@ -383,8 +385,17 @@ TOFAAppManager <- R6::R6Class(
     }
   ),
   public = list(
-    initialize = function(application_id, config_file_name = "config.yml") {
-      super$initialize(application_id, config_file_name, FALSE, FALSE, FALSE, FALSE)
+    initialize = function(app_config) {
+      
+      super$initialize(app_config$application_id, config_file_name = "config.yml", FALSE, FALSE, FALSE, FALSE)
+
+      ### override remote file mgmt 
+      self$remote_files <- AzureRemoteDataFileManager$new(
+        account_name = get(file = self$config_file_name, "remote_storage")$storage_account_name,
+        key = get(file = self$config_file_name, "remote_storage")$storage_key,
+        container_name = glue("htp-{tolower('0847B484-BF9A-4D3D-9C96-992FC10D445D')}"),
+        download_mode = "on demand"
+      )
 
       # additional initialization for TOFA app can go here
 
