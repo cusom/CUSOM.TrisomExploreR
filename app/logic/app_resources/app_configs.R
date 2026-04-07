@@ -6,6 +6,7 @@ box::use(
     group_by, collect, summarise, n, n_distinct, reframe, case_when],
   tibble[tibble, deframe],
   tidyr[drop_na, separate_rows],
+  purrr[pmap]
 )
 
 box::use(
@@ -228,12 +229,12 @@ TrisomExplorerAppManager <- R6Class(
       self$input_config$studies <- self$inputs$study_choices |>
           as.data.frame()
 
-      self$input_config$statTestschoiceNames <- purrr::pmap(
+      self$input_config$statTestschoiceNames <- pmap(
         self$inputs$stat_tests,
         ui_utils$createTooltip
       )
 
-      self$input_config$adjustmentMethodsNames <- purrr::pmap(
+      self$input_config$adjustmentMethodsNames <- pmap(
         self$inputs$adj_methods,
         ui_utils$createTooltip
       )
@@ -258,7 +259,7 @@ TrisomExplorerAppManager <- R6Class(
     load_encounter_data = function() {
       self$input_config$ages <- self$encounter_data |>
         collect() |>
-        tidyr::drop_na() |>
+        drop_na() |>
         summarise(
           min = round(min(AgeAtTimeOfVisit)),
           max = round(max(AgeAtTimeOfVisit)) + 1
@@ -278,8 +279,8 @@ TrisomExplorerAppManager <- R6Class(
       self$input_config$ConditionClasses <- self$condition_data |>
         collect() |>
         distinct(ConditionClass) |>
-        tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
-        tidyr::drop_na() |>
+        separate_rows(sep = ";", "ConditionClass", convert = TRUE) |>
+        drop_na() |>
         select(ConditionClass) |>
         distinct() |>
         pull()
@@ -307,7 +308,7 @@ TrisomExplorerAppManager <- R6Class(
           )
         ) |>
         select(-ConditionCensorshipAgeGroup, n) |>
-        tidyr::separate_rows(sep = ";", "ConditionClass", convert = TRUE)
+        separate_rows(sep = ";", "ConditionClass", convert = TRUE)
     },
 
     get_module_config = function(namespace) {
@@ -331,7 +332,7 @@ TrisomExplorerAppManager <- R6Class(
 
 
 #' @export
-TOFAAppManager <- R6::R6Class(
+TOFAAppManager <- R6Class(
   "TOFAAppManager",
   inherit = TrisomExplorerAppManager,
   private = list(
@@ -411,7 +412,7 @@ TOFAAppManager <- R6::R6Class(
     },
     load_encounter_data = function() {
       self$input_config$ages <- self$encounter_data |>
-        tidyr::drop_na() |>
+        drop_na() |>
         summarise(
           min = round(min(Age_at_visit_in_days)),
           max = round(max(Age_at_visit_in_days)) + 1
