@@ -3,7 +3,7 @@ box::use(
     dplyr[inner_join, join_by, filter],
 )
 
-#' @export 
+#' @export
 BaseTimeseriesDataSource <- R6Class(
     "BaseTimeseriesDataSource",
     active = list(),

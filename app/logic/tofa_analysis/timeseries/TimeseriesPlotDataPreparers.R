@@ -49,6 +49,7 @@ BaseTimeseriesPreparer <- R6Class(
             self$prepared_data <- self$set_source_data(raw_data) |>
                 select(Internal_ParticipantID, Event_Name, Value) |>
                 mutate(
+                    Value = as.numeric(Value),
                     text = glue(
                         "ParticipantID: {Internal_ParticipantID}
                         Event_Name: {Event_Name}
@@ -81,6 +82,8 @@ DifferenceTimeseriesPreparer <- R6Class(
                     by = "Internal_ParticipantID"
                 ) |>
                 mutate(
+                    Value.y = as.numeric(Value.y),
+                    Value.x = as.numeric(Value.x),
                     diff = Value.y - Value.x
                 ) |>
                 select(

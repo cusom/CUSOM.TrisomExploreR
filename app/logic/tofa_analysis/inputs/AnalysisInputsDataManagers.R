@@ -135,7 +135,12 @@ AnalysisInputsManager <- R6Class(
         filtered_data = NULL,
         initialize = function(participant_data = NULL, visit_data = NULL, datasets = NULL, ...) {
             self$participant_data <- participant_data
-            self$visit_data <- visit_data
+            self$visit_data <- visit_data |>
+              mutate(
+                Age_at_visit_in_days = as.numeric(Age_at_visit_in_days),
+                Height_cm = as.numeric(Height_cm),
+                Weight_kg = as.numeric(Weight_kg)
+              )
             self$datasets <- datasets
         },
         get_data = function(
@@ -156,7 +161,7 @@ AnalysisInputsManager <- R6Class(
                     self$visit_extended_data, join_by(Internal_ParticipantID, External_ParticipantID)
                 ) |>
                 filter(
-                    if (!is.null(age_at_visit)) 
+                    if (!is.null(age_at_visit))
                         between(Age_at_visit_in_days, age_at_visit[1], age_at_visit[2])
                         else TRUE,
                     if (!is.null(age_groups)) age_group %in% age_groups else TRUE
