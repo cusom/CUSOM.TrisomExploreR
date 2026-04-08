@@ -2,7 +2,7 @@ box::use(
   R6[R6Class],
   DBI[dbConnect, dbDisconnect, dbSendQuery, dbBind, dbFetch, dbClearResult, Id, dbAppendTable, dbGetQuery],
   odbc[odbc],
-  dplyr[mutate_if, mutate, across, filter, distinct, pull, arrange, case_when, select],
+  dplyr[mutate_if, mutate, across, filter, distinct, pull, arrange, case_when, select, bind_rows],
   tidyr[pivot_longer, separate],
   tidyselect[everything],
   stringr[str_detect, str_split, str_extract],
@@ -262,7 +262,21 @@ AzureRemoteDataFileManager <- R6Class(
     key = "",
     container_name = "",
     endpoint = NULL,
-    container = NULL
+    container = NULL,
+    resolve_target_file = function(candidates, query_context = "target") {
+      if (length(candidates) == 0) {
+        stop(glue("No files matched for {query_context}."), call. = FALSE)
+      }
+
+      if (length(candidates) > 1) {
+        warning(
+          glue("Multiple files matched for {query_context}; using the first match: {candidates[[1]]}"),
+          call. = FALSE
+        )
+      }
+
+      return(candidates[[1]])
+    }
   ),
   active = list(
     uri = function(value) {
@@ -278,6 +292,10 @@ AzureRemoteDataFileManager <- R6Class(
       )
     },
     local_file_exists = function(value) {
+      if (length(self$targeted_file) != 1 || is.na(self$targeted_file)) {
+        return(FALSE)
+      }
+
       return(
         any(
           grepl(
@@ -288,6 +306,10 @@ AzureRemoteDataFileManager <- R6Class(
       )
     },
     local_file_path = function(value) {
+      if (length(self$targeted_file) != 1 || is.na(self$targeted_file)) {
+        stop("targeted_file must resolve to a single file path.", call. = FALSE)
+      }
+
       return(
         glue("{self$local_data_directory}/{self$targeted_file}")
       )
@@ -324,7 +346,7 @@ AzureRemoteDataFileManager <- R6Class(
     ),
     initialize = function(account_name, key, container_name,
       download_mode = c("on demand", "all"), local_data_directory = "Remote_Data") {
-      match.arg(download_mode)
+      download_mode <- match.arg(download_mode)
       private$account_name <- account_name
       private$key <- key
       private$container_name <- container_name
@@ -343,24 +365,32 @@ AzureRemoteDataFileManager <- R6Class(
       self$blobs <- list_blobs(private$container) |>
         separate(
           col = name,
-          into = c("data_group", "sub_folder"),
+          into = c("data_group", "sub_folder", "file_root"),
           sep = "\\/",
           remove = FALSE,
-          extra = "drop"
+          extra = "drop",
+          fill = "right"
         ) |>
         mutate(
-            sub_folder = case_when(
-                grepl(".parquet", sub_folder) ~ NA,
-                TRUE ~ sub_folder
-            ),
-            file_type = str_extract(name, "(json|parquet|txt|csv)$"),
-            is_archive = grepl("archive", data_group) | grepl("archive", sub_folder)
+          file_root = case_when(
+            is.na(file_root) & grepl(".parquet", sub_folder) ~ sub_folder,
+            is.na(file_root) & grepl(".json", data_group) ~ name,
+            TRUE ~ file_root
+          ),
+          sub_folder = case_when(
+            grepl(".parquet", sub_folder) ~ NA, 
+            grepl(".json", sub_folder) ~ NA,
+            TRUE ~ sub_folder
+          ),
+          file_type = str_extract(name, "(json|parquet|txt|csv)$"),
+          is_archive = grepl("archive", data_group) | grepl("archive", sub_folder)
         ) |>
         separate(
           col = sub_folder,
           into = c("Remove", "ExperimentID"),
           sep = "\\=",
-          remove = FALSE
+          remove = FALSE,
+          fill = "right"
         ) |>
         mutate(
           namespace = ifelse(
@@ -375,14 +405,28 @@ AzureRemoteDataFileManager <- R6Class(
         filter(
           if (ignore_archive) is_archive == FALSE else TRUE
         ) |>
-        select(data_group, sub_folder, ExperimentID, namespace, name, file_type, size)
+        select(data_group, sub_folder, ExperimentID, namespace, name, file_root, file_type, size)
 
       return(invisible(self$blobs))
     },
     get_remote_file_data = function(file_name, read_method_args = list()) {
-      self$targeted_file <- self$blobs |>
-        filter(grepl(file_name, name)) |>
+
+      target_files <- self$blobs |>
+        filter(
+          grepl(file_name, data_group) & grepl(file_name, name)
+        ) |>
+        bind_rows(
+          self$blobs |>
+            filter(
+              sub_folder == file_name
+            )
+        ) |>
         pull(name)
+
+      self$targeted_file <- private$resolve_target_file(
+        target_files,
+        glue("file_name pattern '{file_name}'")
+      )
 
       self$read_file_data(read_method_args = read_method_args)
     },
@@ -418,21 +462,33 @@ AzureRemoteDataFileManager <- R6Class(
       )
     },
     get_experiment_data = function(experiment_id, read_method_args = list()) {
-      self$targeted_file <- self$blobs |>
+      target_files <- self$blobs |>
         filter(
           ExperimentID == experiment_id
         ) |>
         pull(name)
+
+      self$targeted_file <- private$resolve_target_file(
+        target_files,
+        glue("experiment_id '{experiment_id}'")
+      )
+
       return(
         self$read_file_data(read_method_args = read_method_args)
       )
     },
     get_pre_calculated_data = function(target_namespace, read_method_args = list()) {
-      self$targeted_file <- self$blobs |>
+      target_files <- self$blobs |>
         filter(
           namespace == target_namespace
         ) |>
         pull(name)
+
+      self$targeted_file <- private$resolve_target_file(
+        target_files,
+        glue("namespace '{target_namespace}'")
+      )
+
       return(
         self$read_file_data(read_method_args = read_method_args)
       )
@@ -448,7 +504,7 @@ AzureRemoteDataFileManager <- R6Class(
             map(function(x) {
               dest <- glue("{self$local_data_directory}/{x}")
               suppressMessages(
-                storage_download(container, src = x, dest = dest)
+                storage_download(private$container, src = x, dest = dest)
               )
             })
           print(glue("{length(list.files(self$local_data_directory, recursive = TRUE))} files downloaded"))
