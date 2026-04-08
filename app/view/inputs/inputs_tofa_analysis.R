@@ -52,12 +52,10 @@ ui <- function(id) {
                 id = ns("scrollableOptions"),
                 style = "height:70vh;padding-left:2px;max-height:70vh;overflow-y:auto;overflow-x:hidden;",
                 sapply(
-                    list("sexes",
-                        #"races", "ethnicities",
+                    list(
                         "down_syndrome_status",
-                        #"age",
+                        "sexes",
                         "age_group",
-                        #"conditions",
                         "feature",
                         "plot_type"),
                     function(x) {
@@ -104,13 +102,15 @@ server <- function(id, analysis_config) {
         )
 
         output$sexes <- renderUI({
-            awesomeCheckboxGroup(
-                inputId = ns("sexes"),
-                label = "Sex",
-                choices = r6$sexes,
-                selected = r6$sexes,
-                inline = TRUE,
-                width = "90%"
+            disabled(
+                awesomeCheckboxGroup(
+                    inputId = ns("sexes"),
+                    label = "Sex",
+                    choices = r6$sexes,
+                    selected = r6$sexes,
+                    inline = TRUE,
+                    width = "90%"
+                )
             )
         })
 
@@ -162,13 +162,15 @@ server <- function(id, analysis_config) {
         })
 
         output$age_group <- renderUI({
-            awesomeCheckboxGroup(
-                inputId = ns("age_group"),
-                label = "Age Groups",
-                choices = r6$age_groups,
-                selected = r6$age_groups,
-                inline = FALSE,
-                width = "90%"
+            disabled(
+                awesomeCheckboxGroup(
+                    inputId = ns("age_group"),
+                    label = "Age Groups",
+                    choices = r6$age_groups,
+                    selected = r6$age_groups,
+                    inline = FALSE,
+                    width = "90%"
+                )
             )
         })
 
@@ -208,7 +210,7 @@ server <- function(id, analysis_config) {
         output$feature <- renderUI({
             selectizeInput(
                 inputId = ns("feature"),
-                label = "Feature to Analyze",
+                label = "Choose Score / Endpoint",
                 choices = r6$features,
                 selected = r6$features[1],
                 multiple = FALSE,
@@ -226,7 +228,7 @@ server <- function(id, analysis_config) {
         output$plot_type <- renderUI({
             prettyRadioButtons(
                 inputId = ns("plot_type"),
-                label = "Show as:",
+                label = "Show Trial Data as:",
                 choiceNames = c("All Events", "Differences from Baseline"),
                 choiceValues = c("Base", "Difference"),
                 inline = FALSE,

@@ -22,15 +22,7 @@ ui <- function(id) {
         box(
             title = tags$div(
                 style = "display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding-right:12px;",
-                tags$span(style = "line-height:1.2;", "Timeseries Plot"),
-                actionButton(
-                    ns("clear_highlight"),
-                    label = "Clear Highlight",
-                    icon = icon("eraser"),
-                    class = "btn btn-default btn-sm",
-                    style = "margin-left:auto;",
-                    disabled = "disabled"
-                )
+                tags$span(style = "line-height:1.2;", "Timeseries Plot")
             ),
             height = "70vh",
             width = NULL,
@@ -103,44 +95,6 @@ server <- function(id, scores, cohort, feature, plot_type) {
             p
 
         })
-
-        observeEvent(event_data("plotly_click", source = ns("plot")), {
-            enable("clear_highlight")
-        })
-
-        observeEvent(event_data("plotly_doubleclick", source = ns("plot")), {
-            disable("clear_highlight")
-        })
-
-        observeEvent(c(plot_type(), feature()), {
-            disable("clear_highlight")
-        })
-
-        observeEvent(input$clear_highlight, {
-            req(plot_type())
-            req(feature())
-
-            feature_tag <- gsub("[^A-Za-z0-9]+", "_", as.character(feature()))
-            highlight_group <- paste0("participant_id_", plot_type(), "_", feature_tag)
-            highlight_group_js <- shQuote(highlight_group)
-            plot_container_js <- shQuote(ns("plot"))
-
-            runjs(sprintf(
-                "App.clearTimeseriesHighlight(%s, %s);",
-                highlight_group_js,
-                plot_container_js
-            ))
-
-            plotlyProxy("plot", session) |>
-                plotlyProxyInvoke(
-                    "relayout",
-                    list(
-                        "xaxis.autorange" = TRUE,
-                        "yaxis.autorange" = TRUE
-                    )
-                )
-            disable("clear_highlight")
-        }, ignoreInit = TRUE)
 
     })
 }
