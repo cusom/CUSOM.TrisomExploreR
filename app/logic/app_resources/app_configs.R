@@ -335,9 +335,7 @@ TrisomExplorerAppManager <- R6Class(
 TOFAAppManager <- R6Class(
   "TOFAAppManager",
   inherit = TrisomExplorerAppManager,
-  private = list(
-
-  ),
+  private = list(),
   active = list(
     inputs = function(value) {
       return(
@@ -346,17 +344,17 @@ TOFAAppManager <- R6Class(
     },
     participant_data = function(value) {
       return(
-        self$remote_files$get_remote_file_data("PARTICIPANTS")
+        self$remote_files$get_remote_file_data("tofa_participants")
       )
     },
     encounter_data = function(value) {
       return(
-        self$remote_files$get_remote_file_data("VISITS")
+        self$remote_files$get_remote_file_data("tofa_encounters")
       )
     },
     datasets = function(value) {
       return(
-        self$remote_files$get_remote_file_data("DATASETS")
+        self$remote_files$get_remote_file_data("tofa_endpoints")
       )
     },
     conditions = function(value) {
@@ -375,7 +373,6 @@ TOFAAppManager <- R6Class(
                 distinct()
         )
     },
-
     all_data = function(value) {
       return(
           self$participant_data |>
@@ -390,13 +387,6 @@ TOFAAppManager <- R6Class(
       
       super$initialize(app_config$application_id, config_file_name = "config.yml", FALSE, FALSE, FALSE, FALSE)
 
-      ### override remote file mgmt 
-      self$remote_files <- AzureRemoteDataFileManager$new(
-        account_name = get(file = self$config_file_name, "remote_storage")$storage_account_name,
-        key = get(file = self$config_file_name, "remote_storage")$storage_key,
-        container_name = glue("htp-{tolower('0847B484-BF9A-4D3D-9C96-992FC10D445D')}"),
-        download_mode = "on demand"
-      )
 
       # additional initialization for TOFA app can go here
 
