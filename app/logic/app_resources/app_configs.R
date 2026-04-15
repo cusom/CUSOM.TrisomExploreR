@@ -3,7 +3,8 @@ box::use(
   config[get],
   glue[glue],
   dplyr[select, arrange, distinct, pull, filter, left_join, mutate, 
-    group_by, collect, summarise, n, n_distinct, reframe, case_when],
+    group_by, collect, summarise, n, n_distinct, reframe, case_when,
+    bind_rows],
   tibble[tibble, deframe],
   tidyr[drop_na, separate_rows],
   purrr[pmap]
@@ -322,7 +323,12 @@ TrisomExplorerAppManager <- R6Class(
       return(
         self$analysis_config |>
           mutate(applicationName = self$app_config$applicationTitle) |>
-          filter(tolower(Namespace) == tolower(namespace))
+          filter(
+            tolower(Namespace) == tolower(namespace) |
+              tolower(AnalysisVariableLabel) == tolower(namespace) |
+              tolower(AnalysisVariableName) == tolower(namespace)
+          ) |>
+          distinct()
       )
     },
 
