@@ -149,7 +149,8 @@ TrisomExplorerAppManager <- R6Class(
       load_inputs = TRUE,
       load_participant_data = TRUE,
       load_encounter_data = TRUE,
-      load_condition_data = TRUE
+      load_condition_data = TRUE,
+      clear_data_dir = TRUE
     ) {
       self$application_id <- application_id
       self$config_file_name <- config_file_name
@@ -162,7 +163,8 @@ TrisomExplorerAppManager <- R6Class(
         account_name = get(file = self$config_file_name, "remote_storage")$storage_account_name,
         key = get(file = self$config_file_name, "remote_storage")$storage_key,
         container_name = glue("htp-{tolower(application_id)}"),
-        download_mode = "on demand"
+        download_mode = "on demand",
+        clear_data_dir = clear_data_dir
       )
 
       self$app_config$application_id <- application_id
@@ -385,7 +387,7 @@ TOFAAppManager <- R6Class(
   public = list(
     initialize = function(app_config) {
       
-      super$initialize(app_config$application_id, config_file_name = "config.yml", FALSE, FALSE, FALSE, FALSE)
+      super$initialize(app_config$application_id, config_file_name = "config.yml", FALSE, FALSE, FALSE, FALSE, FALSE)
 
 
       # additional initialization for TOFA app can go here

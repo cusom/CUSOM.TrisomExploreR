@@ -345,7 +345,8 @@ AzureRemoteDataFileManager <- R6Class(
       "readr::read_delim" = list(show_col_types = FALSE, progress = FALSE)
     ),
     initialize = function(account_name, key, container_name,
-      download_mode = c("on demand", "all"), local_data_directory = "Remote_Data") {
+      download_mode = c("on demand", "all"), local_data_directory = "Remote_Data", 
+      clear_data_dir = TRUE) {
       download_mode <- match.arg(download_mode)
       private$account_name <- account_name
       private$key <- key
@@ -354,7 +355,9 @@ AzureRemoteDataFileManager <- R6Class(
       self$local_data_directory <- local_data_directory
       private$endpoint <- storage_endpoint(self$uri, private$key)
       private$container <- storage_container(private$endpoint, private$container_name)
-      unlink(self$local_data_directory, recursive = TRUE)
+      if (clear_data_dir) {
+        unlink(self$local_data_directory, recursive = TRUE)
+      }
       self$set_blob_metadata()
       if (self$download_mode == "all") {
         self$download_files()
