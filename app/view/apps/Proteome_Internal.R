@@ -60,7 +60,7 @@ ui <- function(id) {
                     selected = TRUE
                 ),
                 menuItem(
-                    text = "Feature Analysis",
+                    text = "HTP Analysis",
                     icon = icon("chart-line"),
                     tabName = ns("feature"),
                     href = NULL,
@@ -68,7 +68,7 @@ ui <- function(id) {
                     selected = FALSE
                 ),
                 menuItem(
-                    text = "Cross Omics Correlates",
+                    text = "HTP Cross-Omics Analysis",
                     icon = icon("circle-nodes"),
                     tabName = ns("correlates"),
                     href = NULL,
@@ -76,7 +76,7 @@ ui <- function(id) {
                     selected = FALSE
                 ),
                 menuItem(
-                    text = "TOFA Analysis",
+                    text = "TOFA Trial Analysis",
                     icon = icon("book-medical"),
                     tabName = ns("tofa_timeseries"),
                     href = NULL,
