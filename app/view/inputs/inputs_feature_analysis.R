@@ -163,15 +163,16 @@ server <- function(id, app_config, analysis_config) {
   moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
+    condition_feature_options <- c("Comorbidity", "HasAnyConditionFlag", "Co-Occuring Conditions")
 
     output$Feature <- renderUI({
       choices <- analysis_config$namespace_config |>
         filter(
           grepl("feature", ModuleServerName, ignore.case = TRUE),
-          !is.na(AnalysisVariableName)
+          !is.na(AnalysisVariableLabel)
         ) |>
         arrange(DisplayOrder) |>
-        pull(AnalysisVariableName)
+        pull(AnalysisVariableLabel)
 
       selectizeInput(
         inputId = ns("Feature"),
@@ -303,7 +304,7 @@ server <- function(id, app_config, analysis_config) {
 
     # Only show conditions UI when Feature is Comorbidity
     output$ConditionsInputs <- renderUI({
-      req(input$Feature == "Comorbidity")
+      req(input$Feature %in% condition_feature_options)
       inputs_conditions_feature_analysis$ui(ns("conditions"))
     })
 
@@ -431,7 +432,7 @@ server <- function(id, app_config, analysis_config) {
         karyotypes = input$Karyotype,
         sexes = input$Sex,
         ages = input$Age,
-        conditions = if (input$Feature == "Comorbidity") conditions$selected_conditions() else NULL
+        conditions = if (input$Feature %in% condition_feature_options) conditions$selected_conditions() else NULL
       )
 
     }) |>
