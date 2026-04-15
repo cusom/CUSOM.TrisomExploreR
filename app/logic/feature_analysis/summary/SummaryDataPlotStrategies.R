@@ -33,7 +33,7 @@ VolcanoPlotStrategy <- R6Class(
         },
         analysis_variable_label = function(value) {
             return(
-                private$analysis_config$AnalysisVariableName
+                private$analysis_config$AnalysisVariableLabel
             )
         },
         volcanoPlotExpectedTraceCount = function(value) {
