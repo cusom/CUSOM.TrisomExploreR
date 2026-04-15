@@ -26,7 +26,8 @@ box::use(
   shinyWidgets[awesomeCheckboxGroup, numericRangeInput, prettyRadioButtons],
   shinybusy[remove_modal_spinner, show_modal_spinner],
   glue[glue],
-  dplyr[arrange, filter, pull],
+  dplyr[arrange, filter, pull, mutate, select],
+  tibble[deframe]
 )
 
 box::use(
@@ -166,13 +167,19 @@ server <- function(id, app_config, analysis_config) {
     condition_feature_options <- c("Comorbidity", "HasAnyConditionFlag", "Co-Occuring Conditions")
 
     output$Feature <- renderUI({
+
       choices <- analysis_config$namespace_config |>
         filter(
           grepl("feature", ModuleServerName, ignore.case = TRUE),
           !is.na(AnalysisVariableLabel)
         ) |>
         arrange(DisplayOrder) |>
-        pull(AnalysisVariableLabel)
+        mutate(
+          value = AnalysisVariableLabel,
+          label = glue("Effect of {AnalysisVariableLabel}")
+        ) |>
+        select(label, value) |>
+        deframe()
 
       selectizeInput(
         inputId = ns("Feature"),
