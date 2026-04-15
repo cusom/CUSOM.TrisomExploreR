@@ -53,6 +53,7 @@ ui <- function(id) {
                 style = "height:70vh;padding-left:2px;max-height:70vh;overflow-y:auto;overflow-x:hidden;",
                 sapply(
                     list(
+                        "dataset",
                         "down_syndrome_status",
                         "sexes",
                         "age_group",
@@ -100,6 +101,17 @@ server <- function(id, analysis_config) {
             analysis_config$encounter_data,
             analysis_config$datasets
         )
+
+        output$dataset <- renderUI({
+            prettyRadioButtons(
+                inputId = ns("dataset"),
+                label = "Dataset",
+                choiceNames = "Endpoints",
+                choiceValues = "Endpoints",
+                inline = TRUE,
+                width = "90%"
+            )
+        })
 
         output$sexes <- renderUI({
             disabled(
