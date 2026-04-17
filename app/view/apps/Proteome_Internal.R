@@ -24,7 +24,7 @@ ui <- function(id) {
         preloader = list(
             html = tagList(
                 spin_orbiter(),
-                glue("Loading TrisomExplorer...")
+                glue("Loading Proteome TrisomExplorer...")
             ),
             color = "#3c8dbc"
         ),
@@ -33,7 +33,7 @@ ui <- function(id) {
             title = tags$a(
                 href = "",
                 tags$img(
-                    src = "/static/htp_logo.png",
+                    src = "static/htp_logo.png",
                     height = "30"
                 ),
                 "TrisomExplorer",
