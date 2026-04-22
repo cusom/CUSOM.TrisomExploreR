@@ -19,8 +19,8 @@ AnalysisInputsDataPreparer <- R6Class(
     active = list(),
     public = list(
         dataset_data = NULL,
-        initialize = function(dataset_data) {
-            self$dataset_data <- dataset_data
+        initialize = function(analysis_config, dataset, ...) {
+            self$dataset_data <- analysis_config$dataset_data
         },
         prepare = function(data) {
             # Placeholder for any data preparation steps needed before analysis

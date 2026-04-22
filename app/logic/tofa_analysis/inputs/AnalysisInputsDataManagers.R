@@ -15,16 +15,12 @@ box::use(
 #' @export
 AnalysisInputsManager <- R6Class(
     "AnalysisInputsManager",
-    private = list(),
+    private = list(
+        analysis_config = NULL
+    ),
     active = list(
-        visit_extended_data = function(value) {
-            return(
-                self$visit_data |>
-                    mutate(
-                        age_at_visit_in_years = Age_at_visit_in_days / 365,
-                        age_group = ifelse(age_at_visit_in_years >= 18, "Adult", "Under 18")
-                    )
-            )
+        remote_files = function(value) {
+            return(private$analysis_config$remote_files)
         },
         sexes = function(value) {
             return(
@@ -49,8 +45,41 @@ AnalysisInputsManager <- R6Class(
                     distinct() |>
                     pull()
             )
+        }
+    ),
+    public = list(
+        input_config = NULL,
+        participant_data = NULL,
+        visit_data = NULL,
+        datasets = NULL,
+        filtered_data = NULL,
+        initialize = function(analysis_config, dataset, ...) {
+            private$analysis_config <- analysis_config
+            self$input_config <- analysis_config$input_config
+            self$participant_data <- analysis_config$participant_data
         },
-        down_syndrome_status = function(value) {
+        get_data = function(...) {
+            return(invisible(self$filtered_data))
+        }
+    )
+)
+
+#' @export
+EndpointsInputsManager <- R6Class(
+    "EndpointsInputsManager",
+    inherit = AnalysisInputsManager,
+    active = list(
+        visit_extended_data = function(value) {
+            return(
+                self$visit_data |>
+                    mutate(
+                        age_at_visit_in_years = Age_at_visit_in_days / 365,
+                        age_group = ifelse(age_at_visit_in_years >= 18, "Adult", "Under 18")
+                    )
+            )
+        },
+        
+        karyotype = function(value) {
             return(
                 self$participant_data |>
                     select(DownSyndromeStatus) |>
@@ -121,7 +150,7 @@ AnalysisInputsManager <- R6Class(
         },
         features = function(value) {
             return(
-                self$datasets |>
+                self$remote_files$get_experiment_data("TOFA_Endpoints") |>
                     select(Feature) |>
                     distinct() |>
                     pull()
@@ -129,22 +158,20 @@ AnalysisInputsManager <- R6Class(
         }
     ),
     public = list(
-        participant_data = NULL,
-        visit_data = NULL,
-        datasets = NULL,
         filtered_data = NULL,
-        initialize = function(participant_data = NULL, visit_data = NULL, datasets = NULL, ...) {
-            self$participant_data <- participant_data
-            self$visit_data <- visit_data |>
-              mutate(
-                Age_at_visit_in_days = as.numeric(Age_at_visit_in_days),
-                Height_cm = as.numeric(Height_cm),
-                Weight_kg = as.numeric(Weight_kg)
-              )
-            self$datasets <- datasets
+        initialize = function(analysis_config, dataset, ...) {
+
+            super$initialize(analysis_config, dataset, ...)
+
+            self$visit_data <- analysis_config$encounter_data |>
+                mutate(
+                    Age_at_visit_in_days = as.numeric(Age_at_visit_in_days),
+                    Height_cm = as.numeric(Height_cm),
+                    Weight_kg = as.numeric(Weight_kg)
+                )
         },
         get_data = function(
-            sexes, races, ethnicities, down_syndrome_status, age_at_visit, age_groups, conditions = NULL
+            sexes, races, ethnicities, karyotype, age_at_visit, age_groups, conditions = NULL
         ) {
             self$filtered_data <- self$participant_data |>
                 filter(
@@ -152,7 +179,7 @@ AnalysisInputsManager <- R6Class(
                     if (!is.null(sexes))              Sex %in% sexes               else TRUE,
                     if (!is.null(races))              Race %in% races              else TRUE,
                     if (!is.null(ethnicities))        Ethnicity %in% ethnicities   else TRUE,
-                    if (!is.null(down_syndrome_status)) DownSyndromeStatus %in% down_syndrome_status else TRUE,
+                    if (!is.null(karyotype)) DownSyndromeStatus %in% karyotype else TRUE,
                     # For `conditions`, match on Qualifying_feature only when provided
                     if (!is.null(conditions))
                         replace_na(grepl(conditions, Qualifying_feature, ignore.case = TRUE), FALSE) else TRUE
@@ -168,6 +195,43 @@ AnalysisInputsManager <- R6Class(
                 ) |>
                 select(Internal_ParticipantID, RecordID, TOFA_LabID, HTP_LabID)
             return(invisible(self$filtered_data))
+        }
+    )
+)
+
+
+#' @export
+NULISAInputsManager <- R6Class(
+    "NULISAInputsManager",
+    inherit = AnalysisInputsManager,
+    private = list(),
+    active = list(),
+    public = list(
+        initialize = function(...) {
+            super$initialize(...)
+            # Additional initialization for NULISA dataset if needed
+        },
+        get_data = function(...) {
+            # Custom data retrieval logic for NULISA dataset if needed
+            return(super$get_data(...))
+        }
+    )
+)
+
+#' @export
+OLINKInputsManager <- R6Class(
+    "OLINKInputsManager",
+    inherit = AnalysisInputsManager,
+    private = list(),
+    active = list(),
+    public = list(
+        initialize = function(...) {
+            super$initialize(...)
+            # Additional initialization for OLINK dataset if needed
+        },
+        get_data = function(...) {
+            # Custom data retrieval logic for OLINK dataset if needed
+            return(super$get_data(...))
         }
     )
 )
