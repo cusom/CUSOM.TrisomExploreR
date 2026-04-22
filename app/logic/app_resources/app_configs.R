@@ -4,7 +4,7 @@ box::use(
   glue[glue],
   dplyr[select, arrange, distinct, pull, filter, left_join, mutate, 
     group_by, collect, summarise, n, n_distinct, reframe, case_when,
-    bind_rows],
+    bind_rows, rename, rename_with],
   tibble[tibble, deframe],
   tidyr[drop_na, separate_rows],
   purrr[pmap]
@@ -345,41 +345,26 @@ TOFAAppManager <- R6Class(
   inherit = TrisomExplorerAppManager,
   private = list(),
   active = list(
-    inputs = function(value) {
-      return(
-        self$remote_files$get_remote_file_data("inputs.json")
-      )
-    },
-    participant_data = function(value) {
-      return(
-        self$remote_files$get_remote_file_data("tofa_participants")
-      )
-    },
-    encounter_data = function(value) {
-      return(
-        self$remote_files$get_remote_file_data("tofa_encounters")
-      )
-    },
     datasets = function(value) {
       return(
-        self$remote_files$get_remote_file_data("tofa_endpoints")
+        self$remote_files$blobs |>
+          select(ExperimentID) |>
+          drop_na() |>
+          rename(Values = ExperimentID) |>
+          mutate(
+            Text = gsub("TOFA_data_DCC_TrisomExplorer_v2.3_DATASETS_", "", Values),
+            URL = NA, 
+            TooltipText = "", 
+            ShowTooltip = FALSE, 
+            FieldSet = case_when(
+              grepl("Endpoints", Values,  ignore.case = TRUE) ~ "Endpoints",
+              grepl("Nulisa", Values,  ignore.case = TRUE) ~ "Nulisa",
+              grepl("Olink", Values, ignore.case = TRUE) ~ "Olink",
+              TRUE ~ "Other"
+            )
+          ) |>
+          select(Values, Text, URL, TooltipText, ShowTooltip, FieldSet)
       )
-    },
-    conditions = function(value) {
-        return(
-            self$participant_data |>
-                select("condition" = Qualifying_feature) |>
-                separate_rows(condition, sep = "; ") |>
-                distinct()
-        )
-    },
-    participant_conditions = function(value) {
-        return(
-            self$participant_data |>
-                select(External_ParticipantID, Internal_ParticipantID, "condition" = Qualifying_feature) |>
-                separate_rows(condition, sep = "; ") |>
-                distinct()
-        )
     },
     all_data = function(value) {
       return(
@@ -393,10 +378,15 @@ TOFAAppManager <- R6Class(
   public = list(
     initialize = function(app_config) {
       
-      super$initialize(app_config$application_id, config_file_name = "config.yml", FALSE, FALSE, FALSE, FALSE, FALSE)
+      super$initialize(app_config$application_id, config_file_name = "config.yml", TRUE, FALSE, FALSE, FALSE, FALSE)
 
-
-      # additional initialization for TOFA app can go here
+      self$remote_files <- AzureRemoteDataFileManager$new(
+        account_name = get(file = self$config_file_name, "remote_storage")$storage_account_name,
+        key = get(file = self$config_file_name, "remote_storage")$storage_key,
+        container_name = "htp-0847b484-bf9a-4d3d-9c96-992fc10d445d",
+        download_mode = "on demand",
+        clear_data_dir = FALSE
+      )
 
     },
     load_participant_data = function() {
