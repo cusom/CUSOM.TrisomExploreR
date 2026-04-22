@@ -4,7 +4,7 @@ box::use(
     tibble[tibble, as_tibble, enframe],
     dplyr[select, mutate, group_by, summarise, ungroup, rename_with, distinct, n,
             pull, arrange, dense_rank, row_number, filter, bind_rows, case_when,
-            n_distinct, if_else, inner_join, left_join, join_by, cross_join],
+            n_distinct, if_else, inner_join, left_join, join_by, cross_join, all_of],
     tidyr[drop_na, separate_rows],
     purrr[pmap, pluck, set_names],
     stringr[str_split_1, str_c],
@@ -12,7 +12,6 @@ box::use(
     rlang[sym]
 )
 
-#' @export
 AnalysisInputsManager <- R6Class(
     "AnalysisInputsManager",
     private = list(
@@ -21,6 +20,14 @@ AnalysisInputsManager <- R6Class(
     active = list(
         remote_files = function(value) {
             return(private$analysis_config$remote_files)
+        },
+        karyotype = function(value) {
+            return(
+                self$participant_data |>
+                    select(DownSyndromeStatus) |>
+                    distinct() |>
+                    pull()
+            )
         },
         sexes = function(value) {
             return(
@@ -45,30 +52,7 @@ AnalysisInputsManager <- R6Class(
                     distinct() |>
                     pull()
             )
-        }
-    ),
-    public = list(
-        input_config = NULL,
-        participant_data = NULL,
-        visit_data = NULL,
-        datasets = NULL,
-        filtered_data = NULL,
-        initialize = function(analysis_config, dataset, ...) {
-            private$analysis_config <- analysis_config
-            self$input_config <- analysis_config$input_config
-            self$participant_data <- analysis_config$participant_data
         },
-        get_data = function(...) {
-            return(invisible(self$filtered_data))
-        }
-    )
-)
-
-#' @export
-EndpointsInputsManager <- R6Class(
-    "EndpointsInputsManager",
-    inherit = AnalysisInputsManager,
-    active = list(
         visit_extended_data = function(value) {
             return(
                 self$visit_data |>
@@ -76,15 +60,6 @@ EndpointsInputsManager <- R6Class(
                         age_at_visit_in_years = Age_at_visit_in_days / 365,
                         age_group = ifelse(age_at_visit_in_years >= 18, "Adult", "Under 18")
                     )
-            )
-        },
-        
-        karyotype = function(value) {
-            return(
-                self$participant_data |>
-                    select(DownSyndromeStatus) |>
-                    distinct() |>
-                    pull()
             )
         },
         events = function(value) {
@@ -147,22 +122,19 @@ EndpointsInputsManager <- R6Class(
                     distinct() |>
                     pull()
             )
-        },
-        features = function(value) {
-            return(
-                self$remote_files$get_experiment_data("TOFA_Endpoints") |>
-                    select(Feature) |>
-                    distinct() |>
-                    pull()
-            )
         }
     ),
     public = list(
+        input_config = NULL,
+        participant_data = NULL,
+        visit_data = NULL,
+        dataset = NULL,
         filtered_data = NULL,
         initialize = function(analysis_config, dataset, ...) {
-
-            super$initialize(analysis_config, dataset, ...)
-
+            private$analysis_config <- analysis_config
+            self$dataset <- dataset
+            self$input_config <- analysis_config$input_config
+            self$participant_data <- analysis_config$participant_data
             self$visit_data <- analysis_config$encounter_data |>
                 mutate(
                     Age_at_visit_in_days = as.numeric(Age_at_visit_in_days),
@@ -195,6 +167,31 @@ EndpointsInputsManager <- R6Class(
                 ) |>
                 select(Internal_ParticipantID, RecordID, TOFA_LabID, HTP_LabID)
             return(invisible(self$filtered_data))
+        }
+    )
+)
+
+#' @export
+EndpointsInputsManager <- R6Class(
+    "EndpointsInputsManager",
+    inherit = AnalysisInputsManager,
+    active = list(
+        features = function(value) {
+            return(
+                self$remote_files$get_experiment_data(self$dataset) |>
+                    select(Feature) |>
+                    distinct() |>
+                    pull()
+            )
+        }
+    ),
+    public = list(
+        initialize = function(analysis_config, dataset, ...) {
+            super$initialize(analysis_config, dataset, ...)
+        },
+        get_data = function(...) {
+            # Custom data retrieval logic for NULISA dataset if needed
+            return(super$get_data(...))
         }
     )
 )
