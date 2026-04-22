@@ -34,6 +34,7 @@ box::use(
 
 box::use(
     app/logic/tofa_analysis/inputs/AnalysisInputs[getAnalysisInputs],
+    app/view/custom_ui/input_widgets[prettyRadioButtonsFieldSet],
 )
 
 #' @export
@@ -50,30 +51,50 @@ ui <- function(id) {
             headerBorder = FALSE,
             tags$div(
                 id = ns("scrollableOptions"),
-                style = "height:70vh;padding-left:2px;max-height:70vh;overflow-y:auto;overflow-x:hidden;",
-                sapply(
-                    list(
-                        "dataset",
-                        "down_syndrome_status",
-                        "sexes",
-                        "age_group",
-                        "feature",
-                        "plot_type"),
-                    function(x) {
-                        return(
-                            tagList(
-                                tags$div(
-                                    withLoader(
-                                        uiOutput(ns(x)),
-                                        type = "html",
-                                        loader = "loader6",
-                                        proxy.height = "20px"
-                                    )
-                                ),
-                                tags$hr(style = "margin-top:15px;margin-bottom:15px;")
-                            )
-                        )
-                    }
+                style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
+                tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+                withLoader(
+                    uiOutput(ns("dataset")),
+                    type = "html",
+                    loader = "loader6",
+                    proxy.height = "20px"
+                ),
+                tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+                tags$b("Karyotype"),
+                withLoader(
+                    uiOutput(ns("karyotype")),
+                    type = "html",
+                    loader = "loader6",
+                    proxy.height = "20px"
+                ),
+                tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+                tags$b("Sex"),
+                withLoader(
+                    uiOutput(ns("sexes")),
+                    type = "html",
+                    loader = "loader6",
+                    proxy.height = "20px"
+                ),
+                tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+                withLoader(
+                    uiOutput(ns("age_group")),
+                    type = "html",
+                    loader = "loader6",
+                    proxy.height = "20px"
+                ),
+                tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+                withLoader(
+                    uiOutput(ns("feature")),
+                    type = "html",
+                    loader = "loader6",
+                    proxy.height = "20px"
+                ),
+                tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+                withLoader(
+                    uiOutput(ns("plot_type")),
+                    type = "html",
+                    loader = "loader6",
+                    proxy.height = "20px"
                 )
             ),
             footer = tagList(
@@ -96,80 +117,67 @@ server <- function(id, analysis_config) {
 
         ns <- session$ns
 
-        r6 <- getAnalysisInputs(
-            analysis_config$participant_data,
-            analysis_config$encounter_data,
-            analysis_config$datasets
-        )
-
         output$dataset <- renderUI({
-            prettyRadioButtons(
-                inputId = ns("dataset"),
-                label = "Dataset",
-                choiceNames = "Endpoints",
-                choiceValues = "Endpoints",
-                inline = TRUE,
-                width = "90%"
+
+            choices <- analysis_config$datasets
+
+            selected <- ifelse(nrow(choices) == 1, choices, character(0))
+
+            prettyRadioButtonsFieldSet(
+                input_id = ns("dataset"),
+                label = NULL,
+                field_set_data = choices,
+                selected = selected
+            ) |>
+                bs_embed_tooltip(
+                    title = "Select a dataset below",
+                    placement = "top",
+                    html = TRUE
+                )
+
+        })
+
+        r6_obj <- reactiveVal(NULL)
+
+        # Recreate the R6 instance when Dataset changes
+        observeEvent(input$dataset, ignoreInit = TRUE, {
+            req(input$dataset)
+            inst <- getAnalysisInputs(
+                analysis_config = analysis_config,
+                dataset = input$dataset
             )
+            r6_obj(inst)
+        })
+
+        #expose a reactive that always reads the current instance
+        r6 <- reactive({
+            req(r6_obj())
+            r6_obj()
         })
 
         output$sexes <- renderUI({
             disabled(
                 awesomeCheckboxGroup(
                     inputId = ns("sexes"),
-                    label = "Sex",
-                    choices = r6$sexes,
-                    selected = r6$sexes,
+                    label = "",
+                    choices = r6()$sexes,
+                    selected = r6()$sexes,
                     inline = TRUE,
                     width = "90%"
                 )
             )
         })
 
-        output$races <- renderUI({
-            awesomeCheckboxGroup(
-                inputId = ns("races"),
-                label = "Race",
-                choices = r6$races,
-                selected = r6$races,
-                inline = FALSE,
-                width = "90%"
-            )
-        })
-
-        output$ethnicities <- renderUI({
-            awesomeCheckboxGroup(
-                inputId = ns("ethnicities"),
-                label = "Ethnicity",
-                choices = r6$ethnicities,
-                selected = r6$ethnicities,
-                inline = FALSE,
-                width = "90%"
-            )
-        })
-
-        output$down_syndrome_status <- renderUI({
+        output$karyotype <- renderUI({
             disabled(
                 prettyRadioButtons(
-                    inputId = ns("down_syndrome_status"),
-                    label = "Down syndrome status",
-                    choiceNames = r6$down_syndrome_status,
-                    choiceValues = r6$down_syndrome_status,
+                    inputId = ns("karyotype"),
+                    label = "",
+                    choiceNames = r6()$karyotype,
+                    choiceValues = r6()$karyotype,
                     inline = TRUE,
                     width = "90%"
                 )
-            )
-        })
-
-        output$age <- renderUI({
-            numericRangeInput(
-                inputId = ns("age"),
-                label = "Age at visit (in days)",
-                value = c(min(r6$age_at_visit, na.rm = TRUE), max(r6$age_at_visit, na.rm = TRUE)),
-                min = min(r6$age_at_visit, na.rm = TRUE),
-                max = max(r6$age_at_visit, na.rm = TRUE),
-                step = 1,
-                width = "90%"
             )
         })
 
@@ -178,38 +186,21 @@ server <- function(id, analysis_config) {
                 awesomeCheckboxGroup(
                     inputId = ns("age_group"),
                     label = "Age Groups",
-                    choices = r6$age_groups,
-                    selected = r6$age_groups,
+                    choices = r6()$age_groups,
+                    selected = r6()$age_groups,
                     inline = FALSE,
                     width = "90%"
                 )
             )
         })
 
-        output$conditions <- renderUI({
-            selectizeInput(
-                inputId = ns("conditions"),
-                label = "Qualifying conditions",
-                choices = r6$conditions,
-                selected = NULL,
-                multiple = TRUE,
-                options = list(
-                    placeholder = "Select below",
-                    onInitialize = I('function() { this.setValue(""); }'),
-                    closeAfterSelect = TRUE,
-                    selectOnTab = TRUE,
-                    persist = FALSE,
-                    dropupAuto = FALSE
-                )
-            )
-        })
 
         output$comparisons <- renderUI({
             virtualSelectInput(
                 inputId = ns("comparisons"),
                 label = "Comparisons Available",
                 choices = prepare_choices(
-                    r6$event_comparisons,
+                    r6()$event_comparisons,
                     label = analysis,
                     value = events
                 ),
@@ -223,8 +214,8 @@ server <- function(id, analysis_config) {
             selectizeInput(
                 inputId = ns("feature"),
                 label = "Choose Score / Endpoint",
-                choices = r6$features,
-                selected = r6$features[1],
+                choices = r6()$features,
+                selected = r6()$features[1],
                 multiple = FALSE,
                 options = list(
                     placeholder = "Select below",
@@ -274,12 +265,12 @@ server <- function(id, analysis_config) {
             }
         })
 
-        data <- reactive({
-            r6$get_data(
+        cohort <- reactive({
+            r6()$get_data(
                 input$sexes,
                 input$races,
                 input$ethnicities,
-                input$down_syndrome_status,
+                input$karyotype,
                 input$age,
                 input$age_group,
                 input$conditions
@@ -289,7 +280,7 @@ server <- function(id, analysis_config) {
 
         return(
             list(
-                data = data,
+                cohort = cohort,
                 feature = reactive({input$feature}),
                 plot_type = reactive({input$plot_type})
             )
