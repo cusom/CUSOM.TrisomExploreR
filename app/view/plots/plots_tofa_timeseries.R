@@ -44,7 +44,7 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, scores, cohort, feature, plot_type) {
+server <- function(id, analysis_config, dataset, cohort, feature, plot_type) {
     moduleServer(id, function(input, output, session) {
 
         ns <- session$ns
@@ -52,17 +52,18 @@ server <- function(id, scores, cohort, feature, plot_type) {
         r6_obj <- reactiveVal(NULL)
 
         # Recreate the R6 instance when Feature changes
-        observeEvent(c(cohort(), scores, plot_type(), feature()), {
+        observeEvent(c(cohort(), dataset(), plot_type(), feature()), {
             req(cohort())
-            req(scores)
+            req(dataset())
             req(plot_type())
             req(feature())
             validate(
                 need(!is.null(cohort()), ""),
             )
             inst <- getTimeseriesPlot(
-                type = plot_type(),
-                dataset = scores,
+                analysis_config = analysis_config,
+                dataset = dataset(),
+                plot_type = plot_type(),
                 cohort = cohort(),
                 feature = feature()
             )
@@ -77,7 +78,7 @@ server <- function(id, scores, cohort, feature, plot_type) {
 
         output$plot <- renderPlotly({
             req(cohort())
-            req(scores)
+            req(dataset())
             req(plot_type())
 
             show_modal_spinner(

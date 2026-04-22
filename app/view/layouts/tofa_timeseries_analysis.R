@@ -42,8 +42,9 @@ server <- function(id, app_config) {
 
         timeseries <- plots_tofa_timeseries$server(
             "timeseries",
-            scores = analysis_config$datasets,
-            cohort = inputs$data,
+            analysis_config = analysis_config,
+            dataset = inputs$dataset,
+            cohort = inputs$cohort,
             feature = inputs$feature,
             plot_type = inputs$plot_type
         )

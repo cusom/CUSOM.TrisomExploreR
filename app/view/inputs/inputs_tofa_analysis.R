@@ -280,6 +280,7 @@ server <- function(id, analysis_config) {
 
         return(
             list(
+                dataset = reactive({input$dataset}),
                 cohort = cohort,
                 feature = reactive({input$feature}),
                 plot_type = reactive({input$plot_type})
