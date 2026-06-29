@@ -45,15 +45,30 @@ BaseTimeseriesPreparer <- R6Class(
             self$source_data <- data
             return(invisible(self$source_data))
         },
+        select_core_columns = function(data = self$source_data) {
+            return(
+                data |>
+                    select(Internal_ParticipantID, Event_Name, Value)
+            )
+        },
+        add_value_and_units = function(data) {
+            return(
+                data |>
+                    mutate(
+                        Value = round(as.numeric(Value), 4),
+                        Units = self$units
+                    )
+            )
+        },
         prepare = function(raw_data) {
             self$prepared_data <- self$set_source_data(raw_data) |>
-                select(Internal_ParticipantID, Event_Name, Value) |>
+                self$select_core_columns() |>
+                self$add_value_and_units() |>
                 mutate(
-                    Value = as.numeric(Value),
                     text = glue(
                         "ParticipantID: {Internal_ParticipantID}
                         Event_Name: {Event_Name}
-                        {self$feature_label}: {Value}"
+                        {self$feature_label}: {Value} {self$units}"
                     )
                 )
             return(invisible(self$prepared_data))
@@ -65,19 +80,13 @@ BaseTimeseriesPreparer <- R6Class(
 DifferenceTimeseriesPreparer <- R6Class(
     "DifferenceTimeseriesPreparer",
     inherit = BaseTimeseriesPreparer,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(type, dataset, cohort, ...) {
-            super$initialize(type, dataset, cohort, ...)
-        },
         prepare = function(raw_data) {
             self$prepared_data <- self$set_source_data(raw_data) |>
-                select(Internal_ParticipantID, Event_Name, Value) |>
+                self$select_core_columns() |>
                 filter(Event_Name == "Baseline") |>
                 inner_join(
-                    self$source_data |>
-                        select(Internal_ParticipantID, Event_Name, Value) |>
+                    self$select_core_columns() |>
                         filter(Event_Name != "Baseline"),
                     by = "Internal_ParticipantID"
                 ) |>
@@ -89,15 +98,16 @@ DifferenceTimeseriesPreparer <- R6Class(
                 select(
                     Internal_ParticipantID, 
                     Event_Name = Event_Name.y,
-                    Value = Value.y,
-                    diff
+                    Value = round(as.numeric(Value.y), 4),
+                    Units = self$units,
+                    diff = round(diff, 4)
                 ) |>
                 mutate(
                     text = glue(
                         "ParticipantID: {Internal_ParticipantID}
                         Event_Name: {Event_Name}
-                        {self$feature_label}: {Value}
-                        Difference from Baseline: {diff}"
+                        {self$feature_label}: {Value} {self$units}
+                        Difference from Baseline: {diff} {self$units}"
                     )
                 )           
             return(invisible(self$prepared_data))

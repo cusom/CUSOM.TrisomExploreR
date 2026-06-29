@@ -122,12 +122,22 @@ AnalysisInputsManager <- R6Class(
                     distinct() |>
                     pull()
             )
+        },
+        features = function(value) {
+            return(
+                self$remote_files$get_experiment_data(self$dataset) |>
+                    select(self$feature_col) |>
+                    distinct() |>
+                    arrange(.data[[self$feature_col]]) |>
+                    pull()
+            )
         }
     ),
     public = list(
         input_config = NULL,
         participant_data = NULL,
         visit_data = NULL,
+        feature_col = "Feature",
         dataset = NULL,
         filtered_data = NULL,
         initialize = function(analysis_config, dataset, ...) {
@@ -175,43 +185,17 @@ AnalysisInputsManager <- R6Class(
 EndpointsInputsManager <- R6Class(
     "EndpointsInputsManager",
     inherit = AnalysisInputsManager,
-    active = list(
-        features = function(value) {
-            return(
-                self$remote_files$get_experiment_data(self$dataset) |>
-                    select(Feature) |>
-                    distinct() |>
-                    pull()
-            )
-        }
-    ),
     public = list(
-        initialize = function(analysis_config, dataset, ...) {
-            super$initialize(analysis_config, dataset, ...)
-        },
-        get_data = function(...) {
-            # Custom data retrieval logic for NULISA dataset if needed
-            return(super$get_data(...))
-        }
+        feature_col = "Feature"
     )
 )
-
 
 #' @export
 NULISAInputsManager <- R6Class(
     "NULISAInputsManager",
     inherit = AnalysisInputsManager,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(...) {
-            super$initialize(...)
-            # Additional initialization for NULISA dataset if needed
-        },
-        get_data = function(...) {
-            # Custom data retrieval logic for NULISA dataset if needed
-            return(super$get_data(...))
-        }
+        feature_col = "Analyte"
     )
 )
 
@@ -219,16 +203,7 @@ NULISAInputsManager <- R6Class(
 OLINKInputsManager <- R6Class(
     "OLINKInputsManager",
     inherit = AnalysisInputsManager,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(...) {
-            super$initialize(...)
-            # Additional initialization for OLINK dataset if needed
-        },
-        get_data = function(...) {
-            # Custom data retrieval logic for OLINK dataset if needed
-            return(super$get_data(...))
-        }
+        feature_col = "Analyte"
     )
 )

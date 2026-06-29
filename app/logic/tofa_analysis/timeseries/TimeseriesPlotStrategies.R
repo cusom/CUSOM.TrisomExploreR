@@ -24,7 +24,6 @@ BasePlotStrategy <- R6Class(
                     summarise(n = n_distinct(Internal_ParticipantID)) 
             )
         },
-        
         x_var_name = function(value) {
             return("Event_Name")
         },
@@ -55,7 +54,12 @@ BasePlotStrategy <- R6Class(
             )
         },
         y_axis_title = function(value) {
-            return(self$feature)
+            return(
+                self$source_data |>
+                    select(Units) |>
+                    distinct() |>
+                    pull()
+            )
         },
         plot_title = function(value) {
             return(glue("{self$feature}: Baseline vs. TOFA"))
