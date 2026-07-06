@@ -78,7 +78,7 @@ ui <- function(id) {
                 menuItem(
                     text = "TOFA Trial Analysis",
                     icon = icon("book-medical"),
-                    tabName = ns("tofa_timeseries"),
+                    tabName = ns("tofa"),
                     href = NULL,
                     newtab = TRUE,
                     selected = FALSE
@@ -114,9 +114,9 @@ ui <- function(id) {
                     )
                 ),
                 tabItem(
-                    tabName = ns("tofa_timeseries"),
+                    tabName = ns("tofa"),
                     tags$div(
-                        tofa_timeseries_analysis$ui(ns("tofa_timeseries"))
+                        tofa_timeseries_analysis$ui(ns("tofa"))
                     )
                 )
             )
@@ -160,7 +160,7 @@ server <- function(id, app_config) {
         )
 
         tofa_timeseries_analysis$server(
-            id = "tofa_timeseries",
+            id = "tofa",
             app_config = app_config
         )
 
