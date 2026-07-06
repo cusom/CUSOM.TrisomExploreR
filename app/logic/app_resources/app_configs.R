@@ -388,6 +388,22 @@ TOFAAppManager <- R6Class(
         clear_data_dir = FALSE
       )
 
+      self$analysis_config <- tibble(
+        Namespace = "Timepoint", 
+        ExperimentIDs = NA, 
+        UsesPreCalculatedData = TRUE,
+        AnalysisVariableName = "Event_Name", 
+        AnalysisVariableLabel = "Event", 
+        AnalysisType = "Categorical",
+        AnalysisVariableBaselineLabel = "Baseline",
+        AnalysisVolcanoPlotTopAnnotation = "Up Compared to Baseline"
+      )
+
+    },
+    get_analysis_config = function(namespace) {
+      return(
+        self$analysis_config
+      )
     },
     load_participant_data = function() {
       self$input_config$karyotypes <- self$participant_data |>
