@@ -1,0 +1,6 @@
+id: age
+display_name: Effect of Age
+description: Age of the participant
+owner: participants
+column: age
+data_type: continuous

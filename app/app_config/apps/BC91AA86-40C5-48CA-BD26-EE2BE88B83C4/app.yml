@@ -1,0 +1,35 @@
+schema_version: 1.0
+
+application:
+  id: BC91AA86-40C5-48CA-BD26-EE2BE88B83C4
+  name: TrisomExplorer | Transcriptome - INTERNAL ONLY
+  environment: internal
+
+runtime:
+  entry_point_path: app/view/apps
+  entry_point: Transcriptome_Internal
+  parent_namespace: Transcriptome
+
+app_settings:
+  class_module: app/logic/app_resources/app_configs
+  class_name: TrisomExplorerAppManager
+  args: {}
+
+data_roots:
+  catalog_root: app/app_config/apps/BC91AA86-40C5-48CA-BD26-EE2BE88B83C4/catalog
+  packages_root: ${TRISOM_PACKAGES_ROOT}/BC91AA86-40C5-48CA-BD26-EE2BE88B83C4
+  allow_missing_packages: false
+
+ui:
+  application_title: TrisomExplorer | Transcriptome - INTERNAL ONLY
+  application_label: TrisomExplorer
+  application_url: https://www.trisome.org/explorer-internal
+  links:
+    - label: TrisomExplorer | Transcriptome
+      image_url: https://www.trisome.org/static/img/transcriptome.png
+      link: https://www.trisome.org/explorer-internal
+      is_current_application: true
+
+metadata_source:
+  use_database_namespace_config: false
+  use_database_application_links: false

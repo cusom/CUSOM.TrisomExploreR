@@ -1,0 +1,6 @@
+id: sex
+display_name: Effect of Sex
+description: Biological sex of the participant
+owner: participants
+column: sex
+data_type: categorical

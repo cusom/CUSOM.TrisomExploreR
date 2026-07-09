@@ -1,0 +1,6 @@
+id: bmi
+display_name: Effect of BMI
+description: Body Mass Index of the participant
+owner: participants
+column: bmi
+data_type: continuous

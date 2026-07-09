@@ -1,0 +1,6 @@
+id: karyotype
+display_name: Effect of Karyotype
+description: Chromosomal classification of the participant
+owner: participants
+column: karyotype
+data_type: categorical

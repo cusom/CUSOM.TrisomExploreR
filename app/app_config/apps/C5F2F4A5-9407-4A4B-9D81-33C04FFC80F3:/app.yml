@@ -1,0 +1,35 @@
+schema_version: 1.0
+
+application:
+  id: C5F2F4A5-9407-4A4B-9D81-33C04FFC80F3
+  name: TrisomExplorer | Metabolome
+  environment: internal
+
+runtime:
+  entry_point_path: app/view/apps
+  entry_point: Metabolome
+  parent_namespace: Metabolome
+
+app_settings:
+  class_module: app/logic/app_resources/app_configs
+  class_name: TrisomExplorerAppManager
+  args: {}
+
+data_roots:
+  catalog_root: app/app_config/apps/C5F2F4A5-9407-4A4B-9D81-33C04FFC80F3/catalog
+  packages_root: ${TRISOM_PACKAGES_ROOT}/C5F2F4A5-9407-4A4B-9D81-33C04FFC80F3
+  allow_missing_packages: false
+
+ui:
+  application_title: TrisomExplorer | Metabolome
+  application_label: TrisomExplorer
+  application_url: https://www.trisome.org/explorer-internal
+  links:
+    - label: TrisomExplorer | Metabolome
+      image_url: https://www.trisome.org/static/img/metabolome.png
+      link: https://www.trisome.org/explorer-internal
+      is_current_application: true
+
+metadata_source:
+  use_database_namespace_config: false
+  use_database_application_links: false

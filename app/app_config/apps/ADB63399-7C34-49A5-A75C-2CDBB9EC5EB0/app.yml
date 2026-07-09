@@ -1,0 +1,35 @@
+schema_version: 1.0
+
+application:
+  id: ADB63399-7C34-49A5-A75C-2CDBB9EC5EB0
+  name: TrisomExplorer | Proteome - INTERNAL ONLY
+  environment: internal
+
+runtime:
+  entry_point_path: app/view/apps
+  entry_point: Proteome_Internal
+  parent_namespace: Proteome
+
+app_settings:
+  class_module: app/logic/app_resources/app_configs
+  class_name: TrisomExplorerAppManager
+  args: {}
+
+data_roots:
+  catalog_root: app/app_config/apps/ADB63399-7C34-49A5-A75C-2CDBB9EC5EB0/catalog
+  packages_root: ${TRISOM_PACKAGES_ROOT}/ADB63399-7C34-49A5-A75C-2CDBB9EC5EB0
+  allow_missing_packages: false
+
+ui:
+  application_title: TrisomExplorer | Proteome - INTERNAL ONLY
+  application_label: TrisomExplorer
+  application_url: https://www.trisome.org/explorer-internal
+  links:
+    - label: TrisomExplorer | Proteome
+      image_url: https://www.trisome.org/static/img/proteome.png
+      link: https://www.trisome.org/explorer-internal
+      is_current_application: true
+
+metadata_source:
+  use_database_namespace_config: false
+  use_database_application_links: false

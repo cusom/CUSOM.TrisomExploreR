@@ -1,0 +1,6 @@
+id: comorbidity
+display_name: Effect of Co-Occurring Conditions
+description: Presence of comorbid conditions in the participant
+owner: participants
+column: comorbidity
+data_type: categorical
