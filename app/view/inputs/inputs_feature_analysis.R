@@ -38,6 +38,24 @@ box::use(
   app/view/inputs/inputs_conditions_feature_analysis
 )
 
+catalog_feature_to_legacy_value <- function(feature_id) {
+  mapping <- c(
+    karyotype = "Karyotype",
+    age = "Age",
+    sex = "Sex",
+    bmi = "BMI",
+    comorbidity = "HasAnyConditionFlag"
+  )
+
+  mapped <- mapping[[feature_id]]
+
+  if (!is.null(mapped)) {
+    return(mapped)
+  }
+
+  feature_id
+}
+
 #' @export
 ui <- function(id) {
   ns <- NS(id)
@@ -164,22 +182,45 @@ server <- function(id, app_config, analysis_config) {
   moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
-    condition_feature_options <- c("Comorbidity", "HasAnyConditionFlag", "Co-Occuring Conditions")
+    condition_feature_options <- c("Comorbidity", "HasAnyConditionFlag", "Co-Occuring Conditions", "comorbidity")
 
     output$Feature <- renderUI({
+      choices <- tryCatch({
+        analysis_def <- app_config$get_catalog_analysis_definition("feature_association")
+        feature_ids <- names(analysis_def$features)
 
-      choices <- analysis_config$namespace_config |>
-        filter(
-          grepl("feature", ModuleServerName, ignore.case = TRUE),
-          !is.na(AnalysisVariableLabel)
-        ) |>
-        arrange(DisplayOrder) |>
-        mutate(
-          value = AnalysisVariableLabel,
-          label = glue("Effect of {AnalysisVariableLabel}")
-        ) |>
-        select(label, value) |>
-        deframe()
+        if (length(feature_ids) == 0) {
+          stop("No features found in feature_association catalog definition.")
+        }
+
+        labels <- vapply(feature_ids, function(feature_id) {
+          feature_def <- app_config$get_catalog_feature_definition(feature_id)
+          display_name <- feature_def$display_name
+
+          if (is.null(display_name) || !nzchar(display_name)) {
+            display_name <- feature_id
+          }
+
+          display_name
+        }, FUN.VALUE = character(1))
+
+        values <- vapply(feature_ids, catalog_feature_to_legacy_value, FUN.VALUE = character(1))
+
+        stats::setNames(values, labels)
+      }, error = function(e) {
+        analysis_config$namespace_config |>
+          filter(
+            grepl("feature", ModuleServerName, ignore.case = TRUE),
+            !is.na(AnalysisVariableLabel)
+          ) |>
+          arrange(DisplayOrder) |>
+          mutate(
+            value = AnalysisVariableLabel,
+            label = glue("Effect of {AnalysisVariableLabel}")
+          ) |>
+          select(label, value) |>
+          deframe()
+      })
 
       selectizeInput(
         inputId = ns("Feature"),
@@ -231,7 +272,7 @@ server <- function(id, app_config, analysis_config) {
 
       choices <- r6()$Studies
 
-      selected <- ifelse(nrow(choices) == 1, choices, character(0))
+      selected <- if (nrow(choices) == 1) choices$Values[[1]] else character(0)
 
       prettyRadioButtonsFieldSet(
         input_id = ns("Study"),
@@ -445,12 +486,23 @@ server <- function(id, app_config, analysis_config) {
     }) |>
       bindEvent(input$getData, ignoreInit = TRUE)
 
+    StudyPlan <- reactive({
+      validate(
+        need(input$getData > 0, ""),
+        need(input$Study != "", "")
+      )
+
+      r6()$StudyPlan
+    }) |>
+      bindEvent(input$getData, ignoreInit = TRUE)
+
     return(
       list(
         feature = reactive(input$Feature),
         study = reactive(input$Study),
         study_label = study_label,
         study_data = StudyData,
+        study_plan = StudyPlan,
         stat_test = reactive(input$StatTest),
         covariates = reactive(input$Covariates),
         adjustment_method = reactive(input$AdjustmentMethod),

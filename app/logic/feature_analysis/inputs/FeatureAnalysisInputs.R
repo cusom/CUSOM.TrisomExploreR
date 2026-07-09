@@ -167,6 +167,11 @@ FeatureAnalysisInputsRunner <- R6Class(
                 self$data_source$FoldChangeVar
             )
         },
+        StudyPlan = function(value) {
+            return(
+                self$data_source$CurrentPlan
+            )
+        },
         event_comparisons = function(value) {
             return(self$data_source$event_comparisons)
         },

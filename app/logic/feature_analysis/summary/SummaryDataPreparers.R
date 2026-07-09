@@ -275,29 +275,63 @@ PreCalculatedSummaryPreparer <- R6Class(
             self$summary_data <- self$set_source_data(source_data)
         },
         prepare = function(source_data) {
-            self$prepared_data <- self$set_summary_data(source_data) |>
-                select("AnalyteID" = Geneid, "Analyte" = Gene_name, FoldChange, pvalue, padj) |>
-                rename(
-                    "p.value.original" = pvalue,
-                    "p.value" = padj
-                ) |>
-                mutate(
-                    shape = "circle",
-                    selectedPoint = 0L,
-                    log2FoldChange = log2(FoldChange),
-                    `-log10pvalue` = -log10(p.value),
-                    `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
-                    formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
-                    text = glue(
-                        "Gene: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"
-                    ),
-                    lmFormula = "
-                    <a
-                        href='https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html'
-                        target='_blank'>DESeq2 model
-                    </a>",
-                    ivs = ""
-                )
+            source <- self$set_summary_data(source_data)
+
+            if (all(c("Geneid", "Gene_name", "FoldChange", "pvalue", "padj") %in% names(source))) {
+                self$prepared_data <- source |>
+                    select("AnalyteID" = Geneid, "Analyte" = Gene_name, FoldChange, pvalue, padj) |>
+                    rename(
+                        "p.value.original" = pvalue,
+                        "p.value" = padj
+                    ) |>
+                    mutate(
+                        shape = "circle",
+                        selectedPoint = 0L,
+                        log2FoldChange = log2(FoldChange),
+                        `-log10pvalue` = -log10(p.value),
+                        `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
+                        formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
+                        text = glue(
+                            "Gene: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"
+                        ),
+                        lmFormula = "
+                        <a
+                            href='https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html'
+                            target='_blank'>DESeq2 model
+                        </a>",
+                        ivs = ""
+                    )
+            } else {
+                analyte_col <- intersect(c("Analyte", "Feature", "Gene_name"), names(source))[[1]]
+                fold_col <- intersect(c("FoldChange", "log<sub>2</sub>(Fold Change)", "log2FoldChange"), names(source))[[1]]
+                p_orig_col <- intersect(c("p.value.original", "p-value (original)", "pvalue"), names(source))[[1]]
+                p_adj_col <- intersect(c("p.value", "q-value", "padj"), names(source))[[1]]
+
+                if (is.null(analyte_col) || is.null(fold_col) || is.null(p_adj_col)) {
+                    stop("Precalculated summary artifact is missing required columns.", call. = FALSE)
+                }
+
+                self$prepared_data <- source |>
+                    mutate(
+                        Analyte = .data[[analyte_col]],
+                        FoldChange = ifelse(grepl("log", fold_col, ignore.case = TRUE), 2 ^ as.numeric(.data[[fold_col]]), as.numeric(.data[[fold_col]])),
+                        `p.value.original` = if (!is.null(p_orig_col)) as.numeric(.data[[p_orig_col]]) else as.numeric(.data[[p_adj_col]]),
+                        `p.value` = as.numeric(.data[[p_adj_col]]),
+                        shape = "circle",
+                        selectedPoint = 0L,
+                        log2FoldChange = log2(FoldChange),
+                        `-log10pvalue` = -log10(p.value),
+                        `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
+                        formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
+                        text = glue("Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"),
+                        lmFormula = "",
+                        ivs = "",
+                        AnalyteID = dense_rank(Analyte)
+                    ) |>
+                    select(AnalyteID, Analyte, FoldChange, `p.value.original`, `p.value`, shape, selectedPoint,
+                        log2FoldChange, `-log10pvalue`, `p.value.adjustment.method`, formattedPValue, text,
+                        lmFormula, ivs)
+            }
             return(invisible(self$prepared_data))
         }
     )

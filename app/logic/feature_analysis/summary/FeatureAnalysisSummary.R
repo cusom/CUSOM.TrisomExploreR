@@ -60,13 +60,36 @@ getRouteProfile <- function(precalculated, analysis_config) {
     )
 }
 
+resolvePrecalculatedMode <- function(precalculated, study_plan = NULL) {
+    if (is.null(study_plan) || is.null(study_plan$execution_mode)) {
+        return(precalculated)
+    }
+
+    if (identical(study_plan$execution_mode, "generated")) {
+        return(FALSE)
+    }
+
+    if (identical(study_plan$execution_mode, "precalculated")) {
+        return(TRUE)
+    }
+
+    precalculated
+}
+
 instantiateMappedClass <- function(map, key, kind, analysis_config, ...) {
     cls <- resolve_class(map, key, kind)
     cls$new(analysis_config = analysis_config, ...)
 }
 
-getDataSource <- function(route_profile, analysis_config, ...) {
-    instantiateMappedClass(DATA_SOURCE_MAP, route_profile$data_source_key, "DataSource", analysis_config, ...)
+getDataSource <- function(route_profile, analysis_config, study_plan = NULL, ...) {
+    instantiateMappedClass(
+        DATA_SOURCE_MAP,
+        route_profile$data_source_key,
+        "DataSource",
+        analysis_config,
+        study_plan = study_plan,
+        ...
+    )
 }
 
 getPreparer <- function(route_profile, analysis_config, ...) {
@@ -117,12 +140,16 @@ FeatureAnalysisSummaryRunner <- R6Class(
 #' @export
 getFeatureAnalysisSummary <- function(
         analysis_config,
+    study_plan = NULL,
         ...
     ) {
 
-    precalculated <- analysis_config$UsesPreCalculatedData
+    precalculated <- resolvePrecalculatedMode(
+        analysis_config$UsesPreCalculatedData,
+        study_plan = study_plan
+    )
     route_profile <- getRouteProfile(precalculated, analysis_config)
-    data_src <- getDataSource(route_profile, analysis_config, ...)
+    data_src <- getDataSource(route_profile, analysis_config, study_plan = study_plan, ...)
     preparer <- getPreparer(route_profile, analysis_config, ...)
     plotter <- getPlotStrategy(route_profile, analysis_config, ...)
 

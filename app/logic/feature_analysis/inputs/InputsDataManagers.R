@@ -4,6 +4,7 @@ box::use(
 
 box::use(
     R6[R6Class],
+    arrow[read_parquet],
     glue[glue],
     tibble[tibble],
     dplyr[select, mutate, group_by, summarise, distinct,
@@ -56,12 +57,161 @@ build_karyotype_choices <- function(.data) {
         arrange(sort)
 }
 
+feature_id_from_analysis_variable <- function(analysis_variable) {
+    mapping <- c(
+        Karyotype = "karyotype",
+        Age = "age",
+        Sex = "sex",
+        BMI = "bmi",
+        HasAnyConditionFlag = "comorbidity"
+    )
+
+    mapped <- mapping[[analysis_variable]]
+    if (is.null(mapped)) {
+        return(tolower(analysis_variable))
+    }
+
+    mapped
+}
+
+statistic_id_from_ui_label <- function(stat_test) {
+    if (is.null(stat_test) || !nzchar(stat_test)) {
+        return(NULL)
+    }
+
+    mapping <- c(
+        "Linear Model" = "linear_model",
+        "Wilcoxon test" = "wilcoxon",
+        "linear model" = "linear_model"
+    )
+
+    mapped <- mapping[[stat_test]]
+
+    if (!is.null(mapped)) {
+        return(mapped)
+    }
+
+    tolower(gsub("[^a-zA-Z0-9]+", "_", stat_test))
+}
+
+statistic_label_from_id <- function(statistic_id) {
+    mapping <- c(
+        linear_model = "Linear Model",
+        wilcoxon = "Wilcoxon test"
+    )
+
+    mapped <- mapping[[statistic_id]]
+    if (!is.null(mapped)) {
+        return(mapped)
+    }
+
+    gsub("_", " ", tools::toTitleCase(statistic_id))
+}
+
 #' @export
 InputsManagerBase <- R6Class(
     "InputsManagerBase",
     private = list(
         app_config = NULL,
-        analysis_config = NULL
+        analysis_config = NULL,
+        build_catalog_studies = function(feature_id) {
+            datasets <- private$app_config$get_catalog_feature_datasets(feature_id)
+
+            if (nrow(datasets) == 0) {
+                return(NULL)
+            }
+
+            study_meta <- private$app_config$input_config$studies
+
+            dataset_rows <- lapply(seq_len(nrow(datasets)), function(i) {
+                dataset_id <- datasets$dataset_id[[i]]
+                package_id <- datasets$package_id[[i]]
+
+                dataset_def <- private$app_config$get_catalog_dataset_definition(dataset_id)
+
+                meta_idx <- integer(0)
+                if (!is.null(study_meta) && nrow(study_meta) > 0) {
+                    package_match <- rep(FALSE, nrow(study_meta))
+
+                    if ("PackageID" %in% names(study_meta)) {
+                        package_match <- study_meta$PackageID == package_id
+                        package_match[is.na(package_match)] <- FALSE
+                    }
+
+                    meta_idx <- which(
+                        study_meta$Values == dataset_id |
+                        package_match
+                    )
+                }
+
+                meta_row <- if (length(meta_idx) > 0) study_meta[meta_idx[[1]], , drop = FALSE] else NULL
+
+                choice_text <- dataset_def$id
+                if (!is.null(meta_row) && !is.na(meta_row$Text[[1]]) && nzchar(meta_row$Text[[1]])) {
+                    choice_text <- meta_row$Text[[1]]
+                }
+
+                choice_url <- NA
+                if (!is.null(meta_row) && "URL" %in% names(meta_row) && !is.na(meta_row$URL[[1]]) && nzchar(meta_row$URL[[1]])) {
+                    choice_url <- meta_row$URL[[1]]
+                }
+
+                choice_tooltip <- ""
+                if (!is.null(meta_row) && "TooltipText" %in% names(meta_row) && !is.na(meta_row$TooltipText[[1]]) && nzchar(meta_row$TooltipText[[1]])) {
+                    choice_tooltip <- meta_row$TooltipText[[1]]
+                }
+
+                choice_group <- "Catalog Datasets"
+                if (!is.null(meta_row) && "FieldSet" %in% names(meta_row) && !is.na(meta_row$FieldSet[[1]]) && nzchar(meta_row$FieldSet[[1]])) {
+                    choice_group <- meta_row$FieldSet[[1]]
+                }
+
+                tibble(
+                    Values = dataset_def$id,
+                    Text = choice_text,
+                    URL = choice_url,
+                    TooltipText = choice_tooltip,
+                    ShowTooltip = nzchar(choice_tooltip),
+                    FieldSet = choice_group,
+                    PackageID = package_id
+                )
+            })
+
+            dplyr::bind_rows(dataset_rows)
+        },
+        get_catalog_plan = function(dataset_id) {
+            feature_id <- feature_id_from_analysis_variable(self$analysisVariable)
+            statistic_id <- statistic_id_from_ui_label(self$StatTest)
+
+            private$app_config$plan_feature_association(
+                feature_id = feature_id,
+                dataset_id = dataset_id,
+                statistic_id = statistic_id
+            )
+        },
+        get_local_fact_data = function(plan) {
+            fact_file <- plan$required_files$facts[[1]]
+
+            if (is.null(fact_file) || !nzchar(fact_file)) {
+                fact_file <- private$app_config$package_resolver$resolve_fact_file(plan$package_id)
+            }
+
+            if (is.null(fact_file) || !nzchar(fact_file)) {
+                stop(sprintf("Package '%s' does not expose a fact table.", plan$package_id), call. = FALSE)
+            }
+
+            package_root <- private$app_config$package_resolver$packages_root
+            parquet_path <- file.path(package_root, plan$package_id, fact_file)
+
+            if (!file.exists(parquet_path)) {
+                stop(sprintf("Planned parquet file not found: %s", parquet_path), call. = FALSE)
+            }
+
+            read_parquet(parquet_path)
+        },
+        get_local_dataset_data = function(dataset_id) {
+            private$app_config$get_local_dataset_data(dataset_id)
+        }
     ),
     active = list(
         application_id = function(value) {
@@ -88,14 +238,20 @@ InputsManagerBase <- R6Class(
         remoteDB = function(value) {
             return(private$app_config$remote_db)
         },
-        remote_files = function(value) {
-            return(private$app_config$remote_files)
-        },
         Studies = function(value) {
-            return(
-                self$input_config$studies |>
-                    filter(Values %in% self$experimentIDs)
+            feature_id <- feature_id_from_analysis_variable(self$analysisVariable)
+
+            catalog_studies <- tryCatch(
+                private$build_catalog_studies(feature_id),
+                error = function(e) NULL
             )
+
+            if (!is.null(catalog_studies) && nrow(catalog_studies) > 0) {
+                return(catalog_studies)
+            }
+
+            self$input_config$studies |>
+                filter(Values %in% self$experimentIDs)
         },
         StudyLabel = function(value) {
             return(
@@ -105,9 +261,10 @@ InputsManagerBase <- R6Class(
             )
         },
         StudyData = function(value) {
-            return(
-                self$remote_files$get_experiment_data(self$Study)
-            )
+            plan <- private$get_catalog_plan(self$Study)
+            self$CurrentPlan <- plan
+
+            private$get_local_fact_data(plan)
         },
         KaryotypeCounts = function(value) {
             return(
@@ -145,14 +302,32 @@ InputsManagerBase <- R6Class(
             return(c("Age", "Sex"))
         },
         StatTestNames = function(value) {
-            return(
-                self$input_config$statTestschoiceNames
-            )
+            if (!is.null(self$Study) && nzchar(self$Study)) {
+                stat_ids <- tryCatch(
+                    private$app_config$get_dataset_statistic_ids(self$Study),
+                    error = function(e) character(0)
+                )
+
+                if (length(stat_ids) > 0) {
+                    return(vapply(stat_ids, statistic_label_from_id, FUN.VALUE = character(1)))
+                }
+            }
+
+            self$input_config$statTestschoiceNames
         },
         StatTestValues = function(value) {
-            return(
-                self$input_config$statTests
-            )
+            if (!is.null(self$Study) && nzchar(self$Study)) {
+                stat_ids <- tryCatch(
+                    private$app_config$get_dataset_statistic_ids(self$Study),
+                    error = function(e) character(0)
+                )
+
+                if (length(stat_ids) > 0) {
+                    return(vapply(stat_ids, statistic_label_from_id, FUN.VALUE = character(1)))
+                }
+            }
+
+            self$input_config$statTests
         },
         AdjustmentMethodNames = function(value) {
             return(
@@ -185,6 +360,7 @@ InputsManagerBase <- R6Class(
         Adjusted = FALSE,
         SignificanceLabel = "p-value",
         FeatureData = NULL,
+        CurrentPlan = NULL,
         initialize = function(app_config, analysis_config, input_config) {
             private$app_config <- app_config
             private$analysis_config <- analysis_config
@@ -215,9 +391,10 @@ InputsManagerPrecalculatedKaryotype <- R6Class(
     inherit = InputsManagerBase,
     active = list(
         StudyData = function(value) {
-            return(
-                self$remote_files$get_pre_calculated_data(self$analysisVariable)
-            )
+            plan <- private$get_catalog_plan(self$Study)
+            self$CurrentPlan <- plan
+
+            private$get_local_fact_data(plan)
         },
         Karyotypes = function(value) {
             make_collapsed_karyotype_choices(
@@ -366,10 +543,7 @@ InputsManagerCellTypes <- R6Class(
         Karyotypes = function(value) {
             karyotypes <- self$input_config$karyotypes
             return(
-                self$remote_files$get_remote_file_data("input") |>
-                    pluck("whole_blood_karyotype_counts") |>
-                    as.data.frame() |>
-                    build_karyotype_choices() |>
+                self$KaryotypeCounts |>
                     bind_rows(
                         make_comparison_row(
                             karyotypes,
@@ -399,9 +573,6 @@ InputsManagerTOFA <- R6Class(
         analysis_config = NULL
     ),
     active = list(
-        remote_files = function(value) {
-            return(private$analysis_config$remote_files)
-        },
         Karyotypes = function(value) {
             return(
                 self$participant_data |>
@@ -506,7 +677,7 @@ InputsManagerTOFA <- R6Class(
         },
         features = function(value) {
             return(
-                self$remote_files$get_experiment_data(self$dataset) |>
+                private$get_local_dataset_data(self$dataset) |>
                     select(self$feature_col) |>
                     distinct() |>
                     arrange(.data[[self$feature_col]]) |>

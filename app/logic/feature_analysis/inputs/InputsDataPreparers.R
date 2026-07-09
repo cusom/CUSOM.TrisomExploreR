@@ -18,9 +18,6 @@ InputsDataPreparerBase <- R6Class(
         app_config = NULL
     ),
     active = list(
-        remote_files = function(value) {
-            return(private$app_config$remote_files)
-        },
         analysisVariable = function(value) {
             if (missing(value)) {
                 return(
@@ -101,9 +98,7 @@ FeatureAnalysisInputsComorbidityDataPreparer <- R6Class(
     inherit = InputsDataPreparerBase,
     active = list(
         participant_conditions = function(value) {
-            return(
-                self$remote_files$get_remote_file_data("conditions")
-            )
+            private$app_config$condition_data
         }
     ),
     public = list(
@@ -181,9 +176,7 @@ TOFAAnalysisInputsDataPreparer <- R6Class(
     inherit = InputsDataPreparerBase,
     active = list(
         time_series_data = function(value) {
-            return(
-                self$remote_files$get_experiment_data(self$dataset)
-            )
+            private$app_config$get_local_dataset_data(self$dataset)
         }
     ),
     public = list(

@@ -1,6 +1,6 @@
 box::use(
   R6[R6Class],
-  purrr[pluck, pmap],
+  purrr[pmap],
   dplyr[left_join, inner_join, join_by, select, first,
     rename, filter, mutate, distinct, pull, add_count],
   tibble[tibble],
@@ -22,26 +22,37 @@ CellTypesInputsManager <- R6Class(
   active = list(
     CellTypes = function() {
       return(
-        self$remote_files$get_remote_file_data("inputs") |>
-          pluck("cell_types") |>
-          unlist() |>
+        private$app_config$get_package_measurements_data() |>
+          select(Specimen_type) |>
+          distinct() |>
+          pull() |>
+          stats::na.omit() |>
           unname()
       )
     },
     Analytes = function() {
+      measurements <- private$app_config$get_package_measurements_data()
+
+      if (!is.null(self$CellType) && length(self$CellType) > 0) {
+        measurements <- measurements |>
+          filter(Specimen_type %in% self$CellType)
+      }
+
       return(
-        self$remote_files$get_remote_file_data("genes") |>
-          pull(Gene)
+        measurements |>
+          select(Analyte) |>
+          distinct() |>
+          pull()
       )
     },
     Participants = function(value) {
       return(
-        self$remote_files$get_remote_file_data("participants")
+        private$app_config$participant_data
       )
     },
     Encounters = function(value) {
       return(
-        self$remote_files$get_remote_file_data("encounter")
+        private$app_config$encounter_data
       )
     },
     ParticipantsWithEncounters = function(value) {
@@ -91,27 +102,26 @@ CellTypesInputsManager <- R6Class(
     combined_data = NULL,
     initialize = function(app_config, analysis_config, input_config) {
       super$initialize(app_config, analysis_config, input_config)
-      self$Platform <- self$remote_files$get_remote_file_data("inputs") |>
-          pluck("platforms")
+      self$Platform <- self$input_config$platforms
     },
 
     set_base_data = function() {
+      measurements <- private$app_config$get_package_measurements_data()
 
-      self$base_data <- self$remoteDB$getQuery(
-          "[shiny].[GetAnalyteDataByPlatform] ?,?",
-          tibble(
-            "Platform" = self$Platform,
-            "Analyte" = self$Analyte,
-          )
-        ) |>
+      if (!is.null(self$Platform) && length(self$Platform) > 0 && "Platform" %in% names(measurements)) {
+        measurements <- measurements |>
+          filter(Platform %in% self$Platform)
+      }
+
+      self$base_data <- measurements |>
+        filter(Analyte == self$Analyte) |>
         left_join(self$ParticipantsWithEncounters, by = c("LabID", "record_id")) |>
-        rename("CellType" = Specimen) |>
+        rename("CellType" = Specimen_type) |>
         filter(
           CellType %in% self$CellType,
           (Sex %in% self$Sex | is.na(Sex)),
           (Age >= min(self$Age) | is.na(Age)),
-          (Age <= max(self$Age) | is.na(Age)),
-          outlier == FALSE
+          (Age <= max(self$Age) | is.na(Age))
         ) |>
         mutate(
           log2MeasuredValue = ifelse(MeasuredValue == 0, 0, log2(MeasuredValue)),

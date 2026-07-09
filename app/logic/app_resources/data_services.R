@@ -345,7 +345,7 @@ AzureRemoteDataFileManager <- R6Class(
       "readr::read_delim" = list(show_col_types = FALSE, progress = FALSE)
     ),
     initialize = function(account_name, key, container_name,
-      download_mode = c("on demand", "all"), local_data_directory = "Remote_Data", 
+      download_mode = c("on demand", "all"), local_data_directory = file.path(tempdir(), "TrisomExploreR_remote_cache"), 
       clear_data_dir = TRUE) {
       download_mode <- match.arg(download_mode)
       private$account_name <- account_name

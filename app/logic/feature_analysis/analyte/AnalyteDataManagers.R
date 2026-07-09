@@ -1,5 +1,7 @@
 box::use(
     R6[R6Class],
+    arrow[read_parquet],
+    readr[read_csv],
     dplyr[select, filter, mutate, case_when, add_count, ungroup,
         inner_join, rename, distinct, arrange, pull, join_by],
     tibble[tibble],
@@ -22,22 +24,62 @@ AnalyteDataSourceBase <- R6Class(
             return(
                 if (length(self$analyte) == 1) "single" else "multi"
             )
+        },
+        execution_mode = function(value) {
+            if (is.null(self$study_plan) || is.null(self$study_plan$execution_mode)) {
+                return(NULL)
+            }
+
+            self$study_plan$execution_mode
         }
     ),
     public = list(
         study = NULL,
         study_data = NULL,
+        study_plan = NULL,
         analyte = NULL,
         analyte_data = NULL,
         summary_data = NULL,
-        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {
+        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data, study_plan = NULL) {
             private$app_config <- app_config
             private$analysis_config <- analysis_config
             private$remote_db <- app_config$remote_db
             self$study <- study
             self$study_data <- study_data
+            self$study_plan <- study_plan
             self$analyte <- analyte
             self$summary_data <- summary_data
+        },
+        load_precalculated_artifact = function() {
+            if (is.null(self$study_plan) || !identical(self$execution_mode, "precalculated")) {
+                return(NULL)
+            }
+
+            artifact <- self$study_plan$precalculated_artifact
+            package_id <- self$study_plan$package_id
+
+            if (is.null(artifact) || !nzchar(artifact) || is.null(package_id) || !nzchar(package_id)) {
+                return(NULL)
+            }
+
+            package_root <- private$app_config$package_resolver$packages_root
+            artifact_path <- file.path(package_root, package_id, artifact)
+
+            if (!file.exists(artifact_path)) {
+                return(NULL)
+            }
+
+            parquet_attempt <- tryCatch(read_parquet(artifact_path), error = function(e) NULL)
+            if (!is.null(parquet_attempt)) {
+                return(parquet_attempt)
+            }
+
+            csv_attempt <- tryCatch(
+                read_csv(artifact_path, show_col_types = FALSE, progress = FALSE),
+                error = function(e) NULL
+            )
+
+            csv_attempt
         },
         get_data = function(analyte) {
             if (self$analysis_mode == "single") {
@@ -114,6 +156,29 @@ PreCalcualtedAnalyteDataSource <- R6Class(
     ),
     public = list(
         get_single_data = function(analyte) {
+            if (identical(self$execution_mode, "generated")) {
+                self$analyte_data <- self$study_data |>
+                    filter(Analyte == analyte)
+                return(invisible(self$analyte_data))
+            }
+
+            precalc_data <- self$load_precalculated_artifact()
+            if (!is.null(precalc_data)) {
+                analyte_col <- intersect(c("Analyte", "Feature", "analyte", "feature"), names(precalc_data))
+
+                if (length(analyte_col) > 0) {
+                    selected <- precalc_data[precalc_data[[analyte_col[[1]]]] %in% analyte, , drop = FALSE]
+                    if (analyte_col[[1]] != "Analyte") {
+                        names(selected)[names(selected) == analyte_col[[1]]] <- "Analyte"
+                    }
+                    self$analyte_data <- selected
+                } else {
+                    self$analyte_data <- precalc_data
+                }
+
+                return(invisible(self$analyte_data))
+            }
+
             self$analyte_data <- private$remote_db$getQuery(
                     "EXEC [shiny].[GetDataByExperimentAnalyte] ?, ?",
                     tibble(StudyName = self$study, Analyte = analyte)
@@ -226,20 +291,32 @@ PreCalcualtedTOFAAnalyteDataSource <- R6Class(
     "PreCalcualtedTOFAAnalyteDataSource",
     inherit = PreCalcualtedAnalyteDataSource,
     active = list(
-        remote_files = function(value) {
-            return(private$app_config$remote_files)
-        },
         source_data = function(value) {
-            return(
-                self$remote_files$get_experiment_data(self$dataset)
-            )
+            private$app_config$get_local_dataset_data(self$dataset)
         }
     ),
     public = list(
         dataset = NULL,
         comparison = NULL,
-        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data, comparison) {
-            super$initialize(analysis_config, app_config, study, study_data, analyte, summary_data)
+        initialize = function(
+            analysis_config,
+            app_config,
+            study,
+            study_data,
+            analyte,
+            summary_data,
+            comparison,
+            study_plan = NULL
+        ) {
+            super$initialize(
+                analysis_config,
+                app_config,
+                study,
+                study_data,
+                analyte,
+                summary_data,
+                study_plan = study_plan
+            )
             self$dataset <- study
             self$comparison <- comparison
         },

@@ -79,13 +79,37 @@ getRouteProfile <- function(precalculated, analysis_type, analyte, analysis_conf
     )
 }
 
+resolvePrecalculatedMode <- function(precalculated, study_plan = NULL) {
+    if (is.null(study_plan) || is.null(study_plan$execution_mode)) {
+        return(precalculated)
+    }
+
+    if (identical(study_plan$execution_mode, "generated")) {
+        return(FALSE)
+    }
+
+    if (identical(study_plan$execution_mode, "precalculated")) {
+        return(TRUE)
+    }
+
+    precalculated
+}
+
 instantiateMappedClass <- function(map, key, kind, analysis_config, analyte, ...) {
     cls <- resolve_class(map, key, kind)
     cls$new(analysis_config = analysis_config, analyte = analyte, ...)
 }
 
-getDataSource <- function(route_profile, analysis_config, analyte, ...) {
-    instantiateMappedClass(DATA_SOURCE_MAP, route_profile$data_source_key, "DataSource", analysis_config, analyte, ...)
+getDataSource <- function(route_profile, analysis_config, analyte, study_plan = NULL, ...) {
+    instantiateMappedClass(
+        DATA_SOURCE_MAP,
+        route_profile$data_source_key,
+        "DataSource",
+        analysis_config,
+        analyte,
+        study_plan = study_plan,
+        ...
+    )
 }
 
 getPreparer <- function(route_profile, analysis_config, analyte, ...) {
@@ -140,11 +164,15 @@ FeatureAnalysisAnalyteRunner <- R6Class(
 getFeatureAnalysisForAnalyte <- function(
         analysis_config,
         analyte,
+    study_plan = NULL,
         ...
     ) {
-    precalculated <- analysis_config$UsesPreCalculatedData
+    precalculated <- resolvePrecalculatedMode(
+        analysis_config$UsesPreCalculatedData,
+        study_plan = study_plan
+    )
     route_profile <- getRouteProfile(precalculated, analysis_config$AnalysisType, analyte, analysis_config)
-    data_src <- getDataSource(route_profile, analysis_config, analyte, ...)
+    data_src <- getDataSource(route_profile, analysis_config, analyte, study_plan = study_plan, ...)
     preparer <- getPreparer(route_profile, analysis_config, analyte, ...)
     plotter <- getPlotStrategy(route_profile, analysis_config, analyte, ...)
 

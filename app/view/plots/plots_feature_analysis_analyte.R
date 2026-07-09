@@ -71,7 +71,7 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, analysis_config, app_config, analyte, feature, study, study_data,
+server <- function(id, analysis_config, app_config, analyte, feature, study, study_data, study_plan = NULL,
   summary_data, analyte_input_name, analyte_session, ...) {
 
   moduleServer(id, function(input, output, session) {
@@ -89,6 +89,7 @@ server <- function(id, analysis_config, app_config, analyte, feature, study, stu
         app_config = app_config,
         study = study(),
         study_data = study_data(),
+        study_plan = if (is.null(study_plan)) NULL else study_plan(),
         summary_data = summary_data(),
         ...
       )
