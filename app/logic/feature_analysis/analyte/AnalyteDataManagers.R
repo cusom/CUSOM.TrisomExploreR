@@ -1,12 +1,13 @@
 box::use(
     R6[R6Class],
     dplyr[select, filter, mutate, case_when, add_count, ungroup,
-        inner_join, rename, distinct, arrange, pull],
+        inner_join, rename, distinct, arrange, pull, join_by],
     tibble[tibble],
     tidyr[separate_rows],
     forcats[fct_inorder],
     glue[glue],
-    rlang[sym]
+    rlang[sym],
+    stringr[str_split, str_split_1]
 )
 
 AnalyteDataSourceBase <- R6Class(
@@ -60,12 +61,7 @@ AnalyteDataSourceBase <- R6Class(
 RuntimeAnalyteDataSource <- R6Class(
     "RuntimeAnalyteDataSource",
     inherit = AnalyteDataSourceBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {
-            super$initialize(analysis_config, app_config, study, study_data, analyte, summary_data)
-        },
         get_single_data = function(analyte) {
             self$analyte_data <- self$study_data |>
                 filter(Analyte == analyte)
@@ -78,7 +74,6 @@ RuntimeAnalyteDataSource <- R6Class(
 PreCalcualtedAnalyteDataSource <- R6Class(
     "PreCalcualtedAnalyteDataSource",
     inherit = AnalyteDataSourceBase,
-    private = list(),
     active = list(
         age = function(value) {
             return(
@@ -118,9 +113,6 @@ PreCalcualtedAnalyteDataSource <- R6Class(
         }
     ),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {
-            super$initialize(analysis_config, app_config, study, study_data, analyte, summary_data)
-        },
         get_single_data = function(analyte) {
             self$analyte_data <- private$remote_db$getQuery(
                     "EXEC [shiny].[GetDataByExperimentAnalyte] ?, ?",
@@ -154,7 +146,6 @@ PreCalcualtedAnalyteDataSource <- R6Class(
 CorrelatesAnalyteDataSource <- R6Class(
     "CorrelatesAnalyteDataSource",
     inherit = AnalyteDataSourceBase,
-    private = list(),
     active = list(
 
         CompareExperiment = function(value) {
@@ -188,9 +179,6 @@ CorrelatesAnalyteDataSource <- R6Class(
         }
     ),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {
-            super$initialize(analysis_config, app_config, study, study_data, analyte, summary_data)
-        },
         get_data = function(analyte) {
             if (length(analyte) > 1) {
                 return(self$get_multi_data(analyte))
@@ -228,6 +216,46 @@ CorrelatesAnalyteDataSource <- R6Class(
             self$analyte_data <- self$summary_data |>
                 filter(Analyte %in% analyte) |>
                 distinct()
+            return(invisible(self$analyte_data))
+        }
+    )
+)
+
+#' @export
+PreCalcualtedTOFAAnalyteDataSource <- R6Class(
+    "PreCalcualtedTOFAAnalyteDataSource",
+    inherit = PreCalcualtedAnalyteDataSource,
+    active = list(
+        remote_files = function(value) {
+            return(private$app_config$remote_files)
+        },
+        source_data = function(value) {
+            return(
+                self$remote_files$get_experiment_data(self$dataset)
+            )
+        }
+    ),
+    public = list(
+        dataset = NULL,
+        comparison = NULL,
+        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data, comparison) {
+            super$initialize(analysis_config, app_config, study, study_data, analyte, summary_data)
+            self$dataset <- study
+            self$comparison <- comparison
+        },
+        get_single_data = function(analyte) {
+            self$analyte_data <- self$source_data |>
+                filter(
+                    Feature == analyte,
+                    Event_Name %in% str_split_1(self$comparison(),"\\|")
+                ) |>
+                rename(
+                    "LabID" = TOFA_LabID,
+                    "Analyte" = Feature,
+                    "MeasuredValue" = Value,
+                    "Measurement" = Units
+                ) |>
+                mutate(MeasuredValue = as.numeric(MeasuredValue)) 
             return(invisible(self$analyte_data))
         }
     )

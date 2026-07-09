@@ -5,14 +5,13 @@ box::use(
 box::use(
     R6[R6Class],
     glue[glue],
-    tibble[tibble, as_tibble, enframe],
-    dplyr[select, mutate, group_by, summarise, ungroup, rename_with, distinct, n,
-            pull, arrange, dense_rank, row_number, filter, bind_rows, case_when,
-            n_distinct, if_else],
-    purrr[pmap, pluck, set_names],
+    tibble[tibble],
+    dplyr[select, mutate, group_by, summarise, distinct,
+            pull, arrange, row_number, filter, bind_rows,
+            n_distinct, if_else, inner_join, join_by, cross_join],
+    purrr[pluck, set_names],
     stringr[str_split_1, str_c],
     stats[median],
-    rlang[sym],
     shinyTree[get_selected]
 )
 
@@ -34,6 +33,13 @@ make_comparison_row <- function(karyo_list, tooltip_text) {
         Karyotype = str_c(karyo_list, collapse = ";"),
         n = NA,
         sort = 999,
+        choiceNames = make_comparison_html(karyo_list, tooltip_text),
+        choiceValues = str_c(karyo_list, collapse = ";")
+    )
+}
+
+make_collapsed_karyotype_choices <- function(karyo_list, tooltip_text) {
+    tibble(
         choiceNames = make_comparison_html(karyo_list, tooltip_text),
         choiceValues = str_c(karyo_list, collapse = ";")
     )
@@ -194,15 +200,9 @@ InputsManagerKaryotype <- R6Class(
     inherit = InputsManagerBase,
     active = list(
         Karyotypes = function(value) {
-            karyotypes <- self$input_config$karyotypes
-            return(
-                tibble(
-                    choiceNames = make_comparison_html(
-                        karyotypes,
-                        "Test for differences between Trisomy 21 & Controls"
-                    ),
-                    choiceValues = str_c(karyotypes, collapse = ";")
-                )
+            make_collapsed_karyotype_choices(
+                self$input_config$karyotypes,
+                "Test for differences between Trisomy 21 & Controls"
             )
         }
     )
@@ -220,15 +220,9 @@ InputsManagerPrecalculatedKaryotype <- R6Class(
             )
         },
         Karyotypes = function(value) {
-            karyotypes <- self$input_config$karyotypes
-            return(
-                tibble(
-                    choiceNames = make_comparison_html(
-                        karyotypes,
-                        "Test for differences between Trisomy 21 & Controls"
-                    ),
-                    choiceValues = str_c(karyotypes, collapse = ";")
-                )
+            make_collapsed_karyotype_choices(
+                self$input_config$karyotypes,
+                "Test for differences between Trisomy 21 & Controls"
             )
         },
         StatTestNames = function(value) {
@@ -396,3 +390,158 @@ InputsManagerCellTypes <- R6Class(
         }
     )
 )
+
+# TOFA inputs
+#' @export
+InputsManagerTOFA <- R6Class(
+    "InputsManagerTOFA",
+    private = list(
+        analysis_config = NULL
+    ),
+    active = list(
+        remote_files = function(value) {
+            return(private$analysis_config$remote_files)
+        },
+        Karyotypes = function(value) {
+            return(
+                self$participant_data |>
+                    select(DownSyndromeStatus) |>
+                    distinct() |>
+                    pull()
+            )
+        },
+        Sexes = function(value) {
+            return(
+                self$participant_data |>
+                    select(Sex) |>
+                    distinct() |>
+                    pull()
+            )
+        },
+        races = function(value) {
+            return(
+                self$participant_data |>
+                    select(Race) |>
+                    distinct() |>
+                    pull()
+            )
+        },
+        ethnicities = function(value) {
+            return(
+                self$participant_data |>
+                    select(Ethnicity) |>
+                    distinct() |>
+                    pull()
+            )
+        },
+        visit_extended_data = function(value) {
+            return(
+                self$visit_data |>
+                    mutate(
+                        age_at_visit_in_years = Age_at_visit_in_days / 365,
+                        age_group = ifelse(age_at_visit_in_years >= 18, "Adult", "Under 18")
+                    )
+            )
+        },
+        events = function(value) {
+            return(
+                self$visit_data |>
+                    select(Event_Name) |>
+                    distinct() |>
+                    pull()
+            )
+        },
+        event_with_sequence = function(value) {
+            return(
+                self$visit_data |>
+                    select(Event_Name) |>
+                    distinct() |>
+                    mutate(t = row_number())
+            )
+        },
+        event_comparisons = function(value) {
+            return(
+                self$event_with_sequence |>
+                    cross_join(
+                        self$event_with_sequence
+                    ) |>
+                    filter(
+                        Event_Name.x != Event_Name.y,
+                        t.y > t.x
+                    ) |>
+                    select(-c(t.x, t.y)) |>
+                    mutate(
+                        analysis = glue(
+                            "{Event_Name.x} vs {Event_Name.y}"
+                        ),
+                        events = glue("{Event_Name.x}|{Event_Name.y}")
+                    ) |>
+                    select(analysis, events)
+            )
+        },
+        age_at_visit = function(value) {
+            return(
+                self$visit_extended_data |>
+                    select(Age_at_visit_in_days) |>
+                    distinct() |>
+                    pull()
+            )
+        },
+        Age_Groups = function(value) {
+            return(
+                self$visit_extended_data |>
+                    select(age_group) |>
+                    distinct() |>
+                    pull()
+            )
+        },
+        conditions = function(value) {
+            return(
+                self$participant_data |>
+                    select("condition" = Qualifying_feature) |>
+                    separate_rows(condition, sep = "; ") |>
+                    distinct() |>
+                    pull()
+            )
+        },
+        features = function(value) {
+            return(
+                self$remote_files$get_experiment_data(self$dataset) |>
+                    select(self$feature_col) |>
+                    distinct() |>
+                    arrange(.data[[self$feature_col]]) |>
+                    pull()
+            )
+        },
+        StudyData = function(value) {
+            return(
+                self$participant_data |>
+                inner_join(
+                    self$visit_extended_data, join_by(Internal_ParticipantID, External_ParticipantID)
+                )
+            )
+        }
+    ),
+    public = list(
+        input_config = NULL,
+        participant_data = NULL,
+        visit_data = NULL,
+        feature_col = "Feature",
+        dataset = NULL,
+        filtered_data = NULL,
+        initialize = function(app_config, analysis_config, input_config, dataset, ...) {
+
+            private$analysis_config <- analysis_config
+            self$dataset <- dataset
+            self$input_config <- input_config
+            self$participant_data <- app_config$participant_data
+            self$visit_data <- app_config$encounter_data |>
+                mutate(
+                    Age_at_visit_in_days = as.numeric(Age_at_visit_in_days),
+                    Height_cm = as.numeric(Height_cm),
+                    Weight_kg = as.numeric(Weight_kg)
+                )
+        }
+    )
+)
+

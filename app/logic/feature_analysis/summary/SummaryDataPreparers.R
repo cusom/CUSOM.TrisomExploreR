@@ -1,18 +1,17 @@
 box::use(
     R6[R6Class],
-    glue[glue, glue_collapse],
-    tibble[tibble],
+    glue[glue],
     dplyr[select, mutate, mutate_at, group_by, summarise, ungroup, rename_with, rename,
             distinct, n, pull, arrange, dense_rank, row_number, vars, filter, if_else, slice_max],
     forcats[fct_relevel],
-    purrr[pmap, map2_chr],
-    stringr[str_split_1, str_replace],
+    purrr[map2_chr],
+    stringr[str_replace],
     rlang[sym]
 )
 
 box::use(
     app/logic/shared/statistical_analysis[getStatTestByKeyGroup, getLinearModelWithInteraction,
-        formatPValue, addGroupCount],
+        formatPValue],
 )
 
 SummaryDataPreparerBase <- R6Class(
@@ -129,14 +128,7 @@ SummaryDataPreparerBase <- R6Class(
 CategoricalSummaryPreparer <- R6Class(
     "CategoricalSummaryPreparer",
     inherit = SummaryDataPreparerBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data,
-            stat_test, covariates, adjustment_method) {
-            super$initialize(analysis_config, app_config, study, study_data,
-                stat_test, covariates, adjustment_method)
-        },
         set_summary_data = function(source_data) {
             self$summary_data <- self$set_source_data(source_data) |>
                 select(LabID, Analyte, log2MeasuredValue, self$analysis_variable, self$covariates) |>
@@ -164,14 +156,7 @@ CategoricalSummaryPreparer <- R6Class(
 ContinuousSummaryPreparer <- R6Class(
     "ContinuousSummaryPreparer",
     inherit = SummaryDataPreparerBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data,
-            stat_test, covariates, adjustment_method) {
-            super$initialize(analysis_config, app_config, study, study_data,
-                stat_test, covariates, adjustment_method)
-        },
         set_summary_data = function(source_data) {
             self$summary_data <- self$set_source_data(source_data) |>
                 select(LabID, Analyte, log2MeasuredValue, self$analysis_variable, self$covariates, Karyotype) |>
@@ -199,7 +184,6 @@ ContinuousSummaryPreparer <- R6Class(
 CorrelatesSummaryPreparer <- R6Class(
     "CorrelatesSummaryPreparer",
     inherit = SummaryDataPreparerBase,
-    private = list(),
     active = list(
         summary_data_max_finite = function(value) {
             return(
@@ -247,11 +231,6 @@ CorrelatesSummaryPreparer <- R6Class(
         }
     ),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data,
-            stat_test, covariates, adjustment_method) {
-            super$initialize(analysis_config, app_config, study, study_data,
-                stat_test, covariates, adjustment_method)
-        },
         set_summary_data = function(source_data) {
             self$summary_data <- self$set_source_data(source_data)
         },
@@ -291,14 +270,7 @@ CorrelatesSummaryPreparer <- R6Class(
 PreCalculatedSummaryPreparer <- R6Class(
     "PreCalculatedSummaryPreparer",
     inherit = SummaryDataPreparerBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data,
-            stat_test, covariates, adjustment_method) {
-            super$initialize(analysis_config, app_config, study, study_data,
-                stat_test, covariates, adjustment_method)
-        },
         set_summary_data = function(source_data) {
             self$summary_data <- self$set_source_data(source_data)
         },
@@ -326,6 +298,37 @@ PreCalculatedSummaryPreparer <- R6Class(
                     </a>",
                     ivs = ""
                 )
+            return(invisible(self$prepared_data))
+        }
+    )
+)
+
+#' @export
+PreCalculatedTOFASummaryPreparer <- R6Class(
+    "PreCalculatedTOFASummaryPreparer",
+    inherit = SummaryDataPreparerBase,
+    public = list(
+        set_summary_data = function(source_data) {
+            self$summary_data <- self$set_source_data(source_data)
+        },
+        prepare = function(source_data) {
+            self$prepared_data <- self$set_summary_data(source_data) |>
+            rename(
+                "p.value.original" = pvalue,
+                "p.value" = padj
+            ) |>
+            mutate(
+                shape = "circle",
+                selectedPoint = 0L,
+                `-log10pvalue` = -log10(p.value),
+                `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
+                formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
+                text = glue(
+                    "Score: {Analyte}<br />Difference: {round(Mean_difference,2)}<br />{formattedPValue}"
+                ),
+                lmFormula = "",
+                ivs = ""
+            )
             return(invisible(self$prepared_data))
         }
     )

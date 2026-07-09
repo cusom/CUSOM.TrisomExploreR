@@ -31,9 +31,8 @@ box::use(
     rlang[set_names]
 )
 
-
 box::use(
-    app/logic/tofa_analysis/inputs/AnalysisInputs[getAnalysisInputs],
+    app/logic/feature_analysis/inputs/FeatureAnalysisInputs[getFeatureAnalysisInputs],
     app/view/custom_ui/input_widgets[prettyRadioButtonsFieldSet],
 )
 
@@ -60,7 +59,6 @@ ui <- function(id) {
                     proxy.height = "20px"
                 ),
                 tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-                tags$b("Karyotype"),
                 withLoader(
                     uiOutput(ns("karyotype")),
                     type = "html",
@@ -68,7 +66,6 @@ ui <- function(id) {
                     proxy.height = "20px"
                 ),
                 tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-                tags$b("Sex"),
                 withLoader(
                     uiOutput(ns("sexes")),
                     type = "html",
@@ -84,18 +81,12 @@ ui <- function(id) {
                 ),
                 tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
                 withLoader(
-                    uiOutput(ns("feature")),
+                    uiOutput(ns("comparison")),
                     type = "html",
                     loader = "loader6",
                     proxy.height = "20px"
                 ),
                 tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-                withLoader(
-                    uiOutput(ns("plot_type")),
-                    type = "html",
-                    loader = "loader6",
-                    proxy.height = "20px"
-                )
             ),
             footer = tagList(
                 actionButton(
@@ -111,7 +102,7 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, analysis_config) {
+server <- function(id, app_config, analysis_config) {
 
     moduleServer(id, function(input, output, session) {
 
@@ -142,8 +133,11 @@ server <- function(id, analysis_config) {
         # Recreate the R6 instance when Dataset changes
         observeEvent(input$dataset, ignoreInit = TRUE, {
             req(input$dataset)
-            inst <- getAnalysisInputs(
-                analysis_config = analysis_config,
+
+            inst <- getFeatureAnalysisInputs(
+                app_config = app_config,
+                analysis_config = app_config$get_analysis_config(input$dataset),
+                input_config = app_config$get_input_config(input$dataset),
                 dataset = input$dataset
             )
             r6_obj(inst)
@@ -159,9 +153,9 @@ server <- function(id, analysis_config) {
             disabled(
                 awesomeCheckboxGroup(
                     inputId = ns("sexes"),
-                    label = "",
-                    choices = r6()$sexes,
-                    selected = r6()$sexes,
+                    label = "Sex",
+                    choices = r6()$Sexes,
+                    selected = r6()$Sexes,
                     inline = TRUE,
                     width = "90%"
                 )
@@ -172,9 +166,9 @@ server <- function(id, analysis_config) {
             disabled(
                 prettyRadioButtons(
                     inputId = ns("karyotype"),
-                    label = "",
-                    choiceNames = r6()$karyotype,
-                    choiceValues = r6()$karyotype,
+                    label = "Karyotype",
+                    choiceNames = r6()$Karyotypes,
+                    choiceValues = r6()$Karyotypes,
                     inline = TRUE,
                     width = "90%"
                 )
@@ -186,71 +180,35 @@ server <- function(id, analysis_config) {
                 awesomeCheckboxGroup(
                     inputId = ns("age_group"),
                     label = "Age Groups",
-                    choices = r6()$age_groups,
-                    selected = r6()$age_groups,
+                    choices = r6()$Age_Groups,
+                    selected = r6()$Age_Groups,
                     inline = FALSE,
                     width = "90%"
                 )
             )
         })
 
-
-        output$comparisons <- renderUI({
+        output$comparison <- renderUI({
             virtualSelectInput(
-                inputId = ns("comparisons"),
+                inputId = ns("comparison"),
                 label = "Comparisons Available",
                 choices = prepare_choices(
-                    r6()$event_comparisons,
+                    r6()$baseline_comparisons,
                     label = analysis,
                     value = events
                 ),
                 selected = character(0),
                 multiple = FALSE,
-                search = TRUE
+                search = FALSE
             )
         })
-
-        output$feature <- renderUI({
-            selectizeInput(
-                inputId = ns("feature"),
-                label = "Choose Score / Endpoint",
-                choices = r6()$features,
-                selected = r6()$features[1],
-                multiple = FALSE,
-                options = list(
-                    placeholder = "Select below",
-                    onInitialize = I('function() { this.setValue(""); }'),
-                    closeAfterSelect = TRUE,
-                    selectOnTab = TRUE,
-                    persist = FALSE,
-                    dropupAuto = FALSE
-                )
-            )
-        })
-
-        output$plot_type <- renderUI({
-            prettyRadioButtons(
-                inputId = ns("plot_type"),
-                label = "Show Trial Data as:",
-                choiceNames = c("All Events", "Differences from Baseline"),
-                choiceValues = c("Base", "Difference"),
-                inline = FALSE,
-                width = "90%"
-            )
-        })
-
-        observeEvent(input$feature, {
-            updatePrettyRadioButtons(
-                session = session,
-                inputId = "plot_type",
-                label = glue("Show {input$feature} as:")
-            )
-        }, ignoreInit = TRUE)
 
         is_ready_to_analyze <- reactive({
-            feature_ready <- !is.null(input$feature) && nzchar(trimws(input$feature))
-            plot_type_ready <- !is.null(input$plot_type) && nzchar(trimws(input$plot_type))
-            feature_ready && plot_type_ready
+            comparison_ready <- !is.null(input$comparison) && nzchar(trimws(input$comparison))
+            comparison_ready
+            # feature_ready <- !is.null(input$feature) && nzchar(trimws(input$feature))
+            # plot_type_ready <- !is.null(input$plot_type) && nzchar(trimws(input$plot_type))
+            # feature_ready && plot_type_ready
         })
 
         observe({
@@ -265,25 +223,46 @@ server <- function(id, analysis_config) {
             }
         })
 
-        cohort <- reactive({
-            r6()$get_data(
+        # cohort <- reactive({
+        #     req(input$dataset)
+        #     req(input$comparison)
+        #     r6()$get_cohort(
+        #         input$sexes,
+        #         input$races,
+        #         input$ethnicities,
+        #         input$karyotype,
+        #         input$age,
+        #         input$age_group,
+        #         input$conditions
+        #     )
+        # })
+
+        study_data <- reactive({
+            r6()$get_study_data(
                 input$sexes,
                 input$races,
                 input$ethnicities,
                 input$karyotype,
                 input$age,
                 input$age_group,
-                input$conditions
+                input$conditions,
+                input$comparison
             )
         }) |>
             bindEvent(input$run_analysis, ignoreInit = TRUE)
 
         return(
             list(
-                dataset = reactive({input$dataset}),
-                cohort = cohort,
-                feature = reactive({input$feature}),
-                plot_type = reactive({input$plot_type})
+                feature = reactive({"Timepoint"}),
+                study = reactive({input$dataset}),
+                study_label = reactive({input$dataset}),
+                study_data = study_data,
+                stat_test = reactive({"Linear Model"}),
+                covariates = reactive({c("Sex", "Age")}),
+                adjustment_method = reactive({"BH"}),
+                fold_change_variable = reactive({"Event_Name"}),
+                adjusted = reactive(TRUE),
+                comparison = reactive({input$comparison})
             )
         )
 

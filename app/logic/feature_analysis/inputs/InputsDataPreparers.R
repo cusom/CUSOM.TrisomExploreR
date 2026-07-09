@@ -1,15 +1,13 @@
 box::use(
     R6[R6Class],
-    glue[glue, glue_collapse],
-    tibble[tibble],
-    dplyr[select, filter, between, mutate, group_by, summarise, ungroup, rename_with,
-            distinct, n, pull, arrange, dense_rank, row_number, if_else, inner_join,
+    glue[glue],
+    dplyr[select, filter, between, mutate, summarise,
+            pull, if_else, inner_join,
             case_when],
     tidyr[drop_na],
-    forcats[fct_relevel],
-    purrr[pmap],
+    stringr[str_split_1],
     stringr[str_split, str_c],
-    rlang[sym]
+    utils[read.csv]
 )
 
 #' @export
@@ -20,6 +18,9 @@ InputsDataPreparerBase <- R6Class(
         app_config = NULL
     ),
     active = list(
+        remote_files = function(value) {
+            return(private$app_config$remote_files)
+        },
         analysisVariable = function(value) {
             if (missing(value)) {
                 return(
@@ -77,12 +78,7 @@ InputsDataPreparerBase <- R6Class(
 FeatureAnalysisInputsDataPreparer <- R6Class(
     "FeatureAnalysisInputsDataPreparer",
     inherit = InputsDataPreparerBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, app_config) {
-            super$initialize(analysis_config, app_config)
-        },
         prepare = function(.data, study, karyotypes, sexes, ages, ...) {
             k_vec <- self$parse_karyotypes(karyotypes)
 
@@ -103,13 +99,7 @@ FeatureAnalysisInputsDataPreparer <- R6Class(
 FeatureAnalysisInputsComorbidityDataPreparer <- R6Class(
     "FeatureAnalysisInputsComorbidityDataPreparer",
     inherit = InputsDataPreparerBase,
-    private = list(
-        app_config = NULL
-    ),
     active = list(
-        remote_files = function(value) {
-            return(private$app_config$remote_files)
-        },
         participant_conditions = function(value) {
             return(
                 self$remote_files$get_remote_file_data("conditions")
@@ -117,10 +107,6 @@ FeatureAnalysisInputsComorbidityDataPreparer <- R6Class(
         }
     ),
     public = list(
-        initialize = function(analysis_config, app_config) {
-            super$initialize(analysis_config, app_config)
-            private$app_config <- app_config
-        },
         prepare = function(.data, study, karyotypes, sexes, ages, conditions) {
             k_vec <- self$parse_karyotypes(karyotypes)
 
@@ -170,12 +156,7 @@ FeatureAnalysisInputsComorbidityDataPreparer <- R6Class(
 PreCalculatedFeatureAnalysisInputsPreparer <- R6Class(
     "PreCalculatedFeatureAnalysisInputsPreparer",
     inherit = InputsDataPreparerBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, app_config) {
-            super$initialize(analysis_config, app_config)
-        },
         prepare = function(data, study, karyotypes, ages, sexes, params, ...) {
             prepared <- data |>
                 filter(
@@ -190,6 +171,40 @@ PreCalculatedFeatureAnalysisInputsPreparer <- R6Class(
                 )
 
             self$set_prepared_data(prepared)
+        }
+    )
+)
+
+#' @export
+TOFAAnalysisInputsDataPreparer <- R6Class(
+    "TOFAAnalysisInputsDataPreparer",
+    inherit = InputsDataPreparerBase,
+    active = list(
+        time_series_data = function(value) {
+            return(
+                self$remote_files$get_experiment_data(self$dataset)
+            )
+        }
+    ),
+    public = list(
+        dataset = NULL,
+        dataset_data = NULL,
+        visit_data = NULL,
+        initialize = function(analysis_config, app_config, dataset, ...) {
+
+            super$initialize(analysis_config, app_config)
+            self$dataset <- dataset
+            self$visit_data <- app_config$encounter_data
+            self$dataset_data <- app_config$dataset_data
+        },
+        prepare = function(data, sexes, races, ethnicities, karyotype, age_at_visit, age_groups, 
+            conditions = NULL, comparison = NULL, ...) {
+            return(
+                read.csv("app/data/TOFA_trial_Endpioints_RESULTS_LMM_DRAFT.csv") |>
+                    filter(Timepoint %in% str_split_1(comparison, "\\|")) |>
+                    select("Analyte" = Score_name, Mean_difference, pvalue, "padj" = qvalue) |>
+                    mutate(Analyte = gsub(" ", "_", Analyte))  
+            )
         }
     )
 )

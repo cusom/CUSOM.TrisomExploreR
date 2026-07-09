@@ -1,6 +1,5 @@
 box::use(
     app/logic/shared/factory_routing[resolve_class],
-    app/logic/shared/global_utils[`%||%`],
     app/logic/feature_analysis/inputs/InputsDataManagers[
         InputsManagerKaryotype,
         InputsManagerPrecalculatedKaryotype,
@@ -8,38 +7,71 @@ box::use(
         InputsManagerAge,
         InputsManagerComorbidity,
         InputsManagerBMI,
-        InputsManagerCellTypes
+        InputsManagerCellTypes,
+        InputsManagerTOFA
     ],
     app/logic/feature_analysis/inputs/InputsDataPreparers[
         FeatureAnalysisInputsDataPreparer,
         FeatureAnalysisInputsComorbidityDataPreparer,
-        PreCalculatedFeatureAnalysisInputsPreparer
+        PreCalculatedFeatureAnalysisInputsPreparer,
+        TOFAAnalysisInputsDataPreparer
     ]
 )
 
 box::use(
     R6[R6Class],
-    dplyr[between, filter, mutate, select, distinct, arrange, summarise, pull],
-    stringr[str_split, str_c],
-    tibble[tibble]
+    dplyr[filter, case_when]
 )
 
-getDataSource <- function(precalculated, app_config, analysis_type, analysis_config, input_config, ...) {
-    type <- paste0(
+DATA_SOURCE_MAP <- list(
+    Karyotype = InputsManagerKaryotype,
+    PrecalcKaryotype = InputsManagerPrecalculatedKaryotype,
+    Sex = InputsManagerSex,
+    Age = InputsManagerAge,
+    HasAnyConditionFlag = InputsManagerComorbidity,
+    BMI = InputsManagerBMI,
+    CellTypes = InputsManagerCellTypes,
+    PrecalcEvent_Name = InputsManagerTOFA
+)
+
+PREPARER_MAP <- list(
+    Runtime = FeatureAnalysisInputsDataPreparer,
+    Comorbidity = FeatureAnalysisInputsComorbidityDataPreparer,
+    Precalc = PreCalculatedFeatureAnalysisInputsPreparer,
+    TOFA = TOFAAnalysisInputsDataPreparer
+)
+
+getRouteProfile <- function(precalculated, analysis_config) {
+    analysis_variable <- analysis_config$AnalysisVariableName
+
+    data_source_key <- paste0(
         if (isTRUE(precalculated)) "Precalc" else "",
-        analysis_config$AnalysisVariableName
+        analysis_variable
     )
-    map <- list(
-        Karyotype =             InputsManagerKaryotype,
-        PrecalcKaryotype =      InputsManagerPrecalculatedKaryotype,
-        Sex =                   InputsManagerSex,
-        Age =                   InputsManagerAge,
-        HasAnyConditionFlag =   InputsManagerComorbidity,
-        BMI =                   InputsManagerBMI,
-        CellTypes =             InputsManagerCellTypes
+
+    preparer_key <- case_when(
+        analysis_variable == "HasAnyConditionFlag" ~ "Comorbidity",
+        analysis_variable == "Event_Name" ~ "TOFA",
+        isTRUE(precalculated) ~ "Precalc",
+        TRUE ~ "Runtime"
     )
-    cls <- resolve_class(map, type, "DataSource")
-    cls$new(
+
+    list(
+        data_source_key = data_source_key,
+        preparer_key = preparer_key
+    )
+}
+
+instantiateMappedClass <- function(map, key, kind, ...) {
+    cls <- resolve_class(map, key, kind)
+    cls$new(...)
+}
+
+getDataSource <- function(route_profile, app_config, analysis_config, input_config, ...) {
+    instantiateMappedClass(
+        map = DATA_SOURCE_MAP,
+        key = route_profile$data_source_key,
+        kind = "DataSource",
         app_config = app_config,
         analysis_config = analysis_config,
         input_config = input_config,
@@ -47,23 +79,15 @@ getDataSource <- function(precalculated, app_config, analysis_type, analysis_con
     )
 }
 
-getPreparer <- function(precalculated, analysis_config, app_config, ...) {
-    type <- if (
-        analysis_config$AnalysisVariableName == "HasAnyConditionFlag"
-    ) {
-        "Comorbidity"
-    } else if (isTRUE(precalculated)) {
-        "Precalc"
-    } else {
-        "Runtime"
-    }
-    map <- list(
-        Runtime     = FeatureAnalysisInputsDataPreparer,
-        Comorbidity = FeatureAnalysisInputsComorbidityDataPreparer,
-        Precalc     = PreCalculatedFeatureAnalysisInputsPreparer
+getPreparer <- function(route_profile, analysis_config, app_config, ...) {
+    instantiateMappedClass(
+        map = PREPARER_MAP,
+        key = route_profile$preparer_key,
+        kind = "Preparer",
+        analysis_config = analysis_config,
+        app_config = app_config,
+        ...
     )
-    cls <- resolve_class(map, type, "Preparer")
-    cls$new(analysis_config = analysis_config, app_config = app_config, ...)
 }
 
 FeatureAnalysisInputsRunner <- R6Class(
@@ -103,6 +127,11 @@ FeatureAnalysisInputsRunner <- R6Class(
                 self$data_source$Ages
             )
         },
+        Age_Groups = function(value) {
+            return(
+                self$data_source$Age_Groups
+            )
+        },
         StatTestNames = function(value) {
             return(
                 self$data_source$StatTestNames
@@ -136,6 +165,15 @@ FeatureAnalysisInputsRunner <- R6Class(
         fold_change_variable = function() {
             return(
                 self$data_source$FoldChangeVar
+            )
+        },
+        event_comparisons = function(value) {
+            return(self$data_source$event_comparisons)
+        },
+        baseline_comparisons = function(value) {
+            return(
+                self$data_source$event_comparisons |>
+                    filter(grepl("Baseline vs", analysis))
             )
         }
     ),
@@ -183,13 +221,13 @@ getFeatureAnalysisInputs <- function(
     ) {
 
     precalculated <- analysis_config$UsesPreCalculatedData
-    analysis_type <- analysis_config$AnalysisType
-    data_src   <- getDataSource(precalculated, app_config, analysis_type, analysis_config, input_config, ...)
-    preparer   <- getPreparer(precalculated, analysis_config, app_config, ...)
+    route_profile <- getRouteProfile(precalculated, analysis_config)
+    data_src <- getDataSource(route_profile, app_config, analysis_config, input_config, ...)
+    preparer <- getPreparer(route_profile, analysis_config, app_config, ...)
 
     FeatureAnalysisInputsRunner$new(
         precalculated,
-        analysis_type,
+        analysis_config$AnalysisType,
         data_src,
         preparer
     )

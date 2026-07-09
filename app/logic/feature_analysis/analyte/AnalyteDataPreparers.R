@@ -35,11 +35,11 @@ PreparerBase <- R6Class(
 CategoricalSinglePreparer <- R6Class(
     "CategoricalSinglePreparer",
     inherit = PreparerBase,
-    private = list(),
-    active = list(),
     public = list(
+        analysis_variable_name = NULL,
         initialize = function(analysis_config, ...) {
             super$initialize(analysis_config, ...)
+            self$analysis_variable_name <- analysis_config$AnalysisVariableName
         },
         prepare = function(.data) {
             self$prepared_data <- .data |>
@@ -51,10 +51,34 @@ CategoricalSinglePreparer <- R6Class(
                 filter(
                     is.finite(log2MeasuredValue)
                 ) |>
-                add_count(Karyotype, name = "n") |>
+                add_count(!!sym(self$analysis_variable_name), name = "n") |>
                 mutate(
-                    Karyotype = glue("<b>{Karyotype}</b> (n={n})"),
+                    !!sym(self$analysis_variable_name) := paste0("<b>", .data[[self$analysis_variable_name]], "</b> (n=", n, ")"),
                     text      = glue("LabID: {LabID} <br />{log2Measurement}: {log2MeasuredValue}")
+                ) |>
+                select(-n)
+            return(invisible(self$prepared_data))
+        }
+    )
+)
+
+#' @export
+PrecalculatedCategoricalSinglePreparer <- R6Class(
+    "PrecalculatedCategoricalSinglePreparer",
+    inherit = CategoricalSinglePreparer,
+    public = list(
+        prepare = function(.data) {
+            self$prepared_data <- .data |>
+                mutate(
+                    highlightGroup = NA_character_  # if/when needed
+                ) |>
+                filter(
+                    is.finite(MeasuredValue)
+                ) |>
+                add_count(!!sym(self$analysis_variable_name), name = "n") |>
+                mutate(
+                    !!sym(self$analysis_variable_name) := paste0("<b>", .data[[self$analysis_variable_name]], "</b> (n=", n, ")"),
+                    text      = glue("LabID: {LabID} <br />{Measurement}: {MeasuredValue}")
                 ) |>
                 select(-n)
             return(invisible(self$prepared_data))
@@ -66,12 +90,7 @@ CategoricalSinglePreparer <- R6Class(
 ContinuousSinglePreparer <- R6Class(
     "ContinuousSinglePreparer",
     inherit = PreparerBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, ...) {
-            super$initialize(analysis_config, ...)
-        },
         prepare = function(.data) {
             self$prepared_data <- .data |>
                 mutate(
@@ -94,12 +113,7 @@ ContinuousSinglePreparer <- R6Class(
 HeatmapPreparer <- R6Class(
     "HeatmapPreparer",
     inherit = PreparerBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, ...) {
-            super$initialize(analysis_config, ...)
-        },
         prepare = function(.data) {
             self$prepared_data <- .data |>
                 select(Analyte, ChangeValue = log2FoldChange, text) |>
@@ -118,7 +132,6 @@ HeatmapPreparer <- R6Class(
 CorrelatesPreparer <- R6Class(
     "CorrelatesPreparer",
     inherit = PreparerBase,
-    private = list(),
     active = list(
         QueryAnalyteLabel = function(value) {
             return(
@@ -173,7 +186,6 @@ CorrelatesPreparer <- R6Class(
 CorrelatesHeatmapPreparer <- R6Class(
     "CorrelatesHeatmapPreparer",
     inherit = PreparerBase,
-    private = list(),
     active = list(
         CorrelationMeasureName = function(value) {
             return(
