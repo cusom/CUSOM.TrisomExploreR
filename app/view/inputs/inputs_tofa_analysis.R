@@ -112,7 +112,7 @@ server <- function(id, app_config, analysis_config) {
 
             choices <- analysis_config$datasets
 
-            selected <- ifelse(nrow(choices) == 1, choices, character(0))
+            selected <- if (nrow(choices) == 1) choices$Values[[1]] else character(0)
 
             prettyRadioButtonsFieldSet(
                 input_id = ns("dataset"),

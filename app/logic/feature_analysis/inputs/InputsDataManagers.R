@@ -46,9 +46,17 @@ make_collapsed_karyotype_choices <- function(karyo_list, tooltip_text) {
     )
 }
 
+sanitize_choice_vector <- function(values) {
+    values <- as.character(values)
+    values <- trimws(values)
+    unique(values[!is.na(values) & nzchar(values)])
+}
+
 # Helper to set shared karyotype sorting/label fields
 build_karyotype_choices <- function(.data) {
     .data |>
+        mutate(Karyotype = trimws(as.character(Karyotype))) |>
+        filter(!is.na(Karyotype), nzchar(Karyotype)) |>
         mutate(
             sort = if_else(Karyotype == "Trisomy 21", 1, 99),
             choiceNames = glue("{Karyotype} (n={n})"),
@@ -277,7 +285,7 @@ InputsManagerBase <- R6Class(
             )
         },
         Karyotypes = function(value) {
-            karyotypes <- self$input_config$karyotypes
+            karyotypes <- sanitize_choice_vector(self$input_config$karyotypes)
 
             comparison_row <- make_comparison_row(
                 karyotypes,
@@ -376,8 +384,10 @@ InputsManagerKaryotype <- R6Class(
     inherit = InputsManagerBase,
     active = list(
         Karyotypes = function(value) {
+            karyotypes <- sanitize_choice_vector(self$input_config$karyotypes)
+
             make_collapsed_karyotype_choices(
-                self$input_config$karyotypes,
+                karyotypes,
                 "Test for differences between Trisomy 21 & Controls"
             )
         }
@@ -397,8 +407,10 @@ InputsManagerPrecalculatedKaryotype <- R6Class(
             private$get_local_fact_data(plan)
         },
         Karyotypes = function(value) {
+            karyotypes <- sanitize_choice_vector(self$input_config$karyotypes)
+
             make_collapsed_karyotype_choices(
-                self$input_config$karyotypes,
+                karyotypes,
                 "Test for differences between Trisomy 21 & Controls"
             )
         },
@@ -456,7 +468,7 @@ InputsManagerComorbidity <- R6Class(
     inherit = InputsManagerBase,
     active = list(
         Karyotypes = function(value) {
-            karyotypes <- self$input_config$karyotypes
+            karyotypes <- sanitize_choice_vector(self$input_config$karyotypes)
             return(
                 tibble(
                     choiceNames = karyotypes[1],
@@ -541,7 +553,7 @@ InputsManagerCellTypes <- R6Class(
     inherit = InputsManagerBase,
     active = list(
         Karyotypes = function(value) {
-            karyotypes <- self$input_config$karyotypes
+            karyotypes <- sanitize_choice_vector(self$input_config$karyotypes)
             return(
                 self$KaryotypeCounts |>
                     bind_rows(
@@ -578,7 +590,8 @@ InputsManagerTOFA <- R6Class(
                 self$participant_data |>
                     select(DownSyndromeStatus) |>
                     distinct() |>
-                    pull()
+                    pull() |>
+                    sanitize_choice_vector()
             )
         },
         Sexes = function(value) {

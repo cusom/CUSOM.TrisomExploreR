@@ -2,6 +2,7 @@ box::use(
   R6[R6Class],
   config[get],
   glue[glue],
+  tools[toTitleCase],
   yaml[read_yaml],
   arrow[read_parquet],
   dplyr[select, arrange, distinct, pull, filter, left_join, mutate, 
@@ -67,6 +68,12 @@ resolve_existing_packages_root <- function(candidate_root, catalog_root = NULL) 
   }
 
   "app/app_config/packages"
+}
+
+sanitize_choice_vector <- function(values) {
+  values <- as.character(values)
+  values <- trimws(values)
+  unique(values[!is.na(values) & nzchar(values)])
 }
 
 normalize_application_config <- function(app_definition) {
@@ -572,11 +579,13 @@ TrisomExplorerAppManager <- R6Class(
 
       self$input_config$karyotypes <- self$participant_data |>
         distinct(Karyotype) |>
-        pull()
+        pull() |>
+        sanitize_choice_vector()
 
       self$input_config$sexes <- self$participant_data |>
         distinct(Sex) |>
-        pull()
+        pull() |>
+        sanitize_choice_vector()
     },
 
     load_encounter_data = function() {
@@ -585,8 +594,15 @@ TrisomExplorerAppManager <- R6Class(
         return(invisible(NULL))
       }
 
-      self$input_config$ages <- self$encounter_data |>
-        drop_na() |>
+      valid_ages <- self$encounter_data |>
+        drop_na(AgeAtTimeOfVisit)
+
+      if (nrow(valid_ages) == 0) {
+        self$input_config$ages <- integer(0)
+        return(invisible(NULL))
+      }
+
+      self$input_config$ages <- valid_ages |>
         summarise(
           min = round(min(AgeAtTimeOfVisit)),
           max = round(max(AgeAtTimeOfVisit)) + 1
@@ -777,30 +793,76 @@ TrisomExplorerAppManager <- R6Class(
 TOFAAppManager <- R6Class(
   "TOFAAppManager",
   inherit = TrisomExplorerAppManager,
-  private = list(),
-  active = list(
-    datasets = function(value) {
-      package_dirs <- list.dirs(self$package_resolver$packages_root, recursive = FALSE, full.names = FALSE)
-      candidate_dirs <- package_dirs[file.exists(file.path(self$package_resolver$packages_root, package_dirs, "data.parquet"))]
+  private = list(
+    tofa_analysis_id = "tofa_feature_association",
+    tofa_feature_id = "timepoint",
+    build_tofa_dataset_choices = function() {
+      analysis <- self$catalog_registry$get_analysis(private$tofa_analysis_id)
+      feature_cfg <- analysis$features[[private$tofa_feature_id]]
 
-      if (length(candidate_dirs) == 0) {
+      if (is.null(feature_cfg)) {
         return(tibble(Values = character(0), Text = character(0), URL = character(0), TooltipText = character(0), ShowTooltip = logical(0), FieldSet = character(0)))
       }
 
-      tibble(Values = candidate_dirs) |>
-        mutate(
-          Text = gsub("TOFA_data_DCC_TrisomExplorer_v2.3_DATASETS_", "", Values),
-          URL = NA,
-          TooltipText = "",
-          ShowTooltip = FALSE,
-          FieldSet = case_when(
-            grepl("Endpoints", Values, ignore.case = TRUE) ~ "Endpoints",
-            grepl("Nulisa", Values, ignore.case = TRUE) ~ "Nulisa",
-            grepl("Olink", Values, ignore.case = TRUE) ~ "Olink",
-            TRUE ~ "Other"
-          )
-        ) |>
-        select(Values, Text, URL, TooltipText, ShowTooltip, FieldSet)
+      dataset_refs <- unlist(feature_cfg$datasets %||% list(), use.names = FALSE)
+
+      if (length(dataset_refs) == 0) {
+        return(tibble(Values = character(0), Text = character(0), URL = character(0), TooltipText = character(0), ShowTooltip = logical(0), FieldSet = character(0)))
+      }
+
+      rows <- lapply(dataset_refs, function(ref) {
+        dataset_def <- self$catalog_registry$get_dataset_by_any_id(ref)
+        package_id <- dataset_def$package %||% dataset_def$id
+        manifest <- tryCatch(
+          self$package_resolver$get_package_manifest(package_id),
+          error = function(e) list()
+        )
+
+        tooltip <- manifest$helper_text %||% ""
+
+        tibble(
+          Values = dataset_def$id %||% package_id,
+          Text = manifest$display_name %||% dataset_def$id %||% package_id,
+          URL = manifest$url %||% NA_character_,
+          TooltipText = tooltip,
+          ShowTooltip = nzchar(tooltip),
+          FieldSet = manifest$group %||% "TOFA Datasets"
+        )
+      })
+
+      bind_rows(rows)
+    },
+    build_tofa_analysis_config = function() {
+      analysis_def <- self$catalog_registry$get_analysis(private$tofa_analysis_id)
+      feature_def <- self$catalog_registry$get_feature(private$tofa_feature_id)
+
+      analysis_type <- case_when(
+        identical(tolower(feature_def$data_type %||% ""), "categorical") ~ "Categorical",
+        identical(tolower(feature_def$data_type %||% ""), "continuous") ~ "Continuous",
+        TRUE ~ "Categorical"
+      )
+
+      tibble(
+        Namespace = toTitleCase(private$tofa_feature_id),
+        ExperimentIDs = paste(self$datasets$Values, collapse = "|"),
+        UsesPreCalculatedData = TRUE,
+        AnalysisVariableName = feature_def$column %||% "Event_Name",
+        AnalysisVariableLabel = feature_def$display_name %||% "Event",
+        AnalysisType = analysis_type,
+        AnalysisVariableBaselineLabel = "Baseline",
+        AnalysisVolcanoPlotTopAnnotation = "Up Compared to Baseline",
+        ApplicationName = self$app_config$applicationTitle
+      )
+    }
+  ),
+  active = list(
+    datasets = function(value) {
+      tryCatch(
+        private$build_tofa_dataset_choices(),
+        error = function(e) {
+          tibble(Values = character(0), Text = character(0), URL = character(0), TooltipText = character(0), ShowTooltip = logical(0), FieldSet = character(0))
+        }
+      )
     },
     all_data = function(value) {
       return(
@@ -825,16 +887,7 @@ TOFAAppManager <- R6Class(
         clear_data_dir = FALSE
       )
 
-      self$analysis_config <- tibble(
-        Namespace = "Timepoint", 
-        ExperimentIDs = NA, 
-        UsesPreCalculatedData = TRUE,
-        AnalysisVariableName = "Event_Name", 
-        AnalysisVariableLabel = "Event", 
-        AnalysisType = "Categorical",
-        AnalysisVariableBaselineLabel = "Baseline",
-        AnalysisVolcanoPlotTopAnnotation = "Up Compared to Baseline"
-      )
+      self$analysis_config <- private$build_tofa_analysis_config()
 
     },
     get_analysis_config = function(namespace) {
@@ -845,11 +898,13 @@ TOFAAppManager <- R6Class(
     load_participant_data = function() {
       self$input_config$karyotypes <- self$participant_data |>
         distinct(DownSyndromeStatus) |>
-        pull()
+        pull() |>
+        sanitize_choice_vector()
 
       self$input_config$sexes <- self$participant_data |>
         distinct(Sex) |>
-        pull()
+        pull() |>
+        sanitize_choice_vector()
     },
     load_encounter_data = function() {
       self$input_config$ages <- self$encounter_data |>

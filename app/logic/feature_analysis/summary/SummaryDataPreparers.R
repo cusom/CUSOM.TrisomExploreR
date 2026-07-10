@@ -346,23 +346,34 @@ PreCalculatedTOFASummaryPreparer <- R6Class(
             self$summary_data <- self$set_source_data(source_data)
         },
         prepare = function(source_data) {
-            self$prepared_data <- self$set_summary_data(source_data) |>
-            rename(
-                "p.value.original" = pvalue,
-                "p.value" = padj
-            ) |>
-            mutate(
-                shape = "circle",
-                selectedPoint = 0L,
-                `-log10pvalue` = -log10(p.value),
-                `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
-                formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
-                text = glue(
-                    "Score: {Analyte}<br />Difference: {round(Mean_difference,2)}<br />{formattedPValue}"
-                ),
-                lmFormula = "",
-                ivs = ""
-            )
+            source <- self$set_summary_data(source_data)
+
+            analyte_col <- intersect(c("Analyte", "Score_name", "Feature"), names(source))[[1]]
+            fold_col <- intersect(c("Mean_difference", "FoldChange", "log2FoldChange"), names(source))[[1]]
+            p_orig_col <- intersect(c("pvalue", "p.value.original", "p.value"), names(source))[[1]]
+            p_adj_col <- intersect(c("padj", "qvalue", "p.value", "p_adj"), names(source))[[1]]
+
+            if (is.null(analyte_col) || is.null(fold_col) || is.null(p_adj_col)) {
+                stop("TOFA precalculated artifact is missing required columns.", call. = FALSE)
+            }
+
+            self$prepared_data <- source |>
+                mutate(
+                    Analyte = .data[[analyte_col]],
+                    FoldChange = as.numeric(.data[[fold_col]]),
+                    `p.value.original` = if (!is.null(p_orig_col)) as.numeric(.data[[p_orig_col]]) else as.numeric(.data[[p_adj_col]]),
+                    `p.value` = as.numeric(.data[[p_adj_col]]),
+                    shape = "circle",
+                    selectedPoint = 0L,
+                    `-log10pvalue` = -log10(p.value),
+                    `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
+                    formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
+                    text = glue(
+                        "Score: {Analyte}<br />Difference: {round(FoldChange,2)}<br />{formattedPValue}"
+                    ),
+                    lmFormula = "",
+                    ivs = ""
+                )
             return(invisible(self$prepared_data))
         }
     )

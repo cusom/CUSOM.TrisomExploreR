@@ -1,5 +1,6 @@
 box::use(
     R6[R6Class],
+    arrow[read_parquet],
     glue[glue],
     dplyr[select, filter, between, mutate, summarise,
             pull, if_else, inner_join,
@@ -7,7 +8,7 @@ box::use(
     tidyr[drop_na],
     stringr[str_split_1],
     stringr[str_split, str_c],
-    utils[read.csv]
+    readr[read_csv]
 )
 
 #' @export
@@ -183,18 +184,89 @@ TOFAAnalysisInputsDataPreparer <- R6Class(
         dataset = NULL,
         dataset_data = NULL,
         visit_data = NULL,
+        statistic_id = "linear_model",
         initialize = function(analysis_config, app_config, dataset, ...) {
 
             super$initialize(analysis_config, app_config)
             self$dataset <- dataset
             self$visit_data <- app_config$encounter_data
             self$dataset_data <- app_config$dataset_data
+
+            available_stats <- tryCatch(
+                private$app_config$get_dataset_statistic_ids(dataset),
+                error = function(e) character(0)
+            )
+
+            if (length(available_stats) > 0 && !"linear_model" %in% available_stats) {
+                self$statistic_id <- available_stats[[1]]
+            }
+        },
+        load_precalculated_summary = function() {
+            dataset_def <- private$app_config$get_catalog_dataset_definition(self$dataset)
+            package_id <- dataset_def$package
+            if (is.null(package_id) || !nzchar(package_id)) {
+                package_id <- dataset_def$id
+            }
+
+            artifact_rel_path <- private$app_config$package_resolver$resolve_precalculated_artifact(
+                package_id = package_id,
+                statistic_id = self$statistic_id,
+                feature_id = "timepoint"
+            )
+
+            if (is.null(artifact_rel_path) || !nzchar(artifact_rel_path)) {
+                stop(
+                    sprintf("No precalculated artifact found for dataset '%s' and statistic '%s'.", self$dataset, self$statistic_id),
+                    call. = FALSE
+                )
+            }
+
+            artifact_path <- file.path(private$app_config$package_resolver$packages_root, package_id, artifact_rel_path)
+
+            if (!file.exists(artifact_path)) {
+                stop(sprintf("Precalculated artifact not found: %s", artifact_path), call. = FALSE)
+            }
+
+            parquet_data <- tryCatch(read_parquet(artifact_path), error = function(e) NULL)
+
+            if (!is.null(parquet_data)) {
+                return(parquet_data)
+            }
+
+            csv_data <- tryCatch(
+                read_csv(artifact_path, show_col_types = FALSE, progress = FALSE),
+                error = function(e) NULL
+            )
+
+            if (!is.null(csv_data)) {
+                return(csv_data)
+            }
+
+            stop(sprintf("Unable to read precalculated artifact: %s", artifact_path), call. = FALSE)
         },
         prepare = function(data, sexes, races, ethnicities, karyotype, age_at_visit, age_groups, 
             conditions = NULL, comparison = NULL, ...) {
+            source <- self$load_precalculated_summary()
+
+            comparison_value <- comparison
+            if (is.null(comparison_value)) {
+                comparison_value <- ""
+            }
+
+            comparison_timepoints <- str_split_1(comparison_value, "\\|") |>
+                trimws() |>
+                (
+                    function(x) x[nzchar(x)]
+                )() |>
+                unique()
+
+            if (length(comparison_timepoints) > 0) {
+                source <- source |>
+                    filter(Timepoint %in% comparison_timepoints)
+            }
+
             return(
-                read.csv("app/data/TOFA_trial_Endpioints_RESULTS_LMM_DRAFT.csv") |>
-                    filter(Timepoint %in% str_split_1(comparison, "\\|")) |>
+                source |>
                     select("Analyte" = Score_name, Mean_difference, pvalue, "padj" = qvalue) |>
                     mutate(Analyte = gsub(" ", "_", Analyte))  
             )
