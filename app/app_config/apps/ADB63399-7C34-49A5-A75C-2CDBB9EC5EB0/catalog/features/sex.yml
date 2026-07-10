@@ -2,5 +2,8 @@ id: sex
 display_name: Effect of Sex
 description: Biological sex of the participant
 owner: participants
-column: sex
+column: Sex
 data_type: categorical
+label: Sex
+baseline_label: Female
+volcano_top_annotation: Up in Males

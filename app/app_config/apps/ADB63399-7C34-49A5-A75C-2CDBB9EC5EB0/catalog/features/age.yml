@@ -2,5 +2,8 @@ id: age
 display_name: Effect of Age
 description: Age of the participant
 owner: participants
-column: age
+column: Age
 data_type: continuous
+label: Age
+baseline_label: ~
+volcano_top_annotation: Increasing with Age

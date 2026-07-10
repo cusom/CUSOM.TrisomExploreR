@@ -2,5 +2,8 @@ id: comorbidity
 display_name: Effect of Co-Occurring Conditions
 description: Presence of comorbid conditions in the participant
 owner: participants
-column: comorbidity
+column: HasAnyConditionFlag
 data_type: categorical
+label: Co-Occuring Conditions
+baseline_label: "No"
+volcano_top_annotation: Up in those with Conditions

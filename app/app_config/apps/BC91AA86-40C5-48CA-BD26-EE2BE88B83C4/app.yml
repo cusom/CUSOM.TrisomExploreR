@@ -25,10 +25,30 @@ ui:
   application_label: TrisomExplorer
   application_url: https://www.trisome.org/explorer-internal
   links:
-    - label: TrisomExplorer | Transcriptome
-      image_url: https://www.trisome.org/static/img/transcriptome.png
-      link: https://www.trisome.org/explorer-internal
+    - label: Clinical Data
+      image_url: https://images.squarespace-cdn.com/content/v1/56e888d4ab48de7e9d43699f/1568392717309-GC9CTNMMS42NYJC59ONS/ke17ZwdGBToddI8pDm48kN-iCp0H8EbLNb85VXvIfntZw-zPPgdn4jUwVcJE1ZvWQUxwkmyExglNqGp0IvTJZUJFbgE-7XRK3dMEBRBhUpwJ9HQgZp3oxeBiIm-pcS5SfS-zts_3xPPiL94bG8Dub8cC2USuOBCliuH5f7Cfki4/Clinical+Data+cover+photo.png
+      link: https://trisome.shinyapps.io/ClinicalDashboard_HTP_Internal/
+      is_current_application: false
+    - label: Transcriptome
+      image_url: https://images.squarespace-cdn.com/content/v1/56e888d4ab48de7e9d43699f/1568394874995-U34IA2EKNWA8MARS2K1I/ke17ZwdGBToddI8pDm48kN-iCp0H8EbLNb85VXvIfntZw-zPPgdn4jUwVcJE1ZvWQUxwkmyExglNqGp0IvTJZUJFbgE-7XRK3dMEBRBhUpwJ9HQgZp3oxeBiIm-pcS5SfS-zts_3xPPiL94bG8Dub8cC2USuOBCliuH5f7Cfki4/Transcriptome+cover+photo.png
+      link: ~
       is_current_application: true
+    - label: Proteome
+      image_url: https://images.squarespace-cdn.com/content/v1/56e888d4ab48de7e9d43699f/1568394752389-QETFBXK0P0U3JWW08H26/ke17ZwdGBToddI8pDm48kN-iCp0H8EbLNb85VXvIfntZw-zPPgdn4jUwVcJE1ZvWQUxwkmyExglNqGp0IvTJZUJFbgE-7XRK3dMEBRBhUpzlOK77aqHYkRPGwHpLkjZlw3V4H-14niY0TyEHjuACLFt21bxqjCTv3aXyR5TUnHA/Proteome+cover+photo_COMPRESSED.png
+      link: https://trisome.shinyapps.io/Proteome_HTP_Internal/
+      is_current_application: false
+    - label: Metabolome
+      image_url: https://images.squarespace-cdn.com/content/v1/56e888d4ab48de7e9d43699f/1568394078872-WNE6UBLWHJ7APSS0HE4A/ke17ZwdGBToddI8pDm48kN-iCp0H8EbLNb85VXvIfntZw-zPPgdn4jUwVcJE1ZvWQUxwkmyExglNqGp0IvTJZUJFbgE-7XRK3dMEBRBhUpwJ9HQgZp3oxeBiIm-pcS5SfS-zts_3xPPiL94bG8Dub8cC2USuOBCliuH5f7Cfki4/Metabolome+cover+photo.png
+      link: https://trisome.shinyapps.io/Metabolome_HTP_Internal/
+      is_current_application: false
+    - label: Immune Map
+      image_url: https://images.squarespace-cdn.com/content/v1/56e888d4ab48de7e9d43699f/1568394816632-4CG9N6IDKK7Y83VD5ABM/ke17ZwdGBToddI8pDm48kN-iCp0H8EbLNb85VXvIfntZw-zPPgdn4jUwVcJE1ZvWQUxwkmyExglNqGp0IvTJZUJFbgE-7XRK3dMEBRBhUpwJ9HQgZp3oxeBiIm-pcS5SfS-zts_3xPPiL94bG8Dub8cC2USuOBCliuH5f7Cfki4/Immune+Map+cover+photo.png
+      link: https://trisome.shinyapps.io/ImmuneMap_HTP_Internal/
+      is_current_application: false
+    - label: Virtual Biorepository
+      image_url: https://images.squarespace-cdn.com/content/v1/56e888d4ab48de7e9d43699f/1568392717309-GC9CTNMMS42NYJC59ONS/ke17ZwdGBToddI8pDm48kN-iCp0H8EbLNb85VXvIfntZw-zPPgdn4jUwVcJE1ZvWQUxwkmyExglNqGp0IvTJZUJFbgE-7XRK3dMEBRBhUpwJ9HQgZp3oxeBiIm-pcS5SfS-zts_3xPPiL94bG8Dub8cC2USuOBCliuH5f7Cfki4/Clinical+Data+cover+photo.png
+      link: https://trisome.shinyapps.io/Virtual_Biorepository_HTP_Internal/
+      is_current_application: false
 
 metadata_source:
   use_database_namespace_config: false

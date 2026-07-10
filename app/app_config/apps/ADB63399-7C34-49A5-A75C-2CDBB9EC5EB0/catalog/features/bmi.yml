@@ -2,5 +2,8 @@ id: bmi
 display_name: Effect of BMI
 description: Body Mass Index of the participant
 owner: participants
-column: bmi
+column: BMI
 data_type: continuous
+label: BMI
+baseline_label: ~
+volcano_top_annotation: Increasing with BMI
