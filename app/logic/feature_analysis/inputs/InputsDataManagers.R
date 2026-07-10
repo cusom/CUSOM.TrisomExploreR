@@ -52,6 +52,18 @@ sanitize_choice_vector <- function(values) {
     unique(values[!is.na(values) & nzchar(values)])
 }
 
+normalize_field_set_label <- function(value, default = "Catalog Datasets") {
+    if (is.null(value) || is.na(value) || !nzchar(trimws(value))) {
+        value <- default
+    }
+
+    value <- trimws(as.character(value))
+    value <- gsub("&copy;", "©", value, fixed = TRUE)
+    value <- gsub("\\s+", " ", value)
+
+    value
+}
+
 # Helper to set shared karyotype sorting/label fields
 build_karyotype_choices <- function(.data) {
     .data |>
@@ -136,6 +148,14 @@ InputsManagerBase <- R6Class(
                 package_id <- datasets$package_id[[i]]
 
                 dataset_def <- private$app_config$get_catalog_dataset_definition(dataset_id)
+                if (is.null(package_id) || is.na(package_id) || !nzchar(package_id)) {
+                    package_id <- dataset_def$package %||% dataset_def$id
+                }
+
+                manifest <- tryCatch(
+                    private$app_config$package_resolver$get_package_manifest(package_id),
+                    error = function(e) list()
+                )
 
                 meta_idx <- integer(0)
                 if (!is.null(study_meta) && nrow(study_meta) > 0) {
@@ -154,24 +174,24 @@ InputsManagerBase <- R6Class(
 
                 meta_row <- if (length(meta_idx) > 0) study_meta[meta_idx[[1]], , drop = FALSE] else NULL
 
-                choice_text <- dataset_def$id
-                if (!is.null(meta_row) && !is.na(meta_row$Text[[1]]) && nzchar(meta_row$Text[[1]])) {
+                choice_text <- manifest$display_name %||% dataset_def$id
+                if (is.null(manifest$display_name) && !is.null(meta_row) && !is.na(meta_row$Text[[1]]) && nzchar(meta_row$Text[[1]])) {
                     choice_text <- meta_row$Text[[1]]
                 }
 
-                choice_url <- NA
-                if (!is.null(meta_row) && "URL" %in% names(meta_row) && !is.na(meta_row$URL[[1]]) && nzchar(meta_row$URL[[1]])) {
+                choice_url <- manifest$url %||% NA
+                if (is.null(manifest$url) && !is.null(meta_row) && "URL" %in% names(meta_row) && !is.na(meta_row$URL[[1]]) && nzchar(meta_row$URL[[1]])) {
                     choice_url <- meta_row$URL[[1]]
                 }
 
-                choice_tooltip <- ""
-                if (!is.null(meta_row) && "TooltipText" %in% names(meta_row) && !is.na(meta_row$TooltipText[[1]]) && nzchar(meta_row$TooltipText[[1]])) {
+                choice_tooltip <- manifest$helper_text %||% ""
+                if (is.null(manifest$helper_text) && !is.null(meta_row) && "TooltipText" %in% names(meta_row) && !is.na(meta_row$TooltipText[[1]]) && nzchar(meta_row$TooltipText[[1]])) {
                     choice_tooltip <- meta_row$TooltipText[[1]]
                 }
 
-                choice_group <- "Catalog Datasets"
-                if (!is.null(meta_row) && "FieldSet" %in% names(meta_row) && !is.na(meta_row$FieldSet[[1]]) && nzchar(meta_row$FieldSet[[1]])) {
-                    choice_group <- meta_row$FieldSet[[1]]
+                choice_group <- normalize_field_set_label(manifest$group)
+                if (is.null(manifest$group) && !is.null(meta_row) && "FieldSet" %in% names(meta_row) && !is.na(meta_row$FieldSet[[1]]) && nzchar(meta_row$FieldSet[[1]])) {
+                    choice_group <- normalize_field_set_label(meta_row$FieldSet[[1]])
                 }
 
                 tibble(
@@ -258,8 +278,71 @@ InputsManagerBase <- R6Class(
                 return(catalog_studies)
             }
 
-            self$input_config$studies |>
+            fallback_studies <- self$input_config$studies |>
                 filter(Values %in% self$experimentIDs)
+
+            if (is.null(fallback_studies) || nrow(fallback_studies) == 0) {
+                return(fallback_studies)
+            }
+
+            enriched_rows <- lapply(seq_len(nrow(fallback_studies)), function(i) {
+                row <- fallback_studies[i, , drop = FALSE]
+
+                dataset_id <- row$Values[[1]]
+                dataset_def <- tryCatch(
+                    private$app_config$get_catalog_dataset_definition(dataset_id),
+                    error = function(e) NULL
+                )
+
+                package_id <- NA_character_
+                if ("PackageID" %in% names(row)) {
+                    package_id <- row$PackageID[[1]]
+                }
+
+                if (is.null(package_id) || is.na(package_id) || !nzchar(package_id)) {
+                    if (!is.null(dataset_def)) {
+                        package_id <- dataset_def$package %||% dataset_def$id
+                    }
+                }
+
+                if (is.null(package_id) || is.na(package_id) || !nzchar(package_id)) {
+                    package_id <- dataset_id
+                }
+
+                manifest <- tryCatch(
+                    private$app_config$package_resolver$get_package_manifest(package_id),
+                    error = function(e) list()
+                )
+
+                if (!is.null(manifest$display_name) && nzchar(manifest$display_name)) {
+                    row$Text[[1]] <- manifest$display_name
+                }
+
+                if (!is.null(manifest$url) && nzchar(manifest$url)) {
+                    row$URL[[1]] <- manifest$url
+                }
+
+                if (!is.null(manifest$helper_text) && nzchar(manifest$helper_text)) {
+                    row$TooltipText[[1]] <- manifest$helper_text
+                    if ("ShowTooltip" %in% names(row)) {
+                        row$ShowTooltip[[1]] <- TRUE
+                    }
+                }
+
+                if (!is.null(manifest$group) && nzchar(manifest$group)) {
+                    row$FieldSet[[1]] <- normalize_field_set_label(manifest$group)
+                } else {
+                    row$FieldSet[[1]] <- normalize_field_set_label(row$FieldSet[[1]])
+                }
+
+                if ("PackageID" %in% names(row)) {
+                    row$PackageID[[1]] <- package_id
+                }
+
+                row
+            })
+
+            dplyr::bind_rows(enriched_rows)
         },
         StudyLabel = function(value) {
             return(

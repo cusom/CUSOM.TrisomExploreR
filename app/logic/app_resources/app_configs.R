@@ -304,6 +304,10 @@ TrisomExplorerAppManager <- R6Class(
         )
 
         tooltip <- manifest$helper_text %||% ""
+        field_set <- manifest$group %||% "Catalog Datasets"
+        field_set <- trimws(as.character(field_set))
+        field_set <- gsub("&copy;", "©", field_set, fixed = TRUE)
+        field_set <- gsub("\\s+", " ", field_set)
 
         tibble(
           Values = dataset_def$id %||% package_id,
@@ -311,7 +315,7 @@ TrisomExplorerAppManager <- R6Class(
           URL = manifest$url %||% NA_character_,
           TooltipText = tooltip,
           ShowTooltip = nzchar(tooltip),
-          FieldSet = manifest$group %||% "Catalog Datasets",
+          FieldSet = field_set,
           PackageID = package_id,
           Platform = manifest$platform %||% NA_character_
         )
