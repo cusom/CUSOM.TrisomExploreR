@@ -1,0 +1,22 @@
+id: p4c_somascan_06252020
+
+package: P4C_SOMAscan_06252020
+
+available_features: 
+
+    karyotype:
+        enabled: true
+
+    age:
+        enabled: true
+
+    sex:
+        enabled: true
+
+    bmi:
+        enabled: true
+        
+    comorbidity:
+        enabled: false
+        reason: "insufficient data available"
+

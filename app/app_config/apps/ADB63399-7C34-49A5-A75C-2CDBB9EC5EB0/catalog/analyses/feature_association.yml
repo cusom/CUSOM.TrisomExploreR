@@ -19,34 +19,62 @@ features:
   karyotype:
     datasets:
     - MSD_P4C_09012019
-    - HTP_NULISA_2025_v1_APOE4
+    - MSD_Proteomics_plasma_long_12192019
+    - P4C_SIMOA_11022020   
+    - P4C_SOMAscan_06252020 
     - HTP_SomaScan11k_2025_core
+    - SOMA_Proteomics_plasma_long_09182019
     - X01_2024_HTP_OLINK_core
+    - HTP_NULISA_2025_v1_no_APOE4
+    - HTP_NULISA_2025_v1_APOE4
 
   age:
     datasets:
     - MSD_P4C_09012019
-    - HTP_NULISA_2025_v1_APOE4
+    - MSD_Proteomics_plasma_long_12192019
+    - P4C_SIMOA_11022020   
+    - P4C_SOMAscan_06252020 
     - HTP_SomaScan11k_2025_core
+    - SOMA_Proteomics_plasma_long_09182019
     - X01_2024_HTP_OLINK_core
+    - HTP_NULISA_2025_v1_no_APOE4
+    - HTP_NULISA_2025_v1_APOE4
+
   sex:
     datasets:
     - MSD_P4C_09012019
-    - HTP_NULISA_2025_v1_APOE4
+    - MSD_Proteomics_plasma_long_12192019
+    - P4C_SIMOA_11022020   
+    - P4C_SOMAscan_06252020 
     - HTP_SomaScan11k_2025_core
+    - SOMA_Proteomics_plasma_long_09182019
+    - X01_2024_HTP_OLINK_core
+    - HTP_NULISA_2025_v1_no_APOE4
+    - HTP_NULISA_2025_v1_APOE4
 
   bmi:
     datasets:
     - MSD_P4C_09012019
-    - HTP_NULISA_2025_v1_APOE4
+    - MSD_Proteomics_plasma_long_12192019
+    - P4C_SIMOA_11022020   
+    - P4C_SOMAscan_06252020 
     - HTP_SomaScan11k_2025_core
+    - SOMA_Proteomics_plasma_long_09182019
+    - X01_2024_HTP_OLINK_core
+    - HTP_NULISA_2025_v1_no_APOE4
+    - HTP_NULISA_2025_v1_APOE4
 
   comorbidity:
     datasets:
     - MSD_P4C_09012019
-    - HTP_NULISA_2025_v1_APOE4
+    - MSD_Proteomics_plasma_long_12192019
+    - P4C_SIMOA_11022020   
+    - P4C_SOMAscan_06252020 
     - HTP_SomaScan11k_2025_core
-
+    - SOMA_Proteomics_plasma_long_09182019
+    - X01_2024_HTP_OLINK_core
+    - HTP_NULISA_2025_v1_no_APOE4
+    - HTP_NULISA_2025_v1_APOE4
 
 supported_statistics:
   source: package

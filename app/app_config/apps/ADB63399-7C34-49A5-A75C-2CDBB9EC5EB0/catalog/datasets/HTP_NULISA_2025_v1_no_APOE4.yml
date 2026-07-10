@@ -1,0 +1,22 @@
+id: htp_nulisa_2025_v1_no_apoe4
+
+package: HTP_NULISA_2025_v1_no_APOE4
+
+available_features: 
+
+    karyotype:
+        enabled: true
+
+    age:
+        enabled: true
+
+    sex:
+        enabled: true
+
+    bmi:
+        enabled: true
+        
+    comorbidity:
+        enabled: false
+        reason: "insufficient data available"
+
