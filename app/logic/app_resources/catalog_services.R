@@ -556,8 +556,17 @@ FeatureAssociationPlanner <- R6Class(
     plan = function(context) {
       analysis <- self$catalog_registry$get_analysis(context$analysis_id)
 
-      if (!identical(analysis$id %||% "", "feature_association")) {
-        stop("Phase I planner supports only 'feature_association'.", call. = FALSE)
+      analysis_strategy <- analysis$execution$strategy %||% ""
+
+      if (!identical(analysis_strategy, "feature_association")) {
+        stop(
+          sprintf(
+            "Planner supports only analyses with execution.strategy = 'feature_association'. Got '%s' for analysis '%s'.",
+            analysis_strategy,
+            context$analysis_id
+          ),
+          call. = FALSE
+        )
       }
 
       feature <- self$catalog_registry$get_feature(context$feature_id)

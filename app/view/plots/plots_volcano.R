@@ -49,18 +49,16 @@ ui <- function(id) {
 
 #' @export
 server <- function(id, analysis_config, app_config, feature, study, study_data, study_plan = NULL, stat_test,
-  covariates, adjustment_method, ...) {
+  covariates, adjustment_method, comparison = NULL, ...) {
 
   moduleServer(id, function(input, output, session) {
 
     ns <- session$ns
 
-    r6_obj <- reactiveVal(NULL)
-
-    # Recreate the R6 instance when Feature changes
-    observeEvent(study_data(), {
+    r6 <- reactive({
       req(study_data())
-      inst <- getFeatureAnalysisSummary(
+
+      getFeatureAnalysisSummary(
         analysis_config = analysis_config$get_analysis_config(feature()),
         app_config = app_config,
         study = study(),
@@ -70,13 +68,6 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
         covariates = covariates(),
         adjustment_method = adjustment_method()
       )
-      r6_obj(inst)
-    })
-
-    #expose a reactive that always reads the current instance
-    r6 <- reactive({
-      req(r6_obj())
-      r6_obj()
     })
 
     summary_data <- reactive({
@@ -91,8 +82,16 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
         )
       on.exit(remove_modal_spinner(), add = TRUE)
 
-      study_data() |>
-        r6()$get_summary_data()
+      selected_comparison <- if (is.null(comparison)) NULL else isolate(comparison())
+
+      if (is.null(selected_comparison) || !nzchar(trimws(selected_comparison))) {
+        r6()$get_summary_data(study_data())
+      } else {
+        r6()$get_summary_data(
+          study_data(),
+          comparison = selected_comparison
+        )
+      }
 
     })
 

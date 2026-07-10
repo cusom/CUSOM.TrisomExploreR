@@ -334,6 +334,68 @@ TrisomExplorerAppManager <- R6Class(
         TooltipText = c("", ""),
         ShowTooltip = c(FALSE, FALSE)
       )
+    },
+    build_analysis_config_from_catalog = function() {
+      fa <- tryCatch(
+        self$catalog_registry$get_analysis("feature_association"),
+        error = function(e) NULL
+      )
+
+      if (is.null(fa) || length(fa$features %||% list()) == 0) {
+        return(tibble(
+          ApplicationId                    = character(0),
+          Namespace                        = character(0),
+          AnalysisVariableName             = character(0),
+          AnalysisVariableLabel            = character(0),
+          AnalysisType                     = character(0),
+          AnalysisVariableBaselineLabel    = character(0),
+          AnalysisVolcanoPlotTopAnnotation = character(0)
+        ))
+      }
+
+      feature_ids <- names(fa$features)
+
+      rows <- lapply(feature_ids, function(feature_id) {
+        feature <- tryCatch(
+          self$catalog_registry$get_feature(feature_id),
+          error = function(e) NULL
+        )
+
+        tibble(
+          ApplicationId                    = self$application_id,
+          Namespace                        = feature_id,
+          AnalysisVariableName             = feature$column %||% NA_character_,
+          AnalysisVariableLabel            = feature$label %||% feature$display_name %||% NA_character_,
+          AnalysisType                     = toTitleCase(feature$data_type %||% ""),
+          AnalysisVariableBaselineLabel    = feature$baseline_label %||% NA_character_,
+          AnalysisVolcanoPlotTopAnnotation = feature$volcano_top_annotation %||% NA_character_
+        )
+      })
+
+      bind_rows(rows)
+    },
+    parse_app_links_from_definition = function() {
+      links_list <- self$app_definition$ui$links %||% list()
+
+      if (length(links_list) == 0) {
+        return(tibble(
+          label                = character(0),
+          imageURL             = character(0),
+          link                 = character(0),
+          IsCurrentApplication = logical(0)
+        ))
+      }
+
+      rows <- lapply(links_list, function(lnk) {
+        tibble(
+          label                = lnk$label %||% NA_character_,
+          imageURL             = lnk$image_url %||% NA_character_,
+          link                 = lnk$link %||% "",
+          IsCurrentApplication = isTRUE(lnk$is_current_application)
+        )
+      })
+
+      bind_rows(rows)
     }
   ),
   active = list(
@@ -457,6 +519,10 @@ TrisomExplorerAppManager <- R6Class(
         package_resolver = self$package_resolver
       )
 
+      metadata_src  <- app_definition$metadata_source %||% list()
+      use_db_ns     <- isTRUE(metadata_src$use_database_namespace_config %||% TRUE)
+      use_db_links  <- isTRUE(metadata_src$use_database_application_links %||% TRUE)
+
       self$remote_db <- ODBCQueryManager$new(
         conn_args = get(file = self$config_file_name, "database")
       )
@@ -465,45 +531,55 @@ TrisomExplorerAppManager <- R6Class(
 
       self$app_config$application_id <- application_id
 
-      self$namespace_config <- self$remote_db$getQuery(
-        "SELECT * FROM [te].[vw_ApplicationNamespaceConfig]
-          WHERE cast([ApplicationId] as nvarchar(256)) = CAST(? As nvarchar(256))
-          ORDER BY DisplayOrder",
-        tibble("ApplicationId" = application_id)
-      )
-
-      self$app_config$Namespaces <- self$namespace_config |>
-        arrange(DisplayOrder) |>
-        select(DisplayOrder, Namespace) |>
-        deframe()
-
-      self$app_config$applicationTitle <- self$namespace_config$applicationName[1]
-      self$app_config$applicationLabel <-  self$namespace_config$applicationLabel[1]
-      self$app_config$applicationURL <- ifelse(
-        self$namespace_config$environment[1] == "Production",
-        "https://www.trisome.org/explorer",
-        "https://www.trisome.org/explorer-internal"
-      )
-
-      self$app_config$applicationLinks <- self$remote_db$getQuery(
-        "SELECT [LinkedApplicationLabel] [label], [LinkedApplicationImageURL][imageURL],
-          [LinkedApplicationURL] [link], [IsCurrentApplication]
-          FROM [app].[vw_ShinyApplicationApplicationLinks]
-          WHERE cast([ApplicationId] as nvarchar(256)) = CAST(? As nvarchar(256))
-          ORDER BY LinkDisplayOrder",
-        tibble("ApplicationId" = application_id)
-      )
-
-      self$module_config <- self$namespace_config |>
-        select(ApplicationId, Namespace, TabText, TabIcon,
-        ModuleServerName, UseR6Class, R6ClassName)
-
-      self$analysis_config <- self$namespace_config |>
-        select(
-          ApplicationId, Namespace, ExperimentIDs, UsesPreCalculatedData,
-          AnalysisVariableName, AnalysisVariableLabel, AnalysisType,
-          AnalysisVariableBaselineLabel, AnalysisVolcanoPlotTopAnnotation
+      if (use_db_ns) {
+        self$namespace_config <- self$remote_db$getQuery(
+          "SELECT * FROM [te].[vw_ApplicationNamespaceConfig]
+            WHERE cast([ApplicationId] as nvarchar(256)) = CAST(? As nvarchar(256))
+            ORDER BY DisplayOrder",
+          tibble("ApplicationId" = application_id)
         )
+
+        self$app_config$applicationTitle <- app_definition$ui$application_title %||%
+          self$namespace_config$applicationName[1]
+        self$app_config$applicationLabel <- app_definition$ui$application_label %||%
+          self$namespace_config$applicationLabel[1]
+        self$app_config$applicationURL <- app_definition$ui$application_url %||%
+          ifelse(
+            self$namespace_config$environment[1] == "Production",
+            "https://www.trisome.org/explorer",
+            "https://www.trisome.org/explorer-internal"
+          )
+
+        self$module_config <- self$namespace_config |>
+          select(ApplicationId, Namespace, TabText, TabIcon,
+          ModuleServerName, UseR6Class, R6ClassName)
+
+        self$analysis_config <- self$namespace_config |>
+          select(
+            ApplicationId, Namespace,
+            AnalysisVariableName, AnalysisVariableLabel, AnalysisType,
+            AnalysisVariableBaselineLabel, AnalysisVolcanoPlotTopAnnotation
+          )
+      } else {
+        self$app_config$applicationTitle <- app_definition$ui$application_title %||% ""
+        self$app_config$applicationLabel <- app_definition$ui$application_label %||% ""
+        self$app_config$applicationURL   <- app_definition$ui$application_url %||%
+          "https://www.trisome.org/explorer-internal"
+        self$analysis_config <- private$build_analysis_config_from_catalog()
+      }
+
+      if (use_db_links) {
+        self$app_config$applicationLinks <- self$remote_db$getQuery(
+          "SELECT [LinkedApplicationLabel] [label], [LinkedApplicationImageURL][imageURL],
+            [LinkedApplicationURL] [link], [IsCurrentApplication]
+            FROM [app].[vw_ShinyApplicationApplicationLinks]
+            WHERE cast([ApplicationId] as nvarchar(256)) = CAST(? As nvarchar(256))
+            ORDER BY LinkDisplayOrder",
+          tibble("ApplicationId" = application_id)
+        )
+      } else {
+        self$app_config$applicationLinks <- private$parse_app_links_from_definition()
+      }
 
       if (load_inputs) {
         self$load_inputs()
@@ -663,15 +739,36 @@ TrisomExplorerAppManager <- R6Class(
     },
 
     get_analysis_config = function(namespace) {
-      return(
-        self$analysis_config |>
-          mutate(applicationName = self$app_config$applicationTitle) |>
-          filter(
-            tolower(Namespace) == tolower(namespace) |
-              tolower(AnalysisVariableLabel) == tolower(namespace) |
-              tolower(AnalysisVariableName) == tolower(namespace)
-          ) |>
-          distinct()
+      row <- self$analysis_config |>
+        filter(
+          tolower(Namespace) == tolower(namespace) |
+            tolower(AnalysisVariableLabel) == tolower(namespace) |
+            tolower(AnalysisVariableName) == tolower(namespace)
+        ) |>
+        distinct()
+
+      if (nrow(row) > 0) {
+        return(row |> mutate(applicationName = self$app_config$applicationTitle))
+      }
+
+      analysis_def <- tryCatch(
+        self$catalog_registry$get_analysis(tolower(namespace)),
+        error = function(e) NULL
+      )
+
+      if (is.null(analysis_def)) {
+        return(tibble())
+      }
+
+      tibble(
+        ApplicationId                    = self$application_id,
+        Namespace                        = namespace,
+        AnalysisVariableName             = NA_character_,
+        AnalysisVariableLabel            = analysis_def$display_name %||% namespace,
+        AnalysisType                     = toTitleCase(analysis_def$id %||% namespace),
+        AnalysisVariableBaselineLabel    = NA_character_,
+        AnalysisVolcanoPlotTopAnnotation = NA_character_,
+        applicationName                  = self$app_config$applicationTitle
       )
     },
 

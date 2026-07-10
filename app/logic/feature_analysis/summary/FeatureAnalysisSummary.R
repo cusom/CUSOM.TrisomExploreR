@@ -61,8 +61,12 @@ getRouteProfile <- function(precalculated, analysis_config) {
 }
 
 resolvePrecalculatedMode <- function(precalculated, study_plan = NULL) {
+    if (!is.null(precalculated)) {
+        return(isTRUE(precalculated))
+    }
+
     if (is.null(study_plan) || is.null(study_plan$execution_mode)) {
-        return(precalculated)
+        return(FALSE)
     }
 
     if (identical(study_plan$execution_mode, "generated")) {
@@ -73,7 +77,63 @@ resolvePrecalculatedMode <- function(precalculated, study_plan = NULL) {
         return(TRUE)
     }
 
-    precalculated
+    FALSE
+}
+
+normalizeStatisticId <- function(stat_test) {
+    if (is.null(stat_test) || !nzchar(stat_test)) {
+        return("linear_model")
+    }
+
+    mapping <- c(
+        "Linear Model" = "linear_model",
+        "linear model" = "linear_model",
+        "Wilcoxon test" = "wilcoxon"
+    )
+
+    mapped <- mapping[[stat_test]]
+    if (!is.null(mapped)) {
+        return(mapped)
+    }
+
+    tolower(gsub("[^a-zA-Z0-9]+", "_", stat_test))
+}
+
+resolvePrecalculatedFromManifest <- function(app_config, study, stat_test) {
+    if (is.null(app_config) || is.null(study) || !nzchar(study)) {
+        return(FALSE)
+    }
+
+    dataset_def <- tryCatch(
+        app_config$get_catalog_dataset_definition(study),
+        error = function(e) NULL
+    )
+
+    if (is.null(dataset_def)) {
+        return(FALSE)
+    }
+
+    package_id <- dataset_def$package
+    if (is.null(package_id) || !nzchar(package_id)) {
+        package_id <- dataset_def$id
+    }
+
+    if (is.null(package_id) || !nzchar(package_id)) {
+        return(FALSE)
+    }
+
+    statistic_id <- normalizeStatisticId(stat_test)
+
+    support <- tryCatch(
+        app_config$package_resolver$resolve_statistic_support(package_id, statistic_id),
+        error = function(e) NULL
+    )
+
+    if (is.null(support) || is.null(support$precalculated)) {
+        return(FALSE)
+    }
+
+    isTRUE(support$precalculated)
 }
 
 instantiateMappedClass <- function(map, key, kind, analysis_config, ...) {
@@ -121,9 +181,9 @@ FeatureAnalysisSummaryRunner <- R6Class(
             self$preparer <- preparer
             self$plotter <- plotter
         },
-        get_summary_data = function(source_data) {
-            self$data_source$get_data(source_data) |>
-                self$preparer$prepare()
+        get_summary_data = function(source_data, ...) {
+            prepared_source <- self$data_source$get_data(source_data)
+            self$preparer$prepare(prepared_source, ...)
         },
         get_summary_plot = function(.data) {
             self$plotter$render(.data)
@@ -144,10 +204,20 @@ getFeatureAnalysisSummary <- function(
         ...
     ) {
 
+    args <- list(...)
+    app_config <- args$app_config
+    study <- args$study
+    stat_test <- args$stat_test
+
     precalculated <- resolvePrecalculatedMode(
-        analysis_config$UsesPreCalculatedData,
+        NULL,
         study_plan = study_plan
     )
+
+    if (!isTRUE(precalculated)) {
+        precalculated <- resolvePrecalculatedFromManifest(app_config, study, stat_test)
+    }
+
     route_profile <- getRouteProfile(precalculated, analysis_config)
     data_src <- getDataSource(route_profile, analysis_config, study_plan = study_plan, ...)
     preparer <- getPreparer(route_profile, analysis_config, ...)

@@ -55,9 +55,11 @@ server <- function(id, app_config) {
             feature = inputs$feature,
             study = inputs$study,
             study_data = inputs$study_data,
+            study_plan = inputs$study_plan,
             stat_test = inputs$stat_test,
             covariates = inputs$covariates,
             adjustment_method = inputs$adjustment_method,
+            comparison = inputs$comparison,
             parent = session
         )
 
@@ -69,6 +71,7 @@ server <- function(id, app_config) {
             feature = inputs$feature,
             study = inputs$study,
             study_data = inputs$study_data,
+            study_plan = inputs$study_plan,
             summary_data = analyte$summary_data,
             analyte_input_name = analyte$analyte_input_name,
             analyte_session = analyte$analyte_session,

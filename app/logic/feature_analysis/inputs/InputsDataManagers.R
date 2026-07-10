@@ -582,7 +582,28 @@ InputsManagerCellTypes <- R6Class(
 InputsManagerTOFA <- R6Class(
     "InputsManagerTOFA",
     private = list(
-        analysis_config = NULL
+        analysis_config = NULL,
+        app_config = NULL,
+        get_catalog_plan = function(dataset_id) {
+            feature_id <- "timepoint"
+            if (!is.null(private$analysis_config$Namespace) && nzchar(private$analysis_config$Namespace)) {
+                feature_id <- tolower(private$analysis_config$Namespace)
+            }
+
+            statistic_id <- statistic_id_from_ui_label(self$StatTest)
+
+            context <- private$app_config$feature_association_planner$create_context(
+                feature_id = feature_id,
+                dataset_id = dataset_id,
+                statistic_id = statistic_id,
+                filters = list(),
+                covariates = character(0),
+                visualization = list(),
+                analysis_id = "tofa_feature_association"
+            )
+
+            private$app_config$feature_association_planner$plan(context)
+        }
     ),
     active = list(
         Karyotypes = function(value) {
@@ -698,6 +719,9 @@ InputsManagerTOFA <- R6Class(
             )
         },
         StudyData = function(value) {
+            plan <- private$get_catalog_plan(self$Study)
+            self$CurrentPlan <- plan
+
             return(
                 self$participant_data |>
                 inner_join(
@@ -712,11 +736,17 @@ InputsManagerTOFA <- R6Class(
         visit_data = NULL,
         feature_col = "Feature",
         dataset = NULL,
+        Study = NULL,
+        StatTest = NULL,
+        CurrentPlan = NULL,
         filtered_data = NULL,
         initialize = function(app_config, analysis_config, input_config, dataset, ...) {
 
+            private$app_config <- app_config
             private$analysis_config <- analysis_config
             self$dataset <- dataset
+            self$Study <- dataset
+            self$StatTest <- "Linear Model"
             self$input_config <- input_config
             self$participant_data <- app_config$participant_data
             self$visit_data <- app_config$encounter_data |>

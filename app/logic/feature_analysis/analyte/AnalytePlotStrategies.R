@@ -79,7 +79,7 @@ PlotStrategyBase <- R6Class(
             return(private$analysis_config$AnalysisType)
         },
         is_precalculated = function(value) {
-            return(private$analysis_config$UsesPreCalculatedData)
+            return(FALSE)
         },
         experimentIDs = function(value) {
             return(

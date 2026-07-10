@@ -345,8 +345,26 @@ PreCalculatedTOFASummaryPreparer <- R6Class(
         set_summary_data = function(source_data) {
             self$summary_data <- self$set_source_data(source_data)
         },
-        prepare = function(source_data) {
+        prepare = function(source_data, comparison = NULL, ...) {
             source <- self$set_summary_data(source_data)
+
+            if (!is.null(comparison) && nzchar(trimws(comparison)) && "Timepoint" %in% names(source)) {
+                comparison_parts <- strsplit(as.character(comparison), "\\|")[[1]]
+                comparison_parts <- trimws(comparison_parts)
+                comparison_parts <- comparison_parts[nzchar(comparison_parts)]
+
+                selected_timepoint <- NULL
+                if (length(comparison_parts) >= 2) {
+                    selected_timepoint <- comparison_parts[[2]]
+                } else if (length(comparison_parts) == 1) {
+                    selected_timepoint <- comparison_parts[[1]]
+                }
+
+                if (!is.null(selected_timepoint) && nzchar(selected_timepoint)) {
+                    source <- source |>
+                        filter(Timepoint == selected_timepoint)
+                }
+            }
 
             analyte_col <- intersect(c("Analyte", "Score_name", "Feature"), names(source))[[1]]
             fold_col <- intersect(c("Mean_difference", "FoldChange", "log2FoldChange"), names(source))[[1]]

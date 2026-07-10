@@ -168,7 +168,7 @@ getFeatureAnalysisForAnalyte <- function(
         ...
     ) {
     precalculated <- resolvePrecalculatedMode(
-        analysis_config$UsesPreCalculatedData,
+        NULL,
         study_plan = study_plan
     )
     route_profile <- getRouteProfile(precalculated, analysis_config$AnalysisType, analyte, analysis_config)

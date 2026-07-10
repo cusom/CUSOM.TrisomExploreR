@@ -9,7 +9,49 @@ SummaryDataSourceBase <- R6Class(
     private = list(
         app_config = NULL,
         analysis_config = NULL,
-        remote_db = NULL
+        remote_db = NULL,
+        normalize_statistic_id = function(stat_test) {
+            if (is.null(stat_test) || !nzchar(stat_test)) {
+                return("linear_model")
+            }
+
+            mapping <- c(
+                "Linear Model" = "linear_model",
+                "linear model" = "linear_model",
+                "Wilcoxon test" = "wilcoxon"
+            )
+
+            mapped <- mapping[[stat_test]]
+            if (!is.null(mapped)) {
+                return(mapped)
+            }
+
+            tolower(gsub("[^a-zA-Z0-9]+", "_", stat_test))
+        },
+        load_artifact_data = function(package_id, artifact_rel_path) {
+            if (is.null(artifact_rel_path) || !nzchar(artifact_rel_path) || is.null(package_id) || !nzchar(package_id)) {
+                return(NULL)
+            }
+
+            package_root <- private$app_config$package_resolver$packages_root
+            artifact_path <- file.path(package_root, package_id, artifact_rel_path)
+
+            if (!file.exists(artifact_path)) {
+                return(NULL)
+            }
+
+            parquet_attempt <- tryCatch(read_parquet(artifact_path), error = function(e) NULL)
+            if (!is.null(parquet_attempt)) {
+                return(parquet_attempt)
+            }
+
+            csv_attempt <- tryCatch(
+                read_csv(artifact_path, show_col_types = FALSE, progress = FALSE),
+                error = function(e) NULL
+            )
+
+            csv_attempt
+        }
     ),
     active = list(
         adjusted = function(value) {
@@ -45,35 +87,49 @@ SummaryDataSourceBase <- R6Class(
             self$adjustment_method <- adjustment_method
         },
         load_precalculated_artifact = function() {
-            if (is.null(self$study_plan) || !identical(self$execution_mode, "precalculated")) {
+            if (!is.null(self$study_plan)) {
+                plan_data <- private$load_artifact_data(
+                    package_id = self$study_plan$package_id,
+                    artifact_rel_path = self$study_plan$precalculated_artifact
+                )
+
+                if (!is.null(plan_data)) {
+                    return(plan_data)
+                }
+            }
+
+            if (is.null(self$study) || !nzchar(self$study)) {
                 return(NULL)
             }
 
-            artifact <- self$study_plan$precalculated_artifact
-            package_id <- self$study_plan$package_id
-
-            if (is.null(artifact) || !nzchar(artifact) || is.null(package_id) || !nzchar(package_id)) {
-                return(NULL)
-            }
-
-            package_root <- private$app_config$package_resolver$packages_root
-            artifact_path <- file.path(package_root, package_id, artifact)
-
-            if (!file.exists(artifact_path)) {
-                return(NULL)
-            }
-
-            parquet_attempt <- tryCatch(read_parquet(artifact_path), error = function(e) NULL)
-            if (!is.null(parquet_attempt)) {
-                return(parquet_attempt)
-            }
-
-            csv_attempt <- tryCatch(
-                read_csv(artifact_path, show_col_types = FALSE, progress = FALSE),
+            dataset_def <- tryCatch(
+                private$app_config$get_catalog_dataset_definition(self$study),
                 error = function(e) NULL
             )
 
-            csv_attempt
+            if (is.null(dataset_def)) {
+                return(NULL)
+            }
+
+            package_id <- dataset_def$package %||% dataset_def$id
+
+            if (is.null(package_id) || !nzchar(package_id)) {
+                return(NULL)
+            }
+
+            feature_id <- tolower(private$analysis_config$Namespace %||% "")
+            statistic_id <- private$normalize_statistic_id(self$stat_test)
+
+            artifact_rel_path <- tryCatch(
+                private$app_config$package_resolver$resolve_precalculated_artifact(
+                    package_id = package_id,
+                    statistic_id = statistic_id,
+                    feature_id = feature_id
+                ),
+                error = function(e) NULL
+            )
+
+            private$load_artifact_data(package_id, artifact_rel_path)
         },
         get_data = function(source_data) {
             stop("Abstract: must implement")
@@ -87,6 +143,12 @@ RuntimeSummaryDataSource <- R6Class(
     inherit = SummaryDataSourceBase,
     public = list(
         get_data = function(source_data) {
+            precalc_data <- self$load_precalculated_artifact()
+            if (!is.null(precalc_data)) {
+                self$study_data <- precalc_data
+                return(invisible(self$study_data))
+            }
+
             return(invisible(self$study_data))
         }
     )
@@ -98,10 +160,6 @@ PreCalculatedSummaryDataSource <- R6Class(
     inherit = SummaryDataSourceBase,
     public = list(
         get_data = function(study_data) {
-            if (identical(self$execution_mode, "generated")) {
-                return(invisible(self$study_data))
-            }
-
             precalc_data <- self$load_precalculated_artifact()
             if (!is.null(precalc_data)) {
                 self$study_data <- precalc_data

@@ -130,8 +130,8 @@ server <- function(id, app_config, analysis_config) {
 
         r6_obj <- reactiveVal(NULL)
 
-        # Recreate the R6 instance when Dataset changes
-        observeEvent(input$dataset, ignoreInit = TRUE, {
+        # Recreate the R6 instance when Dataset changes (including initial selection)
+        observeEvent(input$dataset, ignoreInit = FALSE, {
             req(input$dataset)
 
             inst <- getFeatureAnalysisInputs(
@@ -148,6 +148,22 @@ server <- function(id, app_config, analysis_config) {
             req(r6_obj())
             r6_obj()
         })
+
+        run_snapshot <- reactiveVal(NULL)
+
+        build_study_plan <- function(dataset_id) {
+            context <- app_config$feature_association_planner$create_context(
+                feature_id = "timepoint",
+                dataset_id = dataset_id,
+                statistic_id = "linear_model",
+                filters = list(),
+                covariates = character(0),
+                visualization = list(),
+                analysis_id = "tofa_feature_association"
+            )
+
+            app_config$feature_association_planner$plan(context)
+        }
 
         output$sexes <- renderUI({
             disabled(
@@ -204,8 +220,9 @@ server <- function(id, app_config, analysis_config) {
         })
 
         is_ready_to_analyze <- reactive({
+            source_ready <- !is.null(r6_obj())
             comparison_ready <- !is.null(input$comparison) && nzchar(trimws(input$comparison))
-            comparison_ready
+            source_ready && comparison_ready
             # feature_ready <- !is.null(input$feature) && nzchar(trimws(input$feature))
             # plot_type_ready <- !is.null(input$plot_type) && nzchar(trimws(input$plot_type))
             # feature_ready && plot_type_ready
@@ -237,8 +254,14 @@ server <- function(id, app_config, analysis_config) {
         #     )
         # })
 
-        study_data <- reactive({
-            r6()$get_study_data(
+        observeEvent(input$run_analysis, ignoreInit = TRUE, {
+            req(is_ready_to_analyze())
+
+            dataset_id <- input$dataset
+            comparison_value <- input$comparison
+
+            data <- r6()$get_study_data(
+                study = input$dataset,
                 input$sexes,
                 input$races,
                 input$ethnicities,
@@ -246,10 +269,38 @@ server <- function(id, app_config, analysis_config) {
                 input$age,
                 input$age_group,
                 input$conditions,
-                input$comparison
+                input$comparison,
+                stat_test = "Linear Model",
+                covariates = c("Sex", "Age"),
+                adjustment_method = "BH"
             )
-        }) |>
-            bindEvent(input$run_analysis, ignoreInit = TRUE)
+
+            plan <- build_study_plan(dataset_id)
+
+            run_snapshot(
+                list(
+                    study_data = data,
+                    study_plan = plan,
+                    comparison = comparison_value,
+                    study = dataset_id
+                )
+            )
+        })
+
+        study_data <- reactive({
+            req(run_snapshot())
+            run_snapshot()$study_data
+        })
+
+        study_plan <- reactive({
+            req(run_snapshot())
+            run_snapshot()$study_plan
+        })
+
+        selected_comparison <- reactive({
+            req(run_snapshot())
+            run_snapshot()$comparison
+        })
 
         return(
             list(
@@ -257,12 +308,13 @@ server <- function(id, app_config, analysis_config) {
                 study = reactive({input$dataset}),
                 study_label = reactive({input$dataset}),
                 study_data = study_data,
+                study_plan = study_plan,
                 stat_test = reactive({"Linear Model"}),
                 covariates = reactive({c("Sex", "Age")}),
                 adjustment_method = reactive({"BH"}),
                 fold_change_variable = reactive({"Event_Name"}),
                 adjusted = reactive(TRUE),
-                comparison = reactive({input$comparison})
+                comparison = selected_comparison
             )
         )
 

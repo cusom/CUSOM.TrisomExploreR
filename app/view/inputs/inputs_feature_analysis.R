@@ -208,18 +208,7 @@ server <- function(id, app_config, analysis_config) {
 
         stats::setNames(values, labels)
       }, error = function(e) {
-        analysis_config$namespace_config |>
-          filter(
-            grepl("feature", ModuleServerName, ignore.case = TRUE),
-            !is.na(AnalysisVariableLabel)
-          ) |>
-          arrange(DisplayOrder) |>
-          mutate(
-            value = AnalysisVariableLabel,
-            label = glue("Effect of {AnalysisVariableLabel}")
-          ) |>
-          select(label, value) |>
-          deframe()
+        character(0)
       })
 
       selectizeInput(
@@ -240,6 +229,7 @@ server <- function(id, app_config, analysis_config) {
     })
 
     r6_obj <- reactiveVal(NULL)
+    study_plan_val <- reactiveVal(NULL)
 
     # Recreate the R6 instance when Feature changes
     observeEvent(input$Feature, ignoreInit = TRUE, {
@@ -449,6 +439,16 @@ server <- function(id, app_config, analysis_config) {
           return(FALSE)
         }
 
+        has_karyotype <- !is.null(input$Karyotype) && nzchar(input$Karyotype)
+        has_sex <- !is.null(input$Sex) && length(input$Sex) > 0
+        has_age <- !is.null(input$Age) && length(input$Age) == 2 && all(!is.na(input$Age))
+        has_stat_test <- !is.null(input$StatTest) && nzchar(input$StatTest)
+        has_adjustment <- !is.null(input$AdjustmentMethod) && nzchar(input$AdjustmentMethod)
+
+        if (!(has_karyotype && has_sex && has_age && has_stat_test && has_adjustment)) {
+          return(FALSE)
+        }
+
         if (input$Feature != "Comorbidity") {
           return(TRUE)
         }
@@ -475,26 +475,26 @@ server <- function(id, app_config, analysis_config) {
         )
       on.exit(remove_modal_spinner(), add = TRUE)
 
-      r6()$get_study_data(
+      data <- r6()$get_study_data(
         study = input$Study,
         karyotypes = input$Karyotype,
         sexes = input$Sex,
         ages = input$Age,
+        stat_test = input$StatTest,
+        covariates = input$Covariates,
+        adjustment_method = input$AdjustmentMethod,
         conditions = if (input$Feature %in% condition_feature_options) conditions$selected_conditions() else NULL
       )
+
+      study_plan_val(r6()$StudyPlan)
+      data
 
     }) |>
       bindEvent(input$getData, ignoreInit = TRUE)
 
     StudyPlan <- reactive({
-      validate(
-        need(input$getData > 0, ""),
-        need(input$Study != "", "")
-      )
-
-      r6()$StudyPlan
-    }) |>
-      bindEvent(input$getData, ignoreInit = TRUE)
+      study_plan_val()
+    })
 
     return(
       list(

@@ -31,6 +31,7 @@ DATA_SOURCE_MAP <- list(
     HasAnyConditionFlag = InputsManagerComorbidity,
     BMI = InputsManagerBMI,
     CellTypes = InputsManagerCellTypes,
+    Event_Name = InputsManagerTOFA,
     PrecalcEvent_Name = InputsManagerTOFA
 )
 
@@ -199,6 +200,27 @@ FeatureAnalysisInputsRunner <- R6Class(
             self$preparer <- preparer
         },
         get_study_data = function(...) {
+            args <- list(...)
+            data_source_fields <- names(self$data_source)
+
+            # Keep datasource state in sync with the triggering inputs so the
+            # first Analyze click uses the current selections.
+            if ("Study" %in% data_source_fields && !is.null(args$study) && nzchar(args$study)) {
+                self$data_source$Study <- args$study
+            }
+
+            if ("StatTest" %in% data_source_fields && !is.null(args$stat_test) && nzchar(args$stat_test)) {
+                self$data_source$StatTest <- args$stat_test
+            }
+
+            if ("Covariates" %in% data_source_fields && !is.null(args$covariates)) {
+                self$data_source$Covariates <- args$covariates
+            }
+
+            if ("AdjustmentMethod" %in% data_source_fields && !is.null(args$adjustment_method) && nzchar(args$adjustment_method)) {
+                self$data_source$AdjustmentMethod <- args$adjustment_method
+            }
+
             self$data_source$StudyData |>
                 self$preparer$prepare(...)
         },
@@ -225,7 +247,7 @@ getFeatureAnalysisInputs <- function(
         ...
     ) {
 
-    precalculated <- analysis_config$UsesPreCalculatedData
+    precalculated <- FALSE
     route_profile <- getRouteProfile(precalculated, analysis_config)
     data_src <- getDataSource(route_profile, app_config, analysis_config, input_config, ...)
     preparer <- getPreparer(route_profile, analysis_config, app_config, ...)
