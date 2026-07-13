@@ -1,0 +1,36 @@
+id: correlates
+
+display_name: Cross Omics Correlates
+
+description: >
+  Evaluate correlation between analytes across experiments using
+  database-backed correlation results.
+
+version: 1.0
+
+category: Differential Analysis
+
+icon: correlation
+
+enabled: true
+
+features: {}
+
+supports:
+  filtering: false
+  covariates: false
+  subgroup_analysis: false
+  multiple_testing_correction: true
+
+default_outputs:
+  summary_plot: volcano
+  drilldown_plot: scatterplot
+
+execution:
+  strategy: correlation
+  drilldown: analyte_measurements
+
+tags:
+  - differential
+  - correlation
+  - cross_omics

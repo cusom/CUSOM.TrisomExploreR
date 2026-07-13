@@ -1,0 +1,15 @@
+schema_version: 1.0
+
+catalog:
+
+  analyses:
+    path: analyses/
+
+  features:
+    path: features/
+
+  datasets:
+    path: datasets/
+
+  statistics:
+    path: statistics/
