@@ -14,9 +14,9 @@ icon: feature_association
 enabled: true
 
 features:
-  gene:
+  cell_type:
     datasets:
-    
+    - RNASeq_Transcriptome_CellType_Composite
 
 supported_statistics:
   source: package

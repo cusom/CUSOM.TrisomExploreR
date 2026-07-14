@@ -1,9 +1,0 @@
-id: gene
-display_name: Effect of Gene
-description: Effect of trisomy 21 on gene expression
-owner: analyte
-column: Gene
-data_type: categorical
-label: Gene
-baseline_label: ~
-volcano_top_annotation: ~
