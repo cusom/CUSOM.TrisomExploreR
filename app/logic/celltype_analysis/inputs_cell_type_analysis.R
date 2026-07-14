@@ -1,12 +1,11 @@
 box::use(
   R6[R6Class],
   purrr[pmap],
-  dplyr[left_join, inner_join, join_by, select, first,
-    rename, filter, mutate, distinct, pull, add_count],
+  dplyr[left_join, inner_join, select, first, rename,
+    filter, mutate, distinct, pull, add_count, arrange],
   tibble[tibble],
   glue[glue],
   forcats[fct_relevel],
-
 )
 
 box::use(
@@ -22,28 +21,25 @@ CellTypesInputsManager <- R6Class(
   active = list(
     CellTypes = function() {
       return(
-        private$app_config$get_package_measurements_data() |>
-          select(Specimen_type) |>
-          distinct() |>
-          pull() |>
+        private$app_config$cell_types_data |>
+          pull(cell_type) |>
           stats::na.omit() |>
           unname()
       )
     },
-    Analytes = function() {
-      measurements <- private$app_config$get_package_measurements_data()
-
-      if (!is.null(self$CellType) && length(self$CellType) > 0) {
-        measurements <- measurements |>
-          filter(Specimen_type %in% self$CellType)
-      }
-
+    AnalytesData = function() {
       return(
-        measurements |>
-          select(Analyte) |>
+        private$app_config$analytes_data |>
+          select(AnalyteName) |>
           distinct() |>
-          pull()
+          arrange(AnalyteName)
       )
+    },
+    GeneLabel = function() {
+      if (is.null(self$Analyte) || !nzchar(self$Analyte)) {
+        return("")
+      }
+      self$Analyte
     },
     Participants = function(value) {
       return(
@@ -106,17 +102,23 @@ CellTypesInputsManager <- R6Class(
     },
 
     set_base_data = function() {
-      measurements <- private$app_config$get_package_measurements_data()
+      # Derive package_id from catalog via the cell_type feature link
+      datasets <- private$app_config$get_catalog_feature_datasets("cell_type", "cell_type_analysis")
+      package_id <- datasets$package_id[[1]]
 
-      if (!is.null(self$Platform) && length(self$Platform) > 0 && "Platform" %in% names(measurements)) {
-        measurements <- measurements |>
-          filter(Platform %in% self$Platform)
-      }
+      # self$Analyte holds the Analyte bound from the virtualSelectInput value
+      analyte <- self$Analyte
+   
+      # Pull filtered fact data using partition pushdown on cell_type and Analyte filter
+      # Rename partition column cell_type → CellType for downstream consistency
+      facts <- private$app_config$get_filtered_fact_data(
+        package_id = package_id,
+        cell_types  = self$CellType,
+        analyte_name  = analyte
+      ) |> rename(CellType = cell_type)
 
-      self$base_data <- measurements |>
-        filter(Analyte == self$Analyte) |>
+      self$base_data <- facts |>
         left_join(self$ParticipantsWithEncounters, by = c("LabID", "record_id")) |>
-        rename("CellType" = Specimen_type) |>
         filter(
           CellType %in% self$CellType,
           (Sex %in% self$Sex | is.na(Sex)),
@@ -130,14 +132,15 @@ CellTypesInputsManager <- R6Class(
         )
       return(invisible(self$base_data))
     },
+
     cell_type_data = function() {
       self$set_base_data()
       self$combined_data <- self$base_data |>
-        select(CellType, LabID,  Analyte, log2MeasuredValue, Karyotype, Sex, Age) |>
+        select(CellType, LabID, AnalyteName, log2MeasuredValue, Karyotype, Sex, Age) |>
         getGroupedStatTestByKeyGroup(
           groupVar = CellType,
           id = LabID,
-          key = Analyte,
+          key = AnalyteName,
           group = Karyotype,
           baselineLabel = "Control",
           response = log2MeasuredValue,
@@ -145,6 +148,9 @@ CellTypesInputsManager <- R6Class(
           adjustmentMethod = self$AdjustmentMethod,
           independentVariable = Karyotype,
           covariates = self$Covariates
+        ) |>
+        mutate(
+          CellType = as.character(CellType)
         ) |>
         mutate(
           p.value.text = unlist(
@@ -171,7 +177,6 @@ CellTypesInputsManager <- R6Class(
         )
 
       return(invisible(self$combined_data))
-
     }
 
   )

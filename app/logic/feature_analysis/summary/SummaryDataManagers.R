@@ -61,7 +61,12 @@ SummaryDataSourceBase <- R6Class(
             data[normalized == target, , drop = FALSE]
         },
         normalize_statistic_id = function(stat_test) {
-            if (is.null(stat_test) || !nzchar(stat_test)) {
+            if (is.null(stat_test) || length(stat_test) == 0) {
+                return("linear_model")
+            }
+
+            stat_test <- as.character(stat_test[[1]])
+            if (!nzchar(stat_test)) {
                 return("linear_model")
             }
 
@@ -71,9 +76,9 @@ SummaryDataSourceBase <- R6Class(
                 "Wilcoxon test" = "wilcoxon"
             )
 
-            mapped <- mapping[[stat_test]]
-            if (!is.null(mapped)) {
-                return(mapped)
+            mapped <- unname(mapping[stat_test])
+            if (length(mapped) == 1 && !is.na(mapped)) {
+                return(mapped[[1]])
             }
 
             tolower(gsub("[^a-zA-Z0-9]+", "_", stat_test))

@@ -94,7 +94,12 @@ feature_id_from_analysis_variable <- function(analysis_variable) {
 }
 
 statistic_id_from_ui_label <- function(stat_test) {
-    if (is.null(stat_test) || !nzchar(stat_test)) {
+    if (is.null(stat_test) || length(stat_test) == 0) {
+        return(NULL)
+    }
+
+    stat_test <- as.character(stat_test[[1]])
+    if (!nzchar(stat_test)) {
         return(NULL)
     }
 
@@ -104,10 +109,10 @@ statistic_id_from_ui_label <- function(stat_test) {
         "linear model" = "linear_model"
     )
 
-    mapped <- mapping[[stat_test]]
+    mapped <- unname(mapping[stat_test])
 
-    if (!is.null(mapped)) {
-        return(mapped)
+    if (length(mapped) == 1 && !is.na(mapped)) {
+        return(mapped[[1]])
     }
 
     tolower(gsub("[^a-zA-Z0-9]+", "_", stat_test))

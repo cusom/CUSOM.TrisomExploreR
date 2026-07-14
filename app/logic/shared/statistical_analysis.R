@@ -4,7 +4,7 @@ box::use(
     rowwise, pull, rename, distinct, n, n_distinct, add_count, summarise_at, vars,
     first, nth, row_number, top_n, case_when],
   rlang[enquo, quo_name, `:=`, `!!!`, sym, enquos],
-  stats[lm, p.adjust],
+  stats[lm, p.adjust, median],
   broom[tidy],
   tidyr[pivot_longer, pivot_wider, separate_rows, nest, unnest],
   purrr[map, map_df],
@@ -486,7 +486,10 @@ getPairwiseStatTestByKeyGroup <- function(
           unlist(.x$y)
           )
         ),
-      tidied = map(fit, tidy)
+      tidied = map(
+        fit,
+        ~ tidyStatMethodResult(.x, method)
+      )
     ) |>
     unnest(tidied) |>
     select(-c(data, fit))
@@ -531,8 +534,30 @@ runStatMethod <- function(method, x, y) {
     result <- do.call(methodName, args = list(x, y))
     return(result)
   }, error = function(err) {
-    return(NA)
+    structure(
+      list(error = conditionMessage(err)),
+      class = "stat_test_error"
+    )
   })
+}
+
+tidyStatMethodResult <- function(fit, method) {
+  if (inherits(fit, "htest")) {
+    return(tidy(fit))
+  }
+
+  errorMessage <- if (inherits(fit, "stat_test_error")) {
+    fit$error
+  } else {
+    paste0("Not enough observations to run ", method)
+  }
+
+  tibble(
+    statistic = NA_real_,
+    p.value = NA_real_,
+    method = method,
+    error = errorMessage
+  )
 }
 
 #' Return implemented stat test methods
@@ -613,7 +638,7 @@ formatPValue <- function(
     } else {
       return("No significant difference")
     }
-  } else { 
+  } else {
     return("Unable to compute using chosen methods")
   }
 }

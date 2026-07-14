@@ -547,6 +547,12 @@ TrisomExplorerAppManager <- R6Class(
     },
     condition_data = function(value) {
       self$condition_data_cache
+    },
+    cell_types_data = function(value) {
+      self$cell_types_data_cache %||% tibble()
+    },
+    analytes_data = function(value) {
+      self$analytes_data_cache %||% tibble()
     }
   ),
   public = list(
@@ -562,6 +568,8 @@ TrisomExplorerAppManager <- R6Class(
     encounter_data_cache = NULL,
     condition_data_cache = NULL,
     package_measurements_cache = NULL,
+    cell_types_data_cache = NULL,
+    analytes_data_cache = NULL,
     namespace_config = NULL,
 
     app_config = list(
@@ -759,6 +767,8 @@ TrisomExplorerAppManager <- R6Class(
       self$participant_data_cache <- private$load_dimension_rows("participants")
       self$encounter_data_cache <- private$load_dimension_rows("visits")
       self$condition_data_cache <- private$load_dimension_rows("conditions")
+      self$cell_types_data_cache <- private$load_dimension_rows("cell_types")
+      self$analytes_data_cache <- private$load_dimension_rows("analytes")
       self$package_measurements_cache <- private$load_measurement_rows()
 
       invisible(self)
@@ -1006,6 +1016,47 @@ TrisomExplorerAppManager <- R6Class(
       }
 
       self$load_local_package_artifact(package_id, rel_path)
+    },
+
+    get_filtered_fact_data = function(package_id, cell_types, analyte_name) {
+      if (is.null(package_id) || !nzchar(package_id)) {
+        return(tibble())
+      }
+
+      fact_rel_path <- self$package_resolver$resolve_fact_file(package_id)
+
+      if (is.null(fact_rel_path) || !nzchar(fact_rel_path)) {
+        return(tibble())
+      }
+
+      fact_path <- file.path(self$package_resolver$packages_root, package_id, fact_rel_path)
+
+      if (!dir.exists(fact_path) && !file.exists(fact_path)) {
+        return(tibble())
+      }
+
+      dataset <- tryCatch(open_dataset(fact_path), error = function(e) NULL)
+
+      if (is.null(dataset)) {
+        return(tibble())
+      }
+
+      # Store filter values as local variables and reference via .env$ so Arrow's
+      # lazy expression evaluator captures the full vectors, not just the first element.
+      .cell_types  <- as.character(cell_types)
+      .analyte_id  <- as.character(analyte_name[[1]])
+
+      filtered <- dataset
+
+      if (length(.cell_types) > 0) {
+        filtered <- filtered |> filter(cell_type %in% .env$.cell_types)
+      }
+
+      if (nzchar(.analyte_id)) {
+        filtered <- filtered |> filter(AnalyteName == .env$.analyte_id)
+      }
+
+      tryCatch(collect(filtered), error = function(e) tibble())
     },
 
     plan_feature_association = function(
