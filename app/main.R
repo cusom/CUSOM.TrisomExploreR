@@ -1,7 +1,16 @@
+options(box.path = unique(c(
+  normalizePath(getwd(), winslash = "/", mustWork = TRUE),
+  getOption("box.path") %||% character(0)
+)))
+
 box::use(
   config[get],
   glue[glue],
   shiny[moduleServer, NS],
+)
+
+box::use(
+  app/logic/shared/global_utils[`%||%`]
 )
 
 box::use(
