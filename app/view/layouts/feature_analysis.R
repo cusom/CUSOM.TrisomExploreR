@@ -116,6 +116,7 @@ server <- function(id, app_config, analysis_config, input_config) {
       app_config = app_config,
       feature = inputs$feature,
       study = inputs$study,
+      karyotype = inputs$karyotype,
       study_data = inputs$study_data,
       study_plan = inputs$study_plan,
       summary_data = analyte$summary_data,

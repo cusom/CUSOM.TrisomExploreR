@@ -1,16 +1,23 @@
+options(box.path = unique(c(
+  normalizePath(getwd(), winslash = "/", mustWork = TRUE),
+  getOption("box.path") %||% character(0)
+)))
+
 box::use(
   R6[R6Class],
   config[get],
   glue[glue],
+  rlang[sym],
   tools[toTitleCase],
   yaml[read_yaml],
-  arrow[read_parquet],
+  arrow[open_dataset, read_parquet],
   dplyr[select, arrange, distinct, pull, filter, left_join, mutate, 
     group_by, collect, summarise, n, n_distinct, reframe, case_when,
     bind_rows, rename, rename_with],
   tibble[tibble, deframe],
   tidyr[drop_na, separate_rows],
-  purrr[pmap, map]
+  purrr[pmap, map],
+  readr[read_csv]
 )
 
 box::use(
@@ -90,6 +97,135 @@ normalize_application_config <- function(app_definition) {
     app_settings_args = app_settings$args %||% list(),
     app_definition = app_definition
   )
+}
+
+read_local_artifact <- function(path, feature_id = NULL, analyte_id = NULL) {
+  normalize_filter_values <- function(values) {
+    if (is.null(values) || length(values) == 0) {
+      return(character(0))
+    }
+
+    values <- unique(as.character(values))
+    values[!is.na(values) & nzchar(values)]
+  }
+
+  normalize_feature_key <- function(x) {
+    tolower(gsub("[^a-zA-Z0-9]+", "", as.character(x)))
+  }
+
+  apply_arrow_filters <- function(dataset_obj, analyte_id = NULL) {
+    if (is.null(dataset_obj)) {
+      return(NULL)
+    }
+
+    analyte_values <- normalize_filter_values(analyte_id)
+
+    analyte_col <- intersect(c("AnalyteID", "AnalyteKey", "Analyte", "AnalyteName", "analyte", "feature", "Feature"), names(dataset_obj))
+
+    filtered <- dataset_obj
+
+    if (length(analyte_values) > 0 && length(analyte_col) > 0) {
+      analyte_symbol <- sym(analyte_col[[1]])
+      filtered <- filtered |> filter(!!analyte_symbol %in% analyte_values)
+    }
+
+    tryCatch(collect(filtered), error = function(e) NULL)
+  }
+
+  filter_by_feature <- function(data, feature_id = NULL) {
+    if (is.null(feature_id) || !nzchar(feature_id) || is.null(data) || nrow(data) == 0) {
+      return(data)
+    }
+
+    feature_col <- intersect(c("feature", "Feature"), names(data))
+
+    if (length(feature_col) == 0) {
+      return(data)
+    }
+
+    target <- normalize_feature_key(feature_id)
+    matched <- normalize_feature_key(data[[feature_col[[1]]]]) == target
+    data[matched, , drop = FALSE]
+  }
+
+  filter_by_analyte <- function(data, analyte_id = NULL) {
+    if (is.null(analyte_id) || length(analyte_id) == 0 || is.null(data) || nrow(data) == 0) {
+      return(data)
+    }
+
+    values <- unique(as.character(analyte_id))
+    values <- values[!is.na(values) & nzchar(values)]
+
+    if (length(values) == 0) {
+      return(data)
+    }
+
+    analyte_col <- intersect(c("AnalyteID", "AnalyteKey", "Analyte", "AnalyteName", "analyte", "feature", "Feature"), names(data))
+
+    if (length(analyte_col) == 0) {
+      return(data)
+    }
+
+    matched <- as.character(data[[analyte_col[[1]]]]) %in% values
+    data[matched, , drop = FALSE]
+  }
+
+  if (is.null(path) || !nzchar(path) || !(file.exists(path) || dir.exists(path))) {
+    return(NULL)
+  }
+
+  if (dir.exists(path)) {
+    dataset_attempt <- tryCatch(open_dataset(path), error = function(e) NULL)
+
+    if (is.null(dataset_attempt)) {
+      return(NULL)
+    }
+
+    data <- apply_arrow_filters(
+      dataset_attempt,
+      analyte_id = analyte_id
+    )
+
+    if (!is.null(data)) {
+      data <- filter_by_feature(data, feature_id = feature_id)
+      return(data)
+    }
+
+    data <- tryCatch(collect(dataset_attempt), error = function(e) NULL)
+    data <- filter_by_feature(data, feature_id = feature_id)
+    return(filter_by_analyte(data, analyte_id = analyte_id))
+  }
+
+  if (grepl("\\.parquet$", path, ignore.case = TRUE)) {
+    dataset_attempt <- tryCatch(open_dataset(path), error = function(e) NULL)
+
+    if (!is.null(dataset_attempt)) {
+      data <- apply_arrow_filters(
+        dataset_attempt,
+        analyte_id = analyte_id
+      )
+
+      if (!is.null(data)) {
+        data <- filter_by_feature(data, feature_id = feature_id)
+        return(data)
+      }
+    }
+  }
+
+  parquet_attempt <- tryCatch(read_parquet(path), error = function(e) NULL)
+
+  if (!is.null(parquet_attempt)) {
+    parquet_attempt <- filter_by_feature(parquet_attempt, feature_id = feature_id)
+    return(filter_by_analyte(parquet_attempt, analyte_id = analyte_id))
+  }
+
+  csv_attempt <- tryCatch(
+    read_csv(path, show_col_types = FALSE, progress = FALSE),
+    error = function(e) NULL
+  )
+
+  csv_attempt <- filter_by_feature(csv_attempt, feature_id = feature_id)
+  filter_by_analyte(csv_attempt, analyte_id = analyte_id)
 }
 
 #' @export
@@ -209,14 +345,11 @@ TrisomExplorerAppManager <- R6Class(
 
       path <- file.path(self$package_resolver$packages_root, package_id, rel_path)
 
-      if (!file.exists(path)) {
+      if (!(file.exists(path) || dir.exists(path))) {
         return(NULL)
       }
 
-      tryCatch(
-        read_parquet(path),
-        error = function(e) NULL
-      )
+      read_local_artifact(path)
     },
     resolve_package_ids = function(dataset_ids = NULL) {
       if (is.null(dataset_ids) || length(dataset_ids) == 0) {
@@ -843,6 +976,21 @@ TrisomExplorerAppManager <- R6Class(
       bind_rows(package_rows)
     },
 
+    load_local_package_artifact = function(package_id, rel_path, feature_id = NULL, analyte_id = NULL) {
+      if (is.null(package_id) || !nzchar(package_id) || is.null(rel_path) || !nzchar(rel_path)) {
+        stop("Package ID and relative artifact path are required.", call. = FALSE)
+      }
+
+      artifact_path <- file.path(self$package_resolver$packages_root, package_id, rel_path)
+      data <- read_local_artifact(artifact_path, feature_id = feature_id, analyte_id = analyte_id)
+
+      if (is.null(data)) {
+        stop(sprintf("Unable to read local artifact '%s' for package '%s'.", rel_path, package_id), call. = FALSE)
+      }
+
+      data
+    },
+
     get_local_dataset_data = function(dataset_id) {
       package_id <- dataset_id
 
@@ -857,13 +1005,7 @@ TrisomExplorerAppManager <- R6Class(
         stop(sprintf("No local fact file found for dataset '%s'.", dataset_id), call. = FALSE)
       }
 
-      data <- private$read_local_package_parquet(package_id, rel_path)
-
-      if (is.null(data)) {
-        stop(sprintf("Unable to read local fact file '%s' for dataset '%s'.", rel_path, dataset_id), call. = FALSE)
-      }
-
-      data
+      self$load_local_package_artifact(package_id, rel_path)
     },
 
     plan_feature_association = function(

@@ -277,9 +277,20 @@ PreCalculatedSummaryPreparer <- R6Class(
         prepare = function(source_data) {
             source <- self$set_summary_data(source_data)
 
-            if (all(c("Geneid", "Gene_name", "FoldChange", "pvalue", "padj") %in% names(source))) {
+            first_present <- function(candidates) {
+                hits <- intersect(candidates, names(source))
+
+                if (length(hits) == 0) {
+                    return(NULL)
+                }
+
+                hits[[1]]
+            }
+
+            if (all(c("FoldChange", "pvalue", "padj") %in% names(source))) {
+
                 self$prepared_data <- source |>
-                    select("AnalyteID" = Geneid, "Analyte" = Gene_name, FoldChange, pvalue, padj) |>
+                    select("Analyte" = AnalyteName, FoldChange, pvalue, padj) |>
                     rename(
                         "p.value.original" = pvalue,
                         "p.value" = padj
@@ -302,10 +313,10 @@ PreCalculatedSummaryPreparer <- R6Class(
                         ivs = ""
                     )
             } else {
-                analyte_col <- intersect(c("Analyte", "Feature", "Gene_name"), names(source))[[1]]
-                fold_col <- intersect(c("FoldChange", "log<sub>2</sub>(Fold Change)", "log2FoldChange"), names(source))[[1]]
-                p_orig_col <- intersect(c("p.value.original", "p-value (original)", "pvalue"), names(source))[[1]]
-                p_adj_col <- intersect(c("p.value", "q-value", "padj"), names(source))[[1]]
+                analyte_col <- first_present(c("Analyte", "AnalyteName", "Feature", "Gene_name"))
+                fold_col <- first_present(c("FoldChange", "log<sub>2</sub>(Fold Change)", "log2FoldChange"))
+                p_orig_col <- first_present(c("p.value.original", "p-value (original)", "pvalue"))
+                p_adj_col <- first_present(c("p.value", "q-value", "padj"))
 
                 if (is.null(analyte_col) || is.null(fold_col) || is.null(p_adj_col)) {
                     stop("Precalculated summary artifact is missing required columns.", call. = FALSE)
@@ -348,6 +359,16 @@ PreCalculatedTOFASummaryPreparer <- R6Class(
         prepare = function(source_data, comparison = NULL, ...) {
             source <- self$set_summary_data(source_data)
 
+            first_present <- function(candidates) {
+                hits <- intersect(candidates, names(source))
+
+                if (length(hits) == 0) {
+                    return(NULL)
+                }
+
+                hits[[1]]
+            }
+
             if (!is.null(comparison) && nzchar(trimws(comparison)) && "Timepoint" %in% names(source)) {
                 comparison_parts <- strsplit(as.character(comparison), "\\|")[[1]]
                 comparison_parts <- trimws(comparison_parts)
@@ -366,10 +387,10 @@ PreCalculatedTOFASummaryPreparer <- R6Class(
                 }
             }
 
-            analyte_col <- intersect(c("Analyte", "Score_name", "Feature"), names(source))[[1]]
-            fold_col <- intersect(c("Mean_difference", "FoldChange", "log2FoldChange"), names(source))[[1]]
-            p_orig_col <- intersect(c("pvalue", "p.value.original", "p.value"), names(source))[[1]]
-            p_adj_col <- intersect(c("padj", "qvalue", "p.value", "p_adj"), names(source))[[1]]
+            analyte_col <- first_present(c("Analyte", "AnalyteName", "Score_name", "Feature"))
+            fold_col <- first_present(c("Mean_difference", "FoldChange", "log2FoldChange"))
+            p_orig_col <- first_present(c("pvalue", "p.value.original", "p.value"))
+            p_adj_col <- first_present(c("padj", "qvalue", "p.value", "p_adj"))
 
             if (is.null(analyte_col) || is.null(fold_col) || is.null(p_adj_col)) {
                 stop("TOFA precalculated artifact is missing required columns.", call. = FALSE)

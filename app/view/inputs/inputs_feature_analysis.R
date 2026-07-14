@@ -283,9 +283,21 @@ server <- function(id, app_config, analysis_config) {
     })
 
     karyotypes <- reactive({
-      r6()$Karyotypes
+      req(!is.null(input$Study), nzchar(input$Study))
+
+      inst <- r6()
+
+      studies <- inst$Studies
+      req(!is.null(studies), nrow(studies) > 0)
+      req(any(as.character(studies$Values) == as.character(input$Study)))
+
+      # Keep datasource state aligned when a new manager instance is created
+      # on feature changes but Study input value itself does not emit a change.
+      inst$Study <- input$Study
+
+      inst$Karyotypes
     }) |>
-      bindEvent(c(input$Study), ignoreNULL = TRUE)
+      bindEvent(c(input$Feature, input$Study), ignoreNULL = TRUE)
 
     output$Karyotype <- renderUI({
 
@@ -353,6 +365,9 @@ server <- function(id, app_config, analysis_config) {
     )
 
     output$StatTest <- renderUI({
+      validate(
+        need(input$Study != "", "")
+      )
 
       prettyRadioButtons(
         inputId = ns("StatTest"),
@@ -500,6 +515,7 @@ server <- function(id, app_config, analysis_config) {
       list(
         feature = reactive(input$Feature),
         study = reactive(input$Study),
+        karyotype = reactive(input$Karyotype),
         study_label = study_label,
         study_data = StudyData,
         study_plan = StudyPlan,

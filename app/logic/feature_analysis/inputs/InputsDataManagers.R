@@ -4,12 +4,11 @@ box::use(
 
 box::use(
     R6[R6Class],
-    arrow[read_parquet],
     glue[glue],
     tibble[tibble],
     dplyr[select, mutate, group_by, summarise, distinct,
             pull, arrange, row_number, filter, bind_rows,
-            n_distinct, if_else, inner_join, join_by, cross_join],
+            n_distinct, if_else, inner_join, left_join, join_by, cross_join],
     purrr[pluck, set_names],
     stringr[str_split_1, str_c],
     stats[median],
@@ -208,20 +207,139 @@ InputsManagerBase <- R6Class(
             dplyr::bind_rows(dataset_rows)
         },
         get_catalog_plan = function(dataset_id) {
+            dataset_id <- as.character(dataset_id)
+            dataset_id <- dataset_id[!is.na(dataset_id) & nzchar(dataset_id)]
+
+            if (length(dataset_id) == 0) {
+                return(NULL)
+            }
+
             feature_id <- feature_id_from_analysis_variable(self$analysisVariable)
             statistic_id <- statistic_id_from_ui_label(self$StatTest)
 
-            private$app_config$plan_feature_association(
-                feature_id = feature_id,
-                dataset_id = dataset_id,
-                statistic_id = statistic_id
+            tryCatch(
+                private$app_config$plan_feature_association(
+                    feature_id = feature_id,
+                    dataset_id = dataset_id[[1]],
+                    statistic_id = statistic_id
+                ),
+                error = function(e) NULL
             )
         },
+        enrich_local_fact_data = function(plan, fact_data) {
+            if (is.null(fact_data) || nrow(fact_data) == 0) {
+                return(fact_data)
+            }
+
+            required_cols <- c("Karyotype", "Sex", "Age", "BMI", "Analyte")
+
+            if (all(required_cols %in% names(fact_data))) {
+                return(fact_data)
+            }
+
+            enriched <- fact_data
+
+            if (!all(c("Karyotype", "Sex") %in% names(enriched)) && "record_id" %in% names(enriched)) {
+                participants <- private$load_package_dimension("participants", plan)
+
+                if (!is.null(participants) && "record_id" %in% names(participants)) {
+                    cols <- intersect(c("record_id", "Karyotype", "Sex"), names(participants))
+
+                    if (length(cols) > 1) {
+                        enriched <- enriched |>
+                            left_join(
+                                participants |>
+                                    select(all_of(cols)) |>
+                                    distinct(),
+                                by = "record_id"
+                            )
+                    }
+                }
+            }
+
+            if (!all(c("Age", "BMI") %in% names(enriched)) && "LabID" %in% names(enriched)) {
+                visits <- private$load_package_dimension("visits", plan)
+
+                if (!is.null(visits) && "LabID" %in% names(visits)) {
+                    cols <- intersect(
+                        c("LabID", "Age", "BMI", "AgeAtTimeOfVisit", "BMIAtTimeOfVisit"),
+                        names(visits)
+                    )
+
+                    if (length(cols) > 1) {
+                        enriched <- enriched |>
+                            left_join(
+                                visits |>
+                                    select(all_of(cols)) |>
+                                    distinct(),
+                                by = "LabID"
+                            )
+                    }
+                }
+
+                if (!"Age" %in% names(enriched) && "AgeAtTimeOfVisit" %in% names(enriched)) {
+                    enriched$Age <- enriched$AgeAtTimeOfVisit
+                }
+
+                if (!"BMI" %in% names(enriched) && "BMIAtTimeOfVisit" %in% names(enriched)) {
+                    enriched$BMI <- enriched$BMIAtTimeOfVisit
+                }
+            }
+
+            if (!"Analyte" %in% names(enriched)) {
+                analytes <- private$load_package_dimension("analytes", plan)
+
+                if (!is.null(analytes)) {
+                    name_col <- intersect(c("Analyte", "AnalyteName", "Gene", "Gene_name", "Feature"), names(analytes))
+                    key_col <- NULL
+
+                    if ("AnalyteID" %in% names(enriched) && "AnalyteID" %in% names(analytes)) {
+                        key_col <- "AnalyteID"
+                    } else if ("AnalyteKey" %in% names(enriched) && "AnalyteKey" %in% names(analytes)) {
+                        key_col <- "AnalyteKey"
+                    }
+
+                    if (!is.null(key_col) && length(name_col) > 0) {
+                        analyte_map <- analytes |>
+                            select(all_of(c(key_col, name_col[[1]]))) |>
+                            distinct()
+
+                        names(analyte_map)[names(analyte_map) == name_col[[1]]] <- "Analyte"
+
+                        enriched <- enriched |>
+                            left_join(analyte_map, by = key_col)
+                    }
+                }
+
+                if (!"Analyte" %in% names(enriched)) {
+                    analyte_alias <- intersect(c("AnalyteName", "Gene", "Gene_name", "Feature", "feature", "analyte"), names(enriched))
+
+                    if (length(analyte_alias) > 0) {
+                        names(enriched)[names(enriched) == analyte_alias[[1]]] <- "Analyte"
+                    }
+                }
+            }
+
+            enriched
+        },
         get_local_fact_data = function(plan) {
-            fact_file <- plan$required_files$facts[[1]]
+            fact_files <- plan$required_files$facts
+            fact_file <- NULL
+
+            if (!is.null(fact_files) && length(fact_files) > 0) {
+                fact_file <- fact_files[[1]]
+            }
+            planned_fact_name <- plan$fact_name
+
+            if (is.null(planned_fact_name) || !nzchar(planned_fact_name)) {
+                planned_fact_name <- NULL
+            }
 
             if (is.null(fact_file) || !nzchar(fact_file)) {
-                fact_file <- private$app_config$package_resolver$resolve_fact_file(plan$package_id)
+                fact_file <- private$app_config$package_resolver$resolve_fact_file(
+                    plan$package_id,
+                    planned_fact_name
+                )
             }
 
             if (is.null(fact_file) || !nzchar(fact_file)) {
@@ -231,11 +349,40 @@ InputsManagerBase <- R6Class(
             package_root <- private$app_config$package_resolver$packages_root
             parquet_path <- file.path(package_root, plan$package_id, fact_file)
 
-            if (!file.exists(parquet_path)) {
+            if (!(file.exists(parquet_path) || dir.exists(parquet_path))) {
                 stop(sprintf("Planned parquet file not found: %s", parquet_path), call. = FALSE)
             }
 
-            read_parquet(parquet_path)
+            fact_data <- private$app_config$load_local_package_artifact(plan$package_id, fact_file)
+            private$enrich_local_fact_data(plan, fact_data)
+        },
+        load_package_dimension = function(dimension_name, plan = NULL) {
+            if (is.null(plan)) {
+                plan <- self$CurrentPlan
+
+                if (is.null(plan) && !is.null(self$Study) && nzchar(self$Study)) {
+                    plan <- private$get_catalog_plan(self$Study)
+                    self$CurrentPlan <- plan
+                }
+            }
+
+            if (is.null(plan) || is.null(plan$package_id) || !nzchar(plan$package_id)) {
+                return(NULL)
+            }
+
+            rel_path <- tryCatch(
+                private$app_config$package_resolver$resolve_dimension_file(plan$package_id, dimension_name),
+                error = function(e) NULL
+            )
+
+            if (is.null(rel_path) || !nzchar(rel_path)) {
+                return(NULL)
+            }
+
+            tryCatch(
+                private$app_config$load_local_package_artifact(plan$package_id, rel_path),
+                error = function(e) NULL
+            )
         },
         get_local_dataset_data = function(dataset_id) {
             private$app_config$get_local_dataset_data(dataset_id)
@@ -246,7 +393,11 @@ InputsManagerBase <- R6Class(
             return(private$app_config$application_id)
         },
         applicationName = function(value) {
-            return(private$analysis_config$ApplicationName)
+            if (!is.null(private$analysis_config) && "ApplicationName" %in% names(private$analysis_config)) {
+                return(private$analysis_config$ApplicationName)
+            }
+
+            return("")
         },
         namespace = function(value) {
             return(private$analysis_config$Namespace)
@@ -345,15 +496,44 @@ InputsManagerBase <- R6Class(
             dplyr::bind_rows(enriched_rows)
         },
         StudyLabel = function(value) {
-            return(
-                self$Studies |>
-                    filter(Values == self$Study) |>
-                    pull(Text)
-            )
+            study_value <- as.character(self$Study)
+            study_value <- study_value[!is.na(study_value) & nzchar(study_value)]
+
+            if (length(study_value) == 0) {
+                return("")
+            }
+
+            study_value <- study_value[[1]]
+            studies <- self$Studies
+
+            if (is.null(studies) || nrow(studies) == 0) {
+                return(study_value)
+            }
+
+            selected <- studies |>
+                filter(Values == study_value) |>
+                pull(Text)
+
+            selected <- as.character(selected)
+            selected <- selected[!is.na(selected) & nzchar(selected)]
+
+            if (length(selected) == 0) {
+                return(study_value)
+            }
+
+            selected[[1]]
         },
         StudyData = function(value) {
+            if (is.null(self$Study) || !nzchar(self$Study)) {
+                return(tibble())
+            }
+
             plan <- private$get_catalog_plan(self$Study)
             self$CurrentPlan <- plan
+
+            if (is.null(plan) || is.null(plan$package_id) || !nzchar(plan$package_id)) {
+                return(tibble())
+            }
 
             private$get_local_fact_data(plan)
         },
@@ -400,11 +580,11 @@ InputsManagerBase <- R6Class(
                 )
 
                 if (length(stat_ids) > 0) {
-                    return(vapply(stat_ids, statistic_label_from_id, FUN.VALUE = character(1)))
+                    return(unname(vapply(stat_ids, statistic_label_from_id, FUN.VALUE = character(1))))
                 }
             }
 
-            self$input_config$statTestschoiceNames
+            unname(self$input_config$statTestschoiceNames)
         },
         StatTestValues = function(value) {
             if (!is.null(self$Study) && nzchar(self$Study)) {
@@ -414,11 +594,11 @@ InputsManagerBase <- R6Class(
                 )
 
                 if (length(stat_ids) > 0) {
-                    return(vapply(stat_ids, statistic_label_from_id, FUN.VALUE = character(1)))
+                    return(unname(vapply(stat_ids, statistic_label_from_id, FUN.VALUE = character(1))))
                 }
             }
 
-            self$input_config$statTests
+            unname(self$input_config$statTests)
         },
         AdjustmentMethodNames = function(value) {
             return(
@@ -484,17 +664,143 @@ InputsManagerPrecalculatedKaryotype <- R6Class(
     inherit = InputsManagerBase,
     active = list(
         StudyData = function(value) {
+            if (is.null(self$Study) || !nzchar(self$Study)) {
+                return(tibble())
+            }
+
             plan <- private$get_catalog_plan(self$Study)
             self$CurrentPlan <- plan
 
-            private$get_local_fact_data(plan)
+            if (is.null(plan) || is.null(plan$package_id) || !nzchar(plan$package_id)) {
+                return(tibble())
+            }
+
+            artifact_rel_path <- plan$precalculated_artifact
+
+            if (is.null(artifact_rel_path) || !nzchar(artifact_rel_path)) {
+                statistic_id <- statistic_id_from_ui_label(self$StatTest)
+
+                if (is.null(statistic_id) || !nzchar(statistic_id)) {
+                    statistic_id <- "linear_model"
+                }
+
+                artifact_rel_path <- tryCatch(
+                    private$app_config$package_resolver$resolve_precalculated_artifact(
+                        package_id = plan$package_id,
+                        statistic_id = statistic_id,
+                        feature_id = plan$feature_id
+                    ),
+                    error = function(e) NULL
+                )
+            }
+
+            if (is.null(artifact_rel_path) || !nzchar(artifact_rel_path)) {
+                return(tibble())
+            }
+
+            private$app_config$load_local_package_artifact(
+                package_id = plan$package_id,
+                rel_path = artifact_rel_path
+            )
         },
         Karyotypes = function(value) {
-            karyotypes <- sanitize_choice_vector(self$input_config$karyotypes)
+            data <- self$StudyData
 
-            make_collapsed_karyotype_choices(
-                karyotypes,
-                "Test for differences between Trisomy 21 & Controls"
+            if (is.null(data) || nrow(data) == 0 || !"samples" %in% names(data)) {
+                karyotypes <- sanitize_choice_vector(self$input_config$karyotypes)
+
+                return(
+                    make_collapsed_karyotype_choices(
+                        karyotypes,
+                        "Test for differences between Trisomy 21 & Controls"
+                    )
+                )
+            }
+
+            samples <- data |>
+                distinct(samples) |>
+                pull(samples) |>
+                as.character() |>
+                sanitize_choice_vector()
+
+            samples <- unname(samples)
+
+            if (identical(as.character(self$analysisVariable), "Karyotype")) {
+                comparison_samples <- samples[grepl(";", samples, fixed = TRUE)]
+                comparison_samples <- sanitize_choice_vector(comparison_samples)
+
+                if (length(comparison_samples) > 0) {
+                    samples <- comparison_samples
+                }
+            }
+
+            if (length(samples) == 0) {
+                karyotypes <- sanitize_choice_vector(self$input_config$karyotypes)
+
+                return(
+                    make_collapsed_karyotype_choices(
+                        karyotypes,
+                        "Test for differences between Trisomy 21 & Controls"
+                    )
+                )
+            }
+
+            label_for_sample <- function(sample) {
+                parts <- strsplit(sample, ";", fixed = TRUE)[[1]]
+                parts <- trimws(parts)
+                parts <- parts[nzchar(parts)]
+
+                if (length(parts) == 0) {
+                    return("")
+                }
+
+                if (length(parts) == 1) {
+                    return(tools::toTitleCase(parts[[1]]))
+                }
+
+                display_parts <- sort(parts)
+                glue("{tools::toTitleCase(display_parts[[1]])} vs. {tools::toTitleCase(display_parts[[2]])}")
+            }
+
+            if (length(samples) == 1) {
+                return(
+                    tibble(
+                        choiceNames = unname(vapply(samples, label_for_sample, FUN.VALUE = character(1))),
+                        choiceValues = samples
+                    )
+                )
+            }
+
+            sample_estimates <- data |>
+                filter(!is.na(samples), nzchar(samples)) |>
+                group_by(samples) |>
+                summarise(n_estimate = length(samples), .groups = "drop")
+
+            estimate_for_sample <- function(sample) {
+                idx <- match(sample, sample_estimates$samples)
+
+                if (is.na(idx)) {
+                    return(NA_integer_)
+                }
+
+                sample_estimates$n_estimate[[idx]]
+            }
+
+            choice_names <- vapply(samples, function(sample) {
+                label <- label_for_sample(sample)
+
+                n_estimate <- estimate_for_sample(sample)
+
+                if (is.na(n_estimate)) {
+                    return(label)
+                }
+
+                glue("{label} (n={format(n_estimate, big.mark = ',', scientific = FALSE, trim = TRUE)})")
+            }, FUN.VALUE = character(1))
+
+            tibble(
+                choiceNames = unname(choice_names),
+                choiceValues = samples
             )
         },
         StatTestNames = function(value) {
@@ -525,6 +831,18 @@ InputsManagerPrecalculatedKaryotype <- R6Class(
 InputsManagerAge <- R6Class(
     "InputsManagerAge",
     inherit = InputsManagerBase,
+    active = list(
+        CovariateChoices = function(value) {
+            return(c("Sex"))
+        }
+    )
+)
+
+# Age inputs in precalculated mode - use summary-backed study data and age-specific covariate choices
+#' @export
+InputsManagerPrecalculatedAge <- R6Class(
+    "InputsManagerPrecalculatedAge",
+    inherit = InputsManagerPrecalculatedKaryotype,
     active = list(
         CovariateChoices = function(value) {
             return(c("Sex"))
@@ -664,9 +982,8 @@ InputsManagerCellTypes <- R6Class(
 #' @export
 InputsManagerTOFA <- R6Class(
     "InputsManagerTOFA",
+    inherit = InputsManagerBase,
     private = list(
-        analysis_config = NULL,
-        app_config = NULL,
         get_catalog_plan = function(dataset_id) {
             feature_id <- "timepoint"
             if (!is.null(private$analysis_config$Namespace) && nzchar(private$analysis_config$Namespace)) {
@@ -689,10 +1006,58 @@ InputsManagerTOFA <- R6Class(
         }
     ),
     active = list(
+        participant_data = function(value) {
+            data <- private$load_package_dimension("participants")
+
+            if (!is.null(data)) {
+                return(data)
+            }
+
+            # Fallback: filter global cache to this package
+            global_data <- private$app_config$participant_data
+            plan <- self$CurrentPlan
+
+            if (!is.null(plan) && !is.null(plan$package_id) && nzchar(plan$package_id) &&
+                "PackageID" %in% names(global_data)) {
+                return(global_data |> filter(PackageID == plan$package_id))
+            }
+
+            global_data
+        },
+        visit_data = function(value) {
+            data <- private$load_package_dimension("visits")
+
+            if (!is.null(data)) {
+                return(
+                    data |>
+                        mutate(
+                            Age_at_visit_in_days = as.numeric(Age_at_visit_in_days),
+                            Height_cm = as.numeric(Height_cm),
+                            Weight_kg = as.numeric(Weight_kg)
+                        )
+                )
+            }
+
+            # Fallback: filter global encounter cache to this package
+            global_data <- private$app_config$encounter_data |>
+                mutate(
+                    Age_at_visit_in_days = as.numeric(Age_at_visit_in_days),
+                    Height_cm = as.numeric(Height_cm),
+                    Weight_kg = as.numeric(Weight_kg)
+                )
+            plan <- self$CurrentPlan
+
+            if (!is.null(plan) && !is.null(plan$package_id) && nzchar(plan$package_id) &&
+                "PackageID" %in% names(global_data)) {
+                return(global_data |> filter(PackageID == plan$package_id))
+            }
+
+            global_data
+        },
         Karyotypes = function(value) {
             return(
                 self$participant_data |>
-                    select(DownSyndromeStatus) |>
+                    select(Karyotype) |>
                     distinct() |>
                     pull() |>
                     sanitize_choice_vector()
@@ -814,30 +1179,14 @@ InputsManagerTOFA <- R6Class(
         }
     ),
     public = list(
-        input_config = NULL,
-        participant_data = NULL,
-        visit_data = NULL,
         feature_col = "Feature",
         dataset = NULL,
-        Study = NULL,
-        StatTest = NULL,
-        CurrentPlan = NULL,
         filtered_data = NULL,
         initialize = function(app_config, analysis_config, input_config, dataset, ...) {
-
-            private$app_config <- app_config
-            private$analysis_config <- analysis_config
+            super$initialize(app_config, analysis_config, input_config)
             self$dataset <- dataset
             self$Study <- dataset
             self$StatTest <- "Linear Model"
-            self$input_config <- input_config
-            self$participant_data <- app_config$participant_data
-            self$visit_data <- app_config$encounter_data |>
-                mutate(
-                    Age_at_visit_in_days = as.numeric(Age_at_visit_in_days),
-                    Height_cm = as.numeric(Height_cm),
-                    Weight_kg = as.numeric(Weight_kg)
-                )
         }
     )
 )

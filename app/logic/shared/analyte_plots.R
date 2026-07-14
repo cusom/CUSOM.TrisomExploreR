@@ -34,14 +34,39 @@ getBoxPlotWithHighlightGroup <- function(
         group = !!.group,
         value = !!.value,
         text = !!.text
-      ) |>
+      )
+
+    baseline_label <- as.character(groupBaselineLabel)
+    baseline_label <- baseline_label[!is.na(baseline_label) & nzchar(baseline_label)]
+
+    if (length(baseline_label) == 0) {
+      baseline_label <- .data |>
+        dplyr::distinct(group) |>
+        dplyr::pull(group) |>
+        as.character()
+    }
+
+    baseline_label <- baseline_label[[1]]
+
+    if (!(baseline_label %in% as.character(.data$group))) {
+      fallback <- .data |>
+        dplyr::distinct(group) |>
+        dplyr::pull(group) |>
+        as.character()
+
+      if (length(fallback) > 0) {
+        baseline_label <- fallback[[1]]
+      }
+    }
+
+    .data <- .data |>
       dplyr::add_tally() |>
       dplyr::mutate(
         x = stats::rnorm(
           n,
-          mean = ifelse(!!.group == groupBaselineLabel, -1, 1
-        ),
-        sd = 0.15)
+          mean = ifelse(as.character(group) == baseline_label, -1, 1),
+          sd = 0.15
+        )
       )
 
     yVariableLabel <- .data |>
@@ -49,10 +74,10 @@ getBoxPlotWithHighlightGroup <- function(
       dplyr::pull()
 
     baseline <- .data |>
-      dplyr::filter(!!.group == groupBaselineLabel)
+      dplyr::filter(as.character(group) == baseline_label)
 
     comparison <- .data |>
-      dplyr::filter(!!.group != groupBaselineLabel)
+      dplyr::filter(as.character(group) != baseline_label)
 
     highlightGroups <- .data |>
       dplyr::select(!!.highlightGroup) |>
@@ -62,54 +87,58 @@ getBoxPlotWithHighlightGroup <- function(
 
     highlight_A_baseline <- .data |>
       dplyr::filter(
-        !!.group == groupBaselineLabel,
+        as.character(group) == baseline_label,
         !!.highlightGroup == highlightGroups[1]
       )
 
     highlight_A_comparison <- .data |>
       dplyr::filter(
-        !!.group != groupBaselineLabel,
+        as.character(group) != baseline_label,
         !!.highlightGroup == highlightGroups[1]
       )
 
     highlight_B_baseline <- .data |>
       dplyr::filter(
-        !!.group == groupBaselineLabel,
+        as.character(group) == baseline_label,
         !!.highlightGroup != highlightGroups[1]
       )
 
     highlight_B_comparison <- .data |>
       dplyr::filter(
-        !!.group != groupBaselineLabel,
+        as.character(group) != baseline_label,
         !!.highlightGroup != highlightGroups[1]
       )
 
     p1 <- plotly::plot_ly(
       type = "box",
       colors = baselineColor
-      ) |>
-      plotly::add_boxplot(
-        y = baseline$value,
-        x = -1,
-        type = "box",
-        boxpoints = FALSE,
-        name = baseline$group,
-        color = baseline$group,
-        legendgroup = "baseline"
-      ) |>
-      plotly::add_markers(
-        y = baseline$value,
-        text = baseline$text,
-        hoverinfo = "text",
-        key = baseline$key,
-        x = baseline$x,
-        marker = list(
-          color = baselineColor,
-          size = 8
-        ),
-        showlegend = FALSE,
-        legendgroup = "baseline"
       )
+
+    if (nrow(baseline) > 0) {
+      p1 <- p1 |>
+        plotly::add_boxplot(
+          y = baseline$value,
+          x = -1,
+          type = "box",
+          boxpoints = FALSE,
+          name = baseline$group,
+          color = baseline$group,
+          legendgroup = "baseline"
+        ) |>
+        plotly::add_markers(
+          y = baseline$value,
+          text = baseline$text,
+          hoverinfo = "text",
+          key = baseline$key,
+          x = baseline$x,
+          marker = list(
+            color = baselineColor,
+            size = 8
+          ),
+          showlegend = FALSE,
+          legendgroup = "baseline"
+        )
+    }
 
     if (nrow(highlight_A_baseline) > 0) {
       p1 <- p1 |>
@@ -196,29 +225,33 @@ getBoxPlotWithHighlightGroup <- function(
     p2 <- plotly::plot_ly(
       type = "box",
       colors = comparisonColor
-      ) |>
-      plotly::add_boxplot(
-        y = comparison$value,
-        x = 1,
-        type = "box",
-        boxpoints = FALSE,
-        name = comparison$group,
-        color = comparison$group,
-        legendgroup = "comparison"
-      ) |>
-      plotly::add_markers(
-        y = comparison$value,
-        text = comparison$text,
-        hoverinfo = "text",
-        key = comparison$key,
-        x = comparison$x,
-        marker = list(
-          color = comparisonColor,
-          size = 8
-        ),
-        showlegend = FALSE,
-        legendgroup = "comparison"
       )
+
+    if (nrow(comparison) > 0) {
+      p2 <- p2 |>
+        plotly::add_boxplot(
+          y = comparison$value,
+          x = 1,
+          type = "box",
+          boxpoints = FALSE,
+          name = comparison$group,
+          color = comparison$group,
+          legendgroup = "comparison"
+        ) |>
+        plotly::add_markers(
+          y = comparison$value,
+          text = comparison$text,
+          hoverinfo = "text",
+          key = comparison$key,
+          x = comparison$x,
+          marker = list(
+            color = comparisonColor,
+            size = 8
+          ),
+          showlegend = FALSE,
+          legendgroup = "comparison"
+        )
+    }
 
     if (nrow(highlight_A_comparison) > 0) {
       showLegend <- ifelse(nrow(highlight_A_baseline) > 0, FALSE, TRUE)

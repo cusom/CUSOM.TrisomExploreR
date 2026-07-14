@@ -5,6 +5,7 @@ box::use(
         InputsManagerPrecalculatedKaryotype,
         InputsManagerSex,
         InputsManagerAge,
+        InputsManagerPrecalculatedAge,
         InputsManagerComorbidity,
         InputsManagerBMI,
         InputsManagerCellTypes,
@@ -28,6 +29,7 @@ DATA_SOURCE_MAP <- list(
     PrecalcKaryotype = InputsManagerPrecalculatedKaryotype,
     Sex = InputsManagerSex,
     Age = InputsManagerAge,
+    PrecalcAge = InputsManagerPrecalculatedAge,
     HasAnyConditionFlag = InputsManagerComorbidity,
     BMI = InputsManagerBMI,
     CellTypes = InputsManagerCellTypes,
@@ -45,10 +47,19 @@ PREPARER_MAP <- list(
 getRouteProfile <- function(precalculated, analysis_config) {
     analysis_variable <- analysis_config$AnalysisVariableName
 
-    data_source_key <- paste0(
-        if (isTRUE(precalculated)) "Precalc" else "",
-        analysis_variable
-    )
+    data_source_key <- analysis_variable
+
+    if (isTRUE(precalculated) && analysis_variable == "Karyotype") {
+        data_source_key <- "PrecalcKaryotype"
+    }
+
+    if (isTRUE(precalculated) && analysis_variable == "Age") {
+        data_source_key <- "PrecalcAge"
+    }
+
+    if (isTRUE(precalculated) && analysis_variable == "Event_Name") {
+        data_source_key <- "PrecalcEvent_Name"
+    }
 
     preparer_key <- case_when(
         analysis_variable == "HasAnyConditionFlag" ~ "Comorbidity",
@@ -244,10 +255,10 @@ getFeatureAnalysisInputs <- function(
         app_config,
         analysis_config,
         input_config,
+    precalculated = FALSE,
         ...
     ) {
 
-    precalculated <- FALSE
     route_profile <- getRouteProfile(precalculated, analysis_config)
     data_src <- getDataSource(route_profile, app_config, analysis_config, input_config, ...)
     preparer <- getPreparer(route_profile, analysis_config, app_config, ...)

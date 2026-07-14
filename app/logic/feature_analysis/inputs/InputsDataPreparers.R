@@ -1,6 +1,5 @@
 box::use(
     R6[R6Class],
-    arrow[read_parquet],
     glue[glue],
     dplyr[select, filter, between, mutate, summarise,
             pull, if_else, inner_join,
@@ -8,7 +7,6 @@ box::use(
     tidyr[drop_na],
     stringr[str_split_1],
     stringr[str_split, str_c],
-    readr[read_csv]
 )
 
 #' @export
@@ -154,12 +152,23 @@ PreCalculatedFeatureAnalysisInputsPreparer <- R6Class(
     inherit = InputsDataPreparerBase,
     public = list(
         prepare = function(data, study, karyotypes, ages, sexes, params, ...) {
-            prepared <- data |>
-                filter(
-                    samples == str_c(karyotypes, collapse = ";"),
-                    selected_parameters == params
-                ) |>
-                select(-c(samples, selected_parameters)) |>
+            sample_col <- intersect(c("samples", "karyotypes"), names(data))
+            params_col <- intersect(c("selected_parameters", "params"), names(data))
+
+            prepared <- data
+
+            if (length(sample_col) > 0) {
+                prepared <- prepared |>
+                    filter(.data[[sample_col[[1]]]] == str_c(karyotypes, collapse = ";"))
+            }
+
+            if (length(params_col) > 0) {
+                prepared <- prepared |>
+                    filter(.data[[params_col[[1]]]] == params)
+            }
+
+            prepared <- prepared |>
+                select(-tidyselect::any_of(c("samples", "selected_parameters", "params"))) |>
                 mutate(
                     karyotypes = self$collapse_values(karyotypes),
                     ages = self$collapse_values(ages),
@@ -223,26 +232,15 @@ TOFAAnalysisInputsDataPreparer <- R6Class(
 
             artifact_path <- file.path(private$app_config$package_resolver$packages_root, package_id, artifact_rel_path)
 
-            if (!file.exists(artifact_path)) {
+            if (!(file.exists(artifact_path) || dir.exists(artifact_path))) {
                 stop(sprintf("Precalculated artifact not found: %s", artifact_path), call. = FALSE)
             }
 
-            parquet_data <- tryCatch(read_parquet(artifact_path), error = function(e) NULL)
-
-            if (!is.null(parquet_data)) {
-                return(parquet_data)
-            }
-
-            csv_data <- tryCatch(
-                read_csv(artifact_path, show_col_types = FALSE, progress = FALSE),
-                error = function(e) NULL
+            private$app_config$load_local_package_artifact(
+                package_id,
+                artifact_rel_path,
+                feature_id = "timepoint"
             )
-
-            if (!is.null(csv_data)) {
-                return(csv_data)
-            }
-
-            stop(sprintf("Unable to read precalculated artifact: %s", artifact_path), call. = FALSE)
         },
         prepare = function(data, sexes, races, ethnicities, karyotype, age_at_visit, age_groups, 
             conditions = NULL, comparison = NULL, ...) {

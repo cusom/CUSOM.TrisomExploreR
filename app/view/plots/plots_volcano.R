@@ -95,6 +95,14 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
 
     })
 
+    if (is.null(comparison)) {
+      summary_data <- summary_data |>
+        bindEvent(study_data(), ignoreInit = FALSE)
+    } else {
+      summary_data <- summary_data |>
+        bindEvent(study_data(), comparison(), ignoreInit = FALSE)
+    }
+
     output$plot <- renderPlotly({
 
       validate(

@@ -235,7 +235,14 @@ LocalPackageResolver <- R6Class(
       }
 
       normalized <- unique(private$normalize_rel_path(candidates))
-      existing <- normalized[file.exists(file.path(self$packages_root, package_id, normalized))]
+      existing <- normalized[vapply(
+        normalized,
+        function(candidate) {
+          path <- file.path(self$packages_root, package_id, candidate)
+          file.exists(path) || dir.exists(path)
+        },
+        FUN.VALUE = logical(1)
+      )]
 
       if (length(existing) == 0) {
         return(NULL)
@@ -277,6 +284,9 @@ LocalPackageResolver <- R6Class(
         if (length(candidates) > 0) {
           return(file.path("facts", candidates[[1]]))
         }
+
+        # Partitioned parquet datasets are represented by a directory root.
+        return("facts")
       }
 
       data_candidates <- c("data.parquet", "data.csv")
@@ -284,7 +294,14 @@ LocalPackageResolver <- R6Class(
     },
     find_existing_artifact = function(package_id, configured_path) {
       candidates <- private$candidate_artifact_paths(configured_path)
-      existing <- candidates[file.exists(file.path(self$packages_root, package_id, candidates))]
+      existing <- candidates[vapply(
+        candidates,
+        function(candidate) {
+          path <- file.path(self$packages_root, package_id, candidate)
+          file.exists(path) || dir.exists(path)
+        },
+        FUN.VALUE = logical(1)
+      )]
 
       if (length(existing) == 0) {
         return(NULL)
@@ -352,7 +369,7 @@ LocalPackageResolver <- R6Class(
 
       sort(unique(c(generated_ids, precalc_ids)))
     },
-    get_required_files = function(package_id) {
+    get_required_files = function(package_id, preferred_fact_name = NULL) {
       manifest <- tryCatch(
         self$get_package_manifest(package_id),
         error = function(e) list()
@@ -383,7 +400,7 @@ LocalPackageResolver <- R6Class(
         FUN.VALUE = character(1)
       )
 
-      default_fact <- self$resolve_fact_file(package_id)
+      default_fact <- self$resolve_fact_file(package_id, preferred_fact_name)
       if (!is.null(default_fact) && nzchar(default_fact)) {
         fact_files <- c(fact_files, default = default_fact)
       }
@@ -418,12 +435,22 @@ LocalPackageResolver <- R6Class(
 
       private$discover_dim_file(package_id, dimension_name)
     },
-    resolve_fact_file = function(package_id, fact_name = "proteomics") {
+    resolve_fact_file = function(package_id, fact_name = NULL) {
       manifest <- tryCatch(
         self$get_package_manifest(package_id),
         error = function(e) list()
       )
-      fact_def <- (manifest$facts %||% list())[[fact_name]]
+      facts_cfg <- manifest$facts %||% list()
+
+      if (is.null(fact_name) || !nzchar(fact_name)) {
+        available_facts <- names(facts_cfg)
+
+        if (length(available_facts) > 0) {
+          fact_name <- available_facts[[1]]
+        }
+      }
+
+      fact_def <- facts_cfg[[fact_name]]
 
       configured <- fact_def$file %||% ""
 
@@ -611,6 +638,8 @@ FeatureAssociationPlanner <- R6Class(
       }
 
       package_manifest <- self$package_resolver$get_package_manifest(package_id)
+      manifest_fact_names <- names(package_manifest$facts %||% list())
+      default_fact_name <- if (length(manifest_fact_names) > 0) manifest_fact_names[[1]] else NULL
 
       statistic_id <- context$statistic_id
       execution_mode <- "generated"
@@ -642,10 +671,14 @@ FeatureAssociationPlanner <- R6Class(
         feature_id = feature$id %||% context$feature_id,
         dataset_id = dataset$id %||% context$dataset_id,
         package_id = package_id,
+        fact_name = dataset$fact_name %||% default_fact_name,
         statistic_id = statistic_id,
         execution_mode = execution_mode,
         precalculated_artifact = precalculated_artifact,
-        required_files = self$package_resolver$get_required_files(package_id),
+        required_files = self$package_resolver$get_required_files(
+          package_id,
+          preferred_fact_name = dataset$fact_name %||% default_fact_name
+        ),
         package_manifest = package_manifest,
         context = context
       )

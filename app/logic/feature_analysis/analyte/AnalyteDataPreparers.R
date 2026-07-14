@@ -70,15 +70,17 @@ PrecalculatedCategoricalSinglePreparer <- R6Class(
         prepare = function(.data) {
             self$prepared_data <- .data |>
                 mutate(
+                    log2MeasuredValue = if_else(MeasuredValue == 0, 0, log2(MeasuredValue)),
+                    log2Measurement   = glue("log<sub>2</sub>({Measurement})"),
                     highlightGroup = NA_character_  # if/when needed
                 ) |>
                 filter(
-                    is.finite(MeasuredValue)
+                    is.finite(log2MeasuredValue)
                 ) |>
                 add_count(!!sym(self$analysis_variable_name), name = "n") |>
                 mutate(
                     !!sym(self$analysis_variable_name) := paste0("<b>", .data[[self$analysis_variable_name]], "</b> (n=", n, ")"),
-                    text      = glue("LabID: {LabID} <br />{Measurement}: {MeasuredValue}")
+                    text      = glue("LabID: {LabID} <br />{log2Measurement}: {log2MeasuredValue}")
                 ) |>
                 select(-n)
             return(invisible(self$prepared_data))

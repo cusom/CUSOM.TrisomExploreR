@@ -206,7 +206,8 @@ server <- function(id, app_config, analysis_config) {
       inst <- getFeatureAnalysisInputs(
         app_config = app_config,
         analysis_config = app_config$get_analysis_config(input$Feature),
-        input_config = app_config$get_input_config(input$Feature)
+        input_config = app_config$get_input_config(input$Feature),
+        precalculated = TRUE
       )
       r6_obj(inst)
     })
@@ -231,7 +232,7 @@ server <- function(id, app_config, analysis_config) {
 
       choices <- r6()$Studies
 
-      selected <- ifelse(nrow(choices) == 1, choices, character(0))
+      selected <- if (nrow(choices) == 1) choices$Values[[1]] else character(0)
       disabled(
         prettyRadioButtonsFieldSet(
           input_id = ns("Study"),
@@ -253,9 +254,21 @@ server <- function(id, app_config, analysis_config) {
     })
 
     karyotypes <- reactive({
-      r6()$Karyotypes
+      req(!is.null(input$Study), nzchar(input$Study))
+
+      inst <- r6()
+
+      studies <- inst$Studies
+      req(!is.null(studies), nrow(studies) > 0)
+      req(any(as.character(studies$Values) == as.character(input$Study)))
+
+      # Keep datasource state aligned when a new manager instance is created
+      # on feature changes but Study input value itself does not emit a change.
+      inst$Study <- input$Study
+
+      inst$Karyotypes
     }) |>
-      bindEvent(c(input$Study), ignoreNULL = TRUE)
+      bindEvent(c(input$Feature, input$Study), ignoreNULL = TRUE)
 
     output$Karyotype <- renderUI({
 
@@ -435,6 +448,7 @@ server <- function(id, app_config, analysis_config) {
       list(
         feature = reactive(input$Feature),
         study = reactive(input$Study),
+        karyotype = reactive(input$Karyotype),
         study_label = study_label,
         study_data = StudyData,
         study_plan = StudyPlan,

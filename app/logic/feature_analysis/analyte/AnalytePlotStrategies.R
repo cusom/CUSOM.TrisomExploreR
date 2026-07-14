@@ -50,8 +50,9 @@ PlotStrategyBase <- R6Class(
                 resolve_column_name(
                     data = data,
                     preferred = preferred,
-                    exact_candidates = c("Measurement", "MeasurementLabel", "CorrelationLabel"),
+                    exact_candidates = c("log2Measurement", "Measurement", "MeasurementLabel", "CorrelationLabel"),
                     pattern_candidates = c(
+                        "(^|_)log2[_\\.]?measurement($|_)",
                         "(^|_)measurement($|_)",
                         "(^|_)measurement[_\\.]?label($|_)",
                         "(^|_)correlation[_\\.]?label($|_)"
@@ -64,7 +65,11 @@ PlotStrategyBase <- R6Class(
     ),
     active = list(
         applicationName = function(value) {
-            return(private$analysis_config$ApplicationName)
+            if (!is.null(private$analysis_config) && "ApplicationName" %in% names(private$analysis_config)) {
+                return(private$analysis_config$ApplicationName)
+            }
+
+            return("")
         },
         namespace = function(value) {
             return(private$analysis_config$Namespace)
@@ -73,7 +78,23 @@ PlotStrategyBase <- R6Class(
             return(private$analysis_config$AnalysisVariableName)
         },
         analysisVariableLabel = function(value) {
-            return(private$analysis_config$AnalysisVariableLabel)
+            label <- private$analysis_config$AnalysisVariableLabel
+            label <- as.character(label)
+            label <- label[!is.na(label) & nzchar(label)]
+
+            if (length(label) > 0) {
+                return(label[[1]])
+            }
+
+            variable <- private$analysis_config$AnalysisVariableName
+            variable <- as.character(variable)
+            variable <- variable[!is.na(variable) & nzchar(variable)]
+
+            if (length(variable) > 0) {
+                return(variable[[1]])
+            }
+
+            return("Group")
         },
         analysisType = function(value) {
             return(private$analysis_config$AnalysisType)
@@ -99,11 +120,28 @@ PlotStrategyBase <- R6Class(
             }
         },
         Karyotype = function(value) {
-            return(
-                self$analyte_data |>
-                    distinct(Karyotype) |>
-                    pull()
-            )
+            karyotypes <- self$analyte_data |>
+                distinct(Karyotype) |>
+                pull() |>
+                as.character()
+
+            karyotypes <- karyotypes[!is.na(karyotypes) & nzchar(karyotypes)]
+            karyotypes <- unique(karyotypes)
+
+            if (length(karyotypes) == 0) {
+                return("")
+            }
+
+            if (length(karyotypes) == 1) {
+                return(karyotypes[[1]])
+            }
+
+            # Keep canonical ordering for the most common contrast label.
+            if (all(c("Control", "Trisomy 21") %in% karyotypes)) {
+                return("Control vs. Trisomy 21")
+            }
+
+            paste(sort(karyotypes), collapse = " vs. ")
         },
         AnalytePlotTitle =  function(value) {
             if (missing(value)) {
@@ -135,13 +173,32 @@ PlotStrategyBase <- R6Class(
         },
         formattedGroupBaselineLabel = function(value) {
             if (missing(value)) {
-                return(
-                    self$analyte_data |>
-                        select(!!sym(self$analysisVariable)) |>
-                        distinct() |>
-                        filter(grepl(self$groupBaselineLabel, !!sym(self$analysisVariable))) |>
-                        pull()
-                )
+                groups <- self$analyte_data |>
+                    select(!!sym(self$analysisVariable)) |>
+                    distinct() |>
+                    pull() |>
+                    as.character()
+
+                groups <- groups[!is.na(groups) & nzchar(groups)]
+
+                if (length(groups) == 0) {
+                    return(character(0))
+                }
+
+                baseline_hint <- as.character(self$groupBaselineLabel)
+                baseline_hint <- baseline_hint[!is.na(baseline_hint) & nzchar(baseline_hint)]
+
+                if (length(baseline_hint) == 0) {
+                    return(groups[[1]])
+                }
+
+                matched <- groups[grepl(baseline_hint[[1]], groups, fixed = TRUE)]
+
+                if (length(matched) == 0) {
+                    return(groups[[1]])
+                }
+
+                return(matched[[1]])
             }
         }
     ),
