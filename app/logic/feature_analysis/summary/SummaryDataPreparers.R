@@ -287,10 +287,16 @@ PreCalculatedSummaryPreparer <- R6Class(
                 hits[[1]]
             }
 
+            analyte_col <- first_present(c("Analyte", "AnalyteName", "Feature", "Gene_name", "Gene", "feature", "analyte"))
+
             if (all(c("FoldChange", "pvalue", "padj") %in% names(source))) {
+                if (is.null(analyte_col)) {
+                    stop("Precalculated summary artifact is missing an analyte column.", call. = FALSE)
+                }
 
                 self$prepared_data <- source |>
-                    select("Analyte" = AnalyteName, FoldChange, pvalue, padj) |>
+                    mutate(Analyte = .data[[analyte_col]]) |>
+                    select(Analyte, FoldChange, pvalue, padj) |>
                     rename(
                         "p.value.original" = pvalue,
                         "p.value" = padj
@@ -313,7 +319,6 @@ PreCalculatedSummaryPreparer <- R6Class(
                         ivs = ""
                     )
             } else {
-                analyte_col <- first_present(c("Analyte", "AnalyteName", "Feature", "Gene_name"))
                 fold_col <- first_present(c("FoldChange", "log<sub>2</sub>(Fold Change)", "log2FoldChange"))
                 p_orig_col <- first_present(c("p.value.original", "p-value (original)", "pvalue"))
                 p_adj_col <- first_present(c("p.value", "q-value", "padj"))

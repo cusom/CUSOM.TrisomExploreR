@@ -351,8 +351,8 @@ InputsManagerBase <- R6Class(
                 stop(sprintf("Package '%s' does not expose a fact table.", plan$package_id), call. = FALSE)
             }
 
-            package_root <- private$app_config$package_resolver$packages_root
-            parquet_path <- file.path(package_root, plan$package_id, fact_file)
+            package_root <- private$app_config$package_resolver$get_package_root(plan$package_id)
+            parquet_path <- file.path(package_root, fact_file)
 
             if (!(file.exists(parquet_path) || dir.exists(parquet_path))) {
                 stop(sprintf("Planned parquet file not found: %s", parquet_path), call. = FALSE)
@@ -570,9 +570,14 @@ InputsManagerBase <- R6Class(
             )
         },
         Ages = function() {
-            return(
-                c(min(self$input_config$ages), max(self$input_config$ages))
-            )
+            ages <- suppressWarnings(as.numeric(self$input_config$ages))
+            ages <- ages[is.finite(ages)]
+
+            if (length(ages) == 0) {
+                return(c(0, 0))
+            }
+
+            return(c(min(ages), max(ages)))
         },
         CovariateChoices = function(value) {
             return(c("Age", "Sex"))

@@ -343,7 +343,8 @@ TrisomExplorerAppManager <- R6Class(
         return(NULL)
       }
 
-      path <- file.path(self$package_resolver$packages_root, package_id, rel_path)
+      package_root <- self$package_resolver$get_package_root(package_id)
+      path <- file.path(package_root, rel_path)
 
       if (!(file.exists(path) || dir.exists(path))) {
         return(NULL)
@@ -812,13 +813,16 @@ TrisomExplorerAppManager <- R6Class(
     },
 
     load_encounter_data = function() {
-      if (nrow(self$encounter_data) == 0 || !"AgeAtTimeOfVisit" %in% names(self$encounter_data)) {
+      age_col <- intersect(c("AgeAtTimeOfVisit", "Age", "Age_at_visit_in_days"), names(self$encounter_data))
+
+      if (nrow(self$encounter_data) == 0 || length(age_col) == 0) {
         self$input_config$ages <- integer(0)
         return(invisible(NULL))
       }
 
       valid_ages <- self$encounter_data |>
-        drop_na(AgeAtTimeOfVisit)
+        mutate(.encounter_age = suppressWarnings(as.numeric(.data[[age_col[[1]]]]))) |>
+        filter(!is.na(.encounter_age), is.finite(.encounter_age))
 
       if (nrow(valid_ages) == 0) {
         self$input_config$ages <- integer(0)
@@ -827,8 +831,8 @@ TrisomExplorerAppManager <- R6Class(
 
       self$input_config$ages <- valid_ages |>
         summarise(
-          min = round(min(AgeAtTimeOfVisit)),
-          max = round(max(AgeAtTimeOfVisit)) + 1
+          min = round(min(.encounter_age)),
+          max = round(max(.encounter_age)) + 1
         ) |>
         reframe(
           age = seq(min, max, 1)
@@ -844,6 +848,21 @@ TrisomExplorerAppManager <- R6Class(
         return(invisible(NULL))
       }
 
+      id_col <- intersect(c("LabID", "record_id", "TOFA_LabID"), names(self$condition_data))
+
+      if (length(id_col) == 0) {
+        self$input_config$Conditions <- character(0)
+        self$input_config$ConditionClasses <- character(0)
+        self$input_config$ConditionChoices <- tibble()
+        return(invisible(NULL))
+      }
+
+      has_condition <- rep(TRUE, nrow(self$condition_data))
+      if ("HasCondition" %in% names(self$condition_data)) {
+        values <- tolower(trimws(as.character(self$condition_data$HasCondition)))
+        has_condition <- values %in% c("true", "t", "1", "yes", "y")
+      }
+
       self$input_config$Conditions <- self$condition_data |>
         distinct(Condition) |>
         pull()
@@ -857,11 +876,11 @@ TrisomExplorerAppManager <- R6Class(
         pull()
 
       self$input_config$ConditionChoices <- self$condition_data |>
-        filter(HasCondition == "True") |>
-        select(LabID, ConditionClass, Condition) |>
-        select(LabID, ConditionClass, Condition) |>
+        mutate(.has_condition = has_condition) |>
+        filter(.has_condition) |>
+        select(all_of(c(id_col[[1]], "ConditionClass", "Condition"))) |>
         group_by(ConditionClass, Condition) |>
-        summarise(n = n_distinct(LabID), .groups = "drop")  |>
+        summarise(n = n_distinct(.data[[id_col[[1]]]]), .groups = "drop") |>
         filter(n >= 5) |>
         left_join(
           self$condition_data |>
@@ -991,7 +1010,8 @@ TrisomExplorerAppManager <- R6Class(
         stop("Package ID and relative artifact path are required.", call. = FALSE)
       }
 
-      artifact_path <- file.path(self$package_resolver$packages_root, package_id, rel_path)
+      package_root <- self$package_resolver$get_package_root(package_id)
+      artifact_path <- file.path(package_root, rel_path)
       data <- read_local_artifact(artifact_path, feature_id = feature_id, analyte_id = analyte_id)
 
       if (is.null(data)) {
@@ -1029,7 +1049,8 @@ TrisomExplorerAppManager <- R6Class(
         return(tibble())
       }
 
-      fact_path <- file.path(self$package_resolver$packages_root, package_id, fact_rel_path)
+      package_root <- self$package_resolver$get_package_root(package_id)
+      fact_path <- file.path(package_root, fact_rel_path)
 
       if (!dir.exists(fact_path) && !file.exists(fact_path)) {
         return(tibble())
@@ -1053,7 +1074,14 @@ TrisomExplorerAppManager <- R6Class(
       }
 
       if (nzchar(.analyte_id)) {
-        filtered <- filtered |> filter(AnalyteName == .env$.analyte_id)
+        analyte_col <- intersect(
+          c("AnalyteName", "Analyte", "Gene", "Gene_name", "Feature", "feature", "analyte"),
+          names(dataset)
+        )
+
+        if (length(analyte_col) > 0) {
+          filtered <- filtered |> filter((!!sym(analyte_col[[1]])) == .env$.analyte_id)
+        }
       }
 
       tryCatch(collect(filtered), error = function(e) tibble())

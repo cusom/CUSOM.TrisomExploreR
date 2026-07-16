@@ -230,7 +230,8 @@ TOFAAnalysisInputsDataPreparer <- R6Class(
                 )
             }
 
-            artifact_path <- file.path(private$app_config$package_resolver$packages_root, package_id, artifact_rel_path)
+            package_root <- private$app_config$package_resolver$get_package_root(package_id)
+            artifact_path <- file.path(package_root, artifact_rel_path)
 
             if (!(file.exists(artifact_path) || dir.exists(artifact_path))) {
                 stop(sprintf("Precalculated artifact not found: %s", artifact_path), call. = FALSE)

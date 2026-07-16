@@ -1,7 +1,8 @@
 box::use(
   R6[R6Class],
   yaml[read_yaml],
-  tools[file_path_sans_ext]
+  tools[file_path_sans_ext],
+  utils[compareVersion]
 )
 
 `%||%` <- function(x, y) {
@@ -9,6 +10,26 @@ box::use(
     return(y)
   }
   x
+}
+
+sanitize_scalar_string <- function(value) {
+  if (is.null(value) || length(value) == 0) {
+    return(NULL)
+  }
+
+  scalar <- as.character(value[[1]])
+
+  if (is.na(scalar)) {
+    return(NULL)
+  }
+
+  scalar <- trimws(scalar)
+
+  if (!nzchar(scalar)) {
+    return(NULL)
+  }
+
+  scalar
 }
 
 read_yaml_required <- function(path, allow_empty = FALSE) {
@@ -229,16 +250,69 @@ LocalPackageResolver <- R6Class(
 
       unique(private$normalize_rel_path(candidates))
     },
+    detect_versioned_package_root = function(package_dir) {
+      if (!dir.exists(package_dir)) {
+        return(package_dir)
+      }
+
+      root_manifest <- file.path(package_dir, "manifest.yml")
+
+      if (file.exists(root_manifest)) {
+        return(package_dir)
+      }
+
+      child_dirs <- list.dirs(package_dir, recursive = FALSE, full.names = TRUE)
+
+      if (length(child_dirs) == 0) {
+        return(package_dir)
+      }
+
+      version_dirs <- child_dirs[file.exists(file.path(child_dirs, "manifest.yml"))]
+
+      if (length(version_dirs) == 0) {
+        return(package_dir)
+      }
+
+      versions <- basename(version_dirs)
+      win_scores <- vapply(
+        seq_along(versions),
+        function(i) {
+          sum(vapply(
+            seq_along(versions),
+            function(j) {
+              if (i == j) {
+                return(FALSE)
+              }
+
+              suppressWarnings(compareVersion(versions[[i]], versions[[j]]) > 0)
+            },
+            FUN.VALUE = logical(1)
+          ))
+        },
+        FUN.VALUE = integer(1)
+      )
+
+      best_idx <- which(win_scores == max(win_scores))
+
+      if (length(best_idx) == 1) {
+        return(version_dirs[[best_idx]])
+      }
+
+      mtime <- file.info(version_dirs[best_idx])$mtime
+      mtime[is.na(mtime)] <- as.POSIXct(0, origin = "1970-01-01")
+      version_dirs[best_idx][[which.max(mtime)]]
+    },
     first_existing_relative_path = function(package_id, candidates) {
       if (length(candidates) == 0) {
         return(NULL)
       }
 
       normalized <- unique(private$normalize_rel_path(candidates))
+      package_root <- self$get_package_root(package_id)
       existing <- normalized[vapply(
         normalized,
         function(candidate) {
-          path <- file.path(self$packages_root, package_id, candidate)
+          path <- file.path(package_root, candidate)
           file.exists(path) || dir.exists(path)
         },
         FUN.VALUE = logical(1)
@@ -251,7 +325,7 @@ LocalPackageResolver <- R6Class(
       existing[[1]]
     },
     discover_dim_file = function(package_id, dimension_name) {
-      dim_dir <- file.path(self$packages_root, package_id, "dimensions")
+      dim_dir <- file.path(self$get_package_root(package_id), "dimensions")
 
       if (!dir.exists(dim_dir)) {
         return(NULL)
@@ -271,7 +345,7 @@ LocalPackageResolver <- R6Class(
       file.path("dimensions", candidates[[1]])
     },
     discover_fact_file = function(package_id) {
-      fact_dir <- file.path(self$packages_root, package_id, "facts")
+      fact_dir <- file.path(self$get_package_root(package_id), "facts")
 
       if (dir.exists(fact_dir)) {
         candidates <- list.files(
@@ -294,10 +368,11 @@ LocalPackageResolver <- R6Class(
     },
     find_existing_artifact = function(package_id, configured_path) {
       candidates <- private$candidate_artifact_paths(configured_path)
+      package_root <- self$get_package_root(package_id)
       existing <- candidates[vapply(
         candidates,
         function(candidate) {
-          path <- file.path(self$packages_root, package_id, candidate)
+          path <- file.path(package_root, candidate)
           file.exists(path) || dir.exists(path)
         },
         FUN.VALUE = logical(1)
@@ -319,8 +394,11 @@ LocalPackageResolver <- R6Class(
       dirs <- list.dirs(self$packages_root, recursive = FALSE, full.names = FALSE)
       dirs[dirs != ""]
     },
+    get_package_root = function(package_id) {
+      private$detect_versioned_package_root(file.path(self$packages_root, package_id))
+    },
     get_package_manifest = function(package_id) {
-      manifest_path <- file.path(self$packages_root, package_id, "manifest.yml")
+      manifest_path <- file.path(self$get_package_root(package_id), "manifest.yml")
       read_yaml_required(manifest_path)
     },
     resolve_statistic_support = function(package_id, statistic_id) {
@@ -391,6 +469,7 @@ LocalPackageResolver <- R6Class(
       }
 
       fact_names <- names(manifest$facts %||% list())
+      fact_names <- fact_names[!is.na(fact_names) & nzchar(trimws(fact_names))]
       fact_files <- vapply(
         fact_names,
         function(fact_name) {
@@ -441,16 +520,29 @@ LocalPackageResolver <- R6Class(
         error = function(e) list()
       )
       facts_cfg <- manifest$facts %||% list()
+      if (!is.list(facts_cfg)) {
+        facts_cfg <- list()
+      }
 
-      if (is.null(fact_name) || !nzchar(fact_name)) {
-        available_facts <- names(facts_cfg)
+      normalized_fact_name <- sanitize_scalar_string(fact_name)
+      available_facts <- names(facts_cfg)
+      available_facts <- available_facts[!is.na(available_facts) & nzchar(trimws(available_facts))]
 
+      if (is.null(normalized_fact_name)) {
         if (length(available_facts) > 0) {
-          fact_name <- available_facts[[1]]
+          normalized_fact_name <- available_facts[[1]]
         }
       }
 
-      fact_def <- facts_cfg[[fact_name]]
+      fact_def <- NULL
+
+      if (!is.null(normalized_fact_name)) {
+        fact_def <- facts_cfg[[normalized_fact_name]]
+      }
+
+      if (is.null(fact_def) && length(facts_cfg) > 0) {
+        fact_def <- facts_cfg[[1]]
+      }
 
       configured <- fact_def$file %||% ""
 
@@ -511,7 +603,7 @@ LocalPackageResolver <- R6Class(
         }
       }
 
-      precalc_dir <- file.path(self$packages_root, package_id, "statistics", "precalculated")
+      precalc_dir <- file.path(self$get_package_root(package_id), "statistics", "precalculated")
 
       if (!dir.exists(precalc_dir)) {
         return(NULL)
@@ -639,7 +731,10 @@ FeatureAssociationPlanner <- R6Class(
 
       package_manifest <- self$package_resolver$get_package_manifest(package_id)
       manifest_fact_names <- names(package_manifest$facts %||% list())
+      manifest_fact_names <- manifest_fact_names[!is.na(manifest_fact_names) & nzchar(trimws(manifest_fact_names))]
       default_fact_name <- if (length(manifest_fact_names) > 0) manifest_fact_names[[1]] else NULL
+      dataset_fact_name <- sanitize_scalar_string(dataset$fact_name)
+      selected_fact_name <- dataset_fact_name %||% default_fact_name
 
       statistic_id <- context$statistic_id
       execution_mode <- "generated"
@@ -671,13 +766,13 @@ FeatureAssociationPlanner <- R6Class(
         feature_id = feature$id %||% context$feature_id,
         dataset_id = dataset$id %||% context$dataset_id,
         package_id = package_id,
-        fact_name = dataset$fact_name %||% default_fact_name,
+        fact_name = selected_fact_name,
         statistic_id = statistic_id,
         execution_mode = execution_mode,
         precalculated_artifact = precalculated_artifact,
         required_files = self$package_resolver$get_required_files(
           package_id,
-          preferred_fact_name = dataset$fact_name %||% default_fact_name
+          preferred_fact_name = selected_fact_name
         ),
         package_manifest = package_manifest,
         context = context

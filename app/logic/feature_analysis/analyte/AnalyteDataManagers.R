@@ -216,8 +216,8 @@ AnalyteDataSourceBase <- R6Class(
                 return(NULL)
             }
 
-            package_root <- private$app_config$package_resolver$packages_root
-            artifact_path <- file.path(package_root, package_id, artifact)
+            package_root <- private$app_config$package_resolver$get_package_root(package_id)
+            artifact_path <- file.path(package_root, artifact)
 
             if (!(file.exists(artifact_path) || dir.exists(artifact_path))) {
                 return(NULL)
