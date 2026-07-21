@@ -2,8 +2,8 @@ box::use(
     R6[R6Class],
     glue[glue],
     dplyr[select, filter, between, mutate, summarise,
-            pull, if_else, inner_join,
-            case_when],
+            pull, if_else, inner_join, left_join,
+            distinct, case_when],
     tidyr[drop_na],
     stringr[str_split_1],
     stringr[str_split, str_c],
@@ -237,13 +237,47 @@ TOFAAnalysisInputsDataPreparer <- R6Class(
                 stop(sprintf("Precalculated artifact not found: %s", artifact_path), call. = FALSE)
             }
 
-            private$app_config$load_local_package_artifact(
+            source <- private$app_config$load_local_package_artifact(
                 package_id,
                 artifact_rel_path,
                 feature_id = "timepoint"
             )
+
+            if (!"Analyte" %in% names(source) && "AnalyteID" %in% names(source)) {
+                analyte_rel_path <- private$app_config$package_resolver$resolve_dimension_file(
+                    package_id,
+                    "analytes"
+                )
+
+                if (!is.null(analyte_rel_path) && nzchar(analyte_rel_path)) {
+                    analytes_dim <- tryCatch(
+                        private$app_config$load_local_package_artifact(package_id, analyte_rel_path),
+                        error = function(e) NULL
+                    )
+
+                    if (!is.null(analytes_dim) && "AnalyteID" %in% names(analytes_dim)) {
+                        analyte_name_col <- intersect(
+                            c("Analyte", "AnalyteName", "Gene", "Gene_name", "Feature"),
+                            names(analytes_dim)
+                        )
+
+                        if (length(analyte_name_col) > 0) {
+                            analyte_map <- analytes_dim |>
+                                select(all_of(c("AnalyteID", analyte_name_col[[1]]))) |>
+                                distinct()
+
+                            names(analyte_map)[names(analyte_map) == analyte_name_col[[1]]] <- "Analyte"
+
+                            source <- source |>
+                                left_join(analyte_map, by = "AnalyteID")
+                        }
+                    }
+                }
+            }
+
+            source
         },
-        prepare = function(data, sexes, races, ethnicities, karyotype, age_at_visit, age_groups, 
+        prepare = function(data, sexes, races, ethnicities, karyotype, age_at_visit, age_groups,
             conditions = NULL, comparison = NULL, ...) {
             source <- self$load_precalculated_summary()
 
@@ -266,8 +300,8 @@ TOFAAnalysisInputsDataPreparer <- R6Class(
 
             return(
                 source |>
-                    select("Analyte" = Score_name, Mean_difference, pvalue, "padj" = qvalue) |>
-                    mutate(Analyte = gsub(" ", "_", Analyte))  
+                    select("Analyte" = Analyte, Mean_difference, pvalue, "padj" = qvalue) |>
+                    mutate(Analyte = gsub(" ", "_", Analyte))
             )
         }
     )
