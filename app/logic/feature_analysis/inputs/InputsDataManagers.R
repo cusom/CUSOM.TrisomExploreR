@@ -1040,6 +1040,11 @@ InputsManagerTOFA <- R6Class(
             if (!is.null(data)) {
                 return(
                     data |>
+                        filter(
+                            Age_at_visit_in_days != "",
+                            Age_at_visit_in_days != "NA",
+                            !is.na(Age_at_visit_in_days)
+                        ) |>
                         mutate(
                             Age_at_visit_in_days = as.numeric(Age_at_visit_in_days),
                             Height_cm = as.numeric(Height_cm),
@@ -1050,6 +1055,11 @@ InputsManagerTOFA <- R6Class(
 
             # Fallback: filter global encounter cache to this package
             global_data <- private$app_config$encounter_data |>
+                filter(
+                    Age_at_visit_in_days != "",
+                    Age_at_visit_in_days != "NA",
+                    !is.na(Age_at_visit_in_days)
+                ) |>
                 mutate(
                     Age_at_visit_in_days = as.numeric(Age_at_visit_in_days),
                     Height_cm = as.numeric(Height_cm),
