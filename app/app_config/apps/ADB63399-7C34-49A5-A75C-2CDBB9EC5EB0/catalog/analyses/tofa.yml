@@ -18,6 +18,8 @@ features:
   timepoint:
     datasets:
     - TOFA_Proteomics_Endpoints
+    - TOFA_Proteomics_NULISA
+    
 supported_statistics:
   source: package
 
