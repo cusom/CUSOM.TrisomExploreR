@@ -9,7 +9,7 @@ box::use(
     app/logic/feature_analysis/analyte/AnalyteDataManagers[RuntimeAnalyteDataSource,
         PreCalcualtedAnalyteDataSource, CorrelatesAnalyteDataSource, PreCalcualtedTOFAAnalyteDataSource],
     app/logic/feature_analysis/analyte/AnalyteDataPreparers[CategoricalSinglePreparer, PrecalculatedCategoricalSinglePreparer,
-        ContinuousSinglePreparer, HeatmapPreparer, CorrelatesPreparer, CorrelatesHeatmapPreparer],
+        TOFAEndpointsCategoricalPreparer, ContinuousSinglePreparer, HeatmapPreparer, CorrelatesPreparer, CorrelatesHeatmapPreparer],
     app/logic/feature_analysis/analyte/AnalytePlotStrategies[BoxPlotStrategy, ScatterPlotStrategy,
         HeatmapPlotStrategy, ScatterPlotWithSmoothingStrategy]
 )
@@ -35,6 +35,7 @@ PREPARER_MAP <- list(
     Scatter = ContinuousSinglePreparer,
     Box = CategoricalSinglePreparer,
     PrecalcBox = PrecalculatedCategoricalSinglePreparer,
+    TOFAEndpointsBox = TOFAEndpointsCategoricalPreparer,
     Heatmap = HeatmapPreparer,
     Correlates = CorrelatesPreparer,
     CorrelatesHeatmap = CorrelatesHeatmapPreparer
@@ -47,7 +48,7 @@ PLOT_STRATEGY_MAP <- list(
     Correlates = ScatterPlotWithSmoothingStrategy
 )
 
-getRouteProfile <- function(precalculated, analysis_type, analyte, analysis_config) {
+getRouteProfile <- function(precalculated, analysis_type, analyte, analysis_config, study = NULL) {
     normalized_analysis_type <- trimws(analysis_type)
     plot_kind <- getPlotKind(normalized_analysis_type, analyte)
 
@@ -61,6 +62,7 @@ getRouteProfile <- function(precalculated, analysis_type, analyte, analysis_conf
     preparer_key <- case_when(
         normalized_analysis_type == "Correlates" && plot_kind == "Scatter" ~ "Correlates",
         normalized_analysis_type == "Correlates" && plot_kind == "Heatmap" ~ "CorrelatesHeatmap",
+        isTRUE(precalculated) && plot_kind == "Box" && identical(study, "tofa_proteomics_endpoints") ~ "TOFAEndpointsBox",
         isTRUE(precalculated) && plot_kind == "Box" ~ "PrecalcBox",
         TRUE ~ plot_kind
     )
@@ -167,11 +169,13 @@ getFeatureAnalysisForAnalyte <- function(
     study_plan = NULL,
         ...
     ) {
+    args_list <- list(...)
+    study <- args_list$study
     precalculated <- resolvePrecalculatedMode(
         NULL,
         study_plan = study_plan
     )
-    route_profile <- getRouteProfile(precalculated, analysis_config$AnalysisType, analyte, analysis_config)
+    route_profile <- getRouteProfile(precalculated, analysis_config$AnalysisType, analyte, analysis_config, study = study)
     data_src <- getDataSource(route_profile, analysis_config, analyte, study_plan = study_plan, ...)
     preparer <- getPreparer(route_profile, analysis_config, analyte, ...)
     plotter <- getPlotStrategy(route_profile, analysis_config, analyte, ...)

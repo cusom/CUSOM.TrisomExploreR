@@ -499,14 +499,68 @@ PreCalcualtedTOFAAnalyteDataSource <- R6Class(
             self$comparison <- comparison
         },
         get_single_data = function(analyte) {
-            self$analyte_data <- self$source_data |>
+            source <- self$source_data
+
+            if (!"Analyte" %in% names(source) && "AnalyteID" %in% names(source)) {
+                package_id <- NULL
+
+                if (!is.null(self$study_plan) && !is.null(self$study_plan$package_id) && nzchar(self$study_plan$package_id)) {
+                    package_id <- self$study_plan$package_id
+                } else {
+                    dataset_def <- tryCatch(
+                        private$app_config$get_catalog_dataset_definition(self$dataset),
+                        error = function(e) NULL
+                    )
+
+                    if (!is.null(dataset_def)) {
+                        package_id <- dataset_def$package
+                        if (is.null(package_id) || !nzchar(package_id)) {
+                            package_id <- dataset_def$id
+                        }
+                    }
+                }
+
+                if (!is.null(package_id) && nzchar(package_id)) {
+                    analyte_rel_path <- private$app_config$package_resolver$resolve_dimension_file(
+                        package_id,
+                        "analytes"
+                    )
+
+                    if (!is.null(analyte_rel_path) && nzchar(analyte_rel_path)) {
+                        analytes_dim <- tryCatch(
+                            private$app_config$load_local_package_artifact(package_id, analyte_rel_path),
+                            error = function(e) NULL
+                        )
+
+                        if (!is.null(analytes_dim) && "AnalyteID" %in% names(analytes_dim)) {
+                            analyte_name_col <- intersect(
+                                c("Analyte", "AnalyteName", "Gene", "Gene_name", "Feature"),
+                                names(analytes_dim)
+                            )
+
+                            if (length(analyte_name_col) > 0) {
+                                analyte_map <- analytes_dim |>
+                                    select(all_of(c("AnalyteID", analyte_name_col[[1]]))) |>
+                                    distinct()
+
+                                names(analyte_map)[names(analyte_map) == analyte_name_col[[1]]] <- "Analyte"
+
+                                source <- source |>
+                                    left_join(analyte_map, by = "AnalyteID")
+                            }
+                        }
+                    }
+                }
+            }
+
+            self$analyte_data <- source |>
                 filter(
-                    Feature == analyte,
+                    Analyte == analyte,
                     Event_Name %in% str_split_1(self$comparison(),"\\|")
                 ) |>
-                rename(
+                rename( 
                     "LabID" = TOFA_LabID,
-                    "Analyte" = Feature,
+                    "Analyte" = Analyte,
                     "MeasuredValue" = Value,
                     "Measurement" = Units
                 ) |>
