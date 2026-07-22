@@ -20,8 +20,8 @@ box::use(
         tags
     ],
     shinydashboardPlus[box],
-    shinyjs[addClass, disable, disabled, enable, removeClass],
-    bsplus[bs_embed_tooltip],
+    shinyjs[addClass, disable, disabled, enable, removeClass, click],
+    bsplus[bs_embed_tooltip, bs_accordion, bs_set_opts, bs_append],
     shinycustomloader[withLoader],
     shinyWidgets[awesomeCheckboxGroup, numericRangeInput, prettyRadioButtons, virtualSelectInput,
         prepare_choices, updatePrettyRadioButtons],
@@ -40,25 +40,34 @@ box::use(
 ui <- function(id) {
     ns <- NS(id)
     tagList(
-        box(
-            title = "Set Analysis Inputs",
-            height = "70vh",
-            width = NULL,
-            closable = FALSE,
-            solidHeader = FALSE,
-            collapsible = FALSE,
-            headerBorder = FALSE,
-            tags$div(
-                id = ns("scrollableOptions"),
-                style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
-                tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+        tags$h3("Inputs"),
+        bs_accordion(id = ns("AccordionInputs")) |>
+        bs_set_opts(panel_type = "default", use_heading_link = TRUE) |>
+        bs_append(
+            title = "1) Set TOFA Dataset",
+            content = list(
                 withLoader(
                     uiOutput(ns("dataset")),
                     type = "html",
                     loader = "loader6",
                     proxy.height = "20px"
-                ),
-                tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
+                )
+            )
+        ) |>
+        bs_append(
+            title = "2) Set Comparison",
+            content = list(
+                withLoader(
+                    uiOutput(ns("comparison")),
+                    type = "html",
+                    loader = "loader6",
+                    proxy.height = "20px"
+                )
+            )
+        ) |>
+        bs_append(
+            title = "3) Set Participant Attributes (optional)",
+            content = list(
                 withLoader(
                     uiOutput(ns("karyotype")),
                     type = "html",
@@ -78,27 +87,18 @@ ui <- function(id) {
                     type = "html",
                     loader = "loader6",
                     proxy.height = "20px"
-                ),
-                tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-                withLoader(
-                    uiOutput(ns("comparison")),
-                    type = "html",
-                    loader = "loader6",
-                    proxy.height = "20px"
-                ),
-                tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-            ),
-            footer = tagList(
-                actionButton(
-                    ns("run_analysis"),
-                    label = "Analyze & Plot",
-                    class = "refresh-btn",
-                    icon = icon("play")
                 )
+            )
+        ), 
+        tags$div(
+            actionButton(
+                ns("run_analysis"),
+                label = "Analyze & Plot",
+                class = "refresh-btn",
+                icon = icon("play")
             )
         )
     )
-
 }
 
 #' @export
@@ -133,7 +133,7 @@ server <- function(id, app_config, analysis_config) {
         # Recreate the R6 instance when Dataset changes (including initial selection)
         observeEvent(input$dataset, ignoreInit = FALSE, {
             req(input$dataset)
-
+            click(glue("AccordionInputs-1-heading"), asis = FALSE)
             inst <- getFeatureAnalysisInputs(
                 app_config = app_config,
                 analysis_config = app_config$get_analysis_config(input$dataset),
@@ -223,9 +223,6 @@ server <- function(id, app_config, analysis_config) {
             source_ready <- !is.null(r6_obj())
             comparison_ready <- !is.null(input$comparison) && nzchar(trimws(input$comparison))
             source_ready && comparison_ready
-            # feature_ready <- !is.null(input$feature) && nzchar(trimws(input$feature))
-            # plot_type_ready <- !is.null(input$plot_type) && nzchar(trimws(input$plot_type))
-            # feature_ready && plot_type_ready
         })
 
         observe({
@@ -239,20 +236,6 @@ server <- function(id, app_config, analysis_config) {
                 addClass("run_analysis", "refresh-btn")
             }
         })
-
-        # cohort <- reactive({
-        #     req(input$dataset)
-        #     req(input$comparison)
-        #     r6()$get_cohort(
-        #         input$sexes,
-        #         input$races,
-        #         input$ethnicities,
-        #         input$karyotype,
-        #         input$age,
-        #         input$age_group,
-        #         input$conditions
-        #     )
-        # })
 
         observeEvent(input$run_analysis, ignoreInit = TRUE, {
             req(is_ready_to_analyze())
