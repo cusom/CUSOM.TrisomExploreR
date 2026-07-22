@@ -1,0 +1,9 @@
+id: cell_type
+display_name: Effect of Cell Type
+description: Effect of trisomy 21 on cell type composition
+owner: cell_types
+column: cell_type
+data_type: categorical
+label: Cell Type
+baseline_label: ~
+volcano_top_annotation: ~

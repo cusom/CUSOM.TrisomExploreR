@@ -5,3 +5,11 @@
 .rhino
 .rscignore
 tests
+.Rproj.user
+TrisomExploreR.Rproj
+renv
+Remote_Data
+data
+data-raw
+app/logic/___ignore__
+app/logic/legacy_logic

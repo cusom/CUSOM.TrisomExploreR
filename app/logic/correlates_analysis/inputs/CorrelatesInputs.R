@@ -97,7 +97,7 @@ getCorrelatesAnalysisInputs <- function(
         input_config,
         ...
     ) {
-    precalculated <- analysis_config$UsesPreCalculatedData
+    precalculated <- FALSE
     analysis_type <- analysis_config$AnalysisType
     data_src   <- getDataSource(app_config, analysis_type, analysis_config, input_config, ...)
     preparer   <- getPreparer(precalculated, analysis_type, analysis_config, app_config, ...)

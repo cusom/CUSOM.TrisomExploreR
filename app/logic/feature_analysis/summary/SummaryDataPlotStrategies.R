@@ -1,20 +1,16 @@
 box::use(
     R6[R6Class],
     glue[glue],
-    tibble[tibble],
-    dplyr[select, mutate, group_by, summarise, ungroup, rename_with, distinct, n,
-        filter, pull, arrange, dense_rank, row_number],
-    purrr[pmap],
-    stringr[str_split_1],
+    dplyr[select, mutate, distinct, n, filter, pull, summarise, case_when],
     rlang[sym],
     plotly[layout, config],
     htmlwidgets[onRender],
 )
 
 box::use(
-    app/logic/shared/statistical_analysis[formatPValue, addGroupCount],
     app/logic/shared/summary_plots[getVolcanoPlot, getVolcanoAnnotations, addSignificanceGroup,
-        getCorrelationVolcanoAnnotations]
+        getCorrelationVolcanoAnnotations],
+    app/logic/shared/column_detection_utils[resolve_column_name]
 )
 
 #' @export
@@ -23,9 +19,64 @@ VolcanoPlotStrategy <- R6Class(
     private = list(
         app_config = NULL,
         analysis_config = NULL,
-        remote_db = NULL
+        remote_db = NULL,
+        fold_change_var_override = NULL,
+        detect_fold_change_var = function(data, preferred = NULL) {
+            return(
+                resolve_column_name(
+                    data = data,
+                    preferred = preferred,
+                    exact_candidates = c("log2FoldChange", "FoldChange", "CorrelationValue", "Correlation", "Mean_difference"),
+                    pattern_candidates = c(
+                        "(^|_)log2.*fold.?change($|_)",
+                        "(^|_)fold.?change($|_)",
+                        "(^|_)correlation(value)?($|_)",
+                        "(^|_)mean[_\\.]?diff($|_)"
+                    ),
+                    output_name = "fold_change_var",
+                    data_label = "plot-data"
+                )
+            )
+        },
+        detect_significance_var = function(data, preferred = NULL) {
+            return(
+                resolve_column_name(
+                    data = data,
+                    preferred = preferred,
+                    exact_candidates = c("-log10pvalue", "rho", "p.value", "pvalue", "qvalue", "FDR", "padj"),
+                    pattern_candidates = c(
+                        "(^|_)-?log10.*(p|q)\\.?value($|_)",
+                        "(^|_)(adj|adjusted)?_?p\\.?value($|_)",
+                        "(^|_)q\\.?value($|_)",
+                        "(^|_)(fdr|padj)($|_)",
+                        "(^|_)rho($|_)"
+                    ),
+                    output_name = "significance_var",
+                    data_label = "plot-data"
+                )
+            )
+        }
     ),
     active = list(
+        fold_change_var = function(value) {
+            if (missing(value)) {
+                return(
+                    private$detect_fold_change_var(
+                        data = self$plot_data,
+                        preferred = private$fold_change_var_override
+                    )
+                )
+            }
+        },
+        significance_var = function(value) {
+            if (missing(value)) {
+                return(
+                    private$detect_significance_var(
+                        data = self$plot_data
+                    )
+                )
+            }
+        },
         adjusted = function(value) {
             if (missing(value)) {
                 return(self$adjustment_method != "none")
@@ -33,7 +84,7 @@ VolcanoPlotStrategy <- R6Class(
         },
         analysis_variable_label = function(value) {
             return(
-                private$analysis_config$AnalysisVariableName
+                private$analysis_config$AnalysisVariableLabel
             )
         },
         volcanoPlotExpectedTraceCount = function(value) {
@@ -59,7 +110,12 @@ VolcanoPlotStrategy <- R6Class(
         },
         VolcanoSummaryDataXAxisLabel = function(value) {
             if (missing(value)) {
-                return("log<sub>2</sub>(Fold Change)")
+              return(
+                case_when(
+                  grepl("log2", self$fold_change_var) ~ gsub("log2", "log<sub>2</sub>", self$fold_change_var),
+                  TRUE ~ self$fold_change_var
+                )
+              )
             }
         },
         VolcanoSummaryDataYAxisLabel = function(value) {
@@ -79,15 +135,12 @@ VolcanoPlotStrategy <- R6Class(
         stat_test = NULL,
         covariates = NULL,
         adjustment_method = NULL,
-        fold_change_var = "log2FoldChange",
-        significance_var = "-log10pvalue",
         analytes_label = "Analytes",
         plot_data = NULL,
         analyte = NULL,
         plot_event_data = NULL,
         initialize = function(analysis_config, app_config, study, study_data,
             stat_test, covariates, adjustment_method) {
-
             private$app_config <- app_config
             private$analysis_config <- analysis_config
             private$remote_db <- app_config$remote_db
@@ -199,7 +252,6 @@ VolcanoPlotStrategy <- R6Class(
 CorrelatesVolcanoPlotStrategy <- R6Class(
     "CorrelatesVolcanoPlotStrategy",
     inherit = VolcanoPlotStrategy,
-    private = list(),
     active = list(
         analysis_variable_label = function(value) {
             return(
@@ -242,15 +294,6 @@ CorrelatesVolcanoPlotStrategy <- R6Class(
         }
     ),
     public = list(
-        fold_change_var = "CorrelationValue",
-        significance_var_label = "rho",
-        initialize = function(analysis_config, app_config, study, study_data,
-            stat_test, covariates, adjustment_method) {
-                super$initialize(
-                    analysis_config, app_config, study, study_data,
-                    stat_test, covariates, adjustment_method
-                )
-        },
         get_volcano_annotations = function() {
             return(
                 self$plot_data |>

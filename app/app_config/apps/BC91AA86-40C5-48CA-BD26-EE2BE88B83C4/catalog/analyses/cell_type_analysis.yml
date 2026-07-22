@@ -1,0 +1,66 @@
+id: cell_type_analysis
+
+display_name: Cell Type Grouped Feature Association Analysis
+
+description: >
+  Compare gene expression between people with and without Down syndrome and in various types of cells
+
+version: 1.0
+
+category: Differential Analysis
+
+icon: feature_association
+
+enabled: true
+
+features:
+  cell_type:
+    datasets:
+    - RNASeq_Transcriptome_CellType_Composite
+
+supported_statistics:
+  source: package
+
+supports:
+
+  filtering: true
+
+  covariates: true
+
+  subgroup_analysis: true
+
+  multiple_testing_correction: true
+
+  precalculated_statistics: true
+
+  generated_statistics: true
+
+default_outputs:
+
+  summary_plot: volcano
+
+  drilldown_plot: boxplot
+
+planner:
+
+  feature_source: feature_registry
+
+  dataset_source: dataset_registry
+
+  statistic_source: package
+
+  feature_dimension: feature_definition
+
+  measurement_source: package
+
+execution:
+
+  strategy: feature_association
+
+  drilldown: analyte_measurements
+
+tags:
+  - differential
+  - feature
+  - statistics
+

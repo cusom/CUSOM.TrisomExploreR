@@ -1,0 +1,22 @@
+id: MSD_Proteomics_plasma_long_12192019
+
+package: MSD_Proteomics_plasma_long_12192019
+
+available_features: 
+
+    karyotype:
+        enabled: true
+
+    age:
+        enabled: true
+
+    sex:
+        enabled: true
+
+    bmi:
+        enabled: true
+        
+    comorbidity:
+        enabled: false
+        reason: "insufficient data available"
+

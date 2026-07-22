@@ -156,13 +156,29 @@ server <- function(id, app_config, analysis_config) {
 
     ns <- session$ns
     output$Feature <- renderUI({
-      choices <- analysis_config$namespace_config |>
-        filter(
-          grepl("feature", ModuleServerName, ignore.case = TRUE),
-          !is.na(AnalysisVariableName)
-        ) |>
-        arrange(DisplayOrder) |>
-        pull(AnalysisVariableName)
+      choices <- tryCatch({
+        analysis_def <- analysis_config$get_catalog_analysis_definition("feature_association")
+        feature_ids <- names(analysis_def$features)
+
+        if (length(feature_ids) == 0) {
+          stop("No features found in feature_association catalog definition.")
+        }
+
+        labels <- vapply(feature_ids, function(feature_id) {
+          feature_def <- analysis_config$get_catalog_feature_definition(feature_id)
+          display_name <- feature_def$display_name
+          if (is.null(display_name) || !nzchar(display_name)) display_name <- feature_id
+          display_name
+        }, FUN.VALUE = character(1))
+
+        values <- vapply(feature_ids, function(feature_id) {
+          analysis_config$get_analysis_config(feature_id)$AnalysisVariableName[[1]] %||% feature_id
+        }, FUN.VALUE = character(1))
+
+        stats::setNames(values, labels)
+      }, error = function(e) {
+        character(0)
+      })
 
       selectizeInput(
         inputId = ns("Feature"),
@@ -182,6 +198,7 @@ server <- function(id, app_config, analysis_config) {
     })
 
     r6_obj <- reactiveVal(NULL)
+    study_plan_val <- reactiveVal(NULL)
 
     # Recreate the R6 instance when Feature changes
     observeEvent(input$Feature, ignoreInit = TRUE, {
@@ -189,7 +206,8 @@ server <- function(id, app_config, analysis_config) {
       inst <- getFeatureAnalysisInputs(
         app_config = app_config,
         analysis_config = app_config$get_analysis_config(input$Feature),
-        input_config = app_config$get_input_config(input$Feature)
+        input_config = app_config$get_input_config(input$Feature),
+        precalculated = TRUE
       )
       r6_obj(inst)
     })
@@ -214,7 +232,7 @@ server <- function(id, app_config, analysis_config) {
 
       choices <- r6()$Studies
 
-      selected <- ifelse(nrow(choices) == 1, choices, character(0))
+      selected <- if (nrow(choices) == 1) choices$Values[[1]] else character(0)
       disabled(
         prettyRadioButtonsFieldSet(
           input_id = ns("Study"),
@@ -236,9 +254,21 @@ server <- function(id, app_config, analysis_config) {
     })
 
     karyotypes <- reactive({
-      r6()$Karyotypes
+      req(!is.null(input$Study), nzchar(input$Study))
+
+      inst <- r6()
+
+      studies <- inst$Studies
+      req(!is.null(studies), nrow(studies) > 0)
+      req(any(as.character(studies$Values) == as.character(input$Study)))
+
+      # Keep datasource state aligned when a new manager instance is created
+      # on feature changes but Study input value itself does not emit a change.
+      inst$Study <- input$Study
+
+      inst$Karyotypes
     }) |>
-      bindEvent(c(input$Study), ignoreNULL = TRUE)
+      bindEvent(c(input$Feature, input$Study), ignoreNULL = TRUE)
 
     output$Karyotype <- renderUI({
 
@@ -393,23 +423,35 @@ server <- function(id, app_config, analysis_config) {
         )
       on.exit(remove_modal_spinner(), add = TRUE)
 
-      r6()$get_study_data(
+      data <- r6()$get_study_data(
         study = input$Study,
         karyotypes = input$Karyotype,
         sexes = input$Sex,
         ages = input$Age,
+        stat_test = input$StatTest,
+        covariates = input$Covariates,
+        adjustment_method = input$AdjustmentMethod,
         params = params()
       )
 
+      study_plan_val(r6()$StudyPlan)
+      data
+
     }) |>
       bindEvent(input$getData, ignoreInit = TRUE)
+
+    StudyPlan <- reactive({
+      study_plan_val()
+    })
 
     return(
       list(
         feature = reactive(input$Feature),
         study = reactive(input$Study),
+        karyotype = reactive(input$Karyotype),
         study_label = study_label,
         study_data = StudyData,
+        study_plan = StudyPlan,
         stat_test = reactive(input$StatTest),
         covariates = reactive(input$Covariates),
         adjustment_method = reactive(input$AdjustmentMethod),

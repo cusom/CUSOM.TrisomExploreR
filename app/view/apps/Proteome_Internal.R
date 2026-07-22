@@ -8,7 +8,8 @@ box::use(
     app/logic/shared/ui_utils[create_app_dropdown_links],
     app/view/overviews/overview_proteome,
     app/view/layouts/feature_analysis,
-    app/view/layouts/correlates_analysis
+    app/view/layouts/correlates_analysis,
+    app/view/layouts/tofa_timeseries_analysis,
 )
 
 #' @export
@@ -154,6 +155,11 @@ server <- function(id, app_config) {
             app_config = app_config,
             analysis_config = app_config,
             input_config = app_config
+        )
+
+        tofa_timeseries_analysis$server(
+            id = "tofa",
+            app_config = app_config
         )
 
     })

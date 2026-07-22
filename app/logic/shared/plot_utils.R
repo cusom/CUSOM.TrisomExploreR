@@ -174,11 +174,11 @@ toggle_GSEA_volcano_plot_trace <- function(
 }
 
 #' @export
-purge_plot <- function(session, ns, plot_name, r6) {
-
+purge_plot <- function(session, namespace, plot_name, r6) {
+  resolved_namespace <- get_namespace_by_level(namespace, 3)
   plotName <- get_object_name_from_namespace_session(
     session = session,
-    namespace = r6$namespace,
+    namespace = resolved_namespace,
     object_name = plot_name
   )
 
@@ -349,8 +349,8 @@ getGroupedStatAnnotations <- function(
       function(x, i) {
         annotation <- annotation_template
         stat_result <- AnnotationAnchorLines[[i]]$statResult
-        annotation[["x"]] <- AnnotationAnchorLines[[i]]$x1 -
-          (AnnotationAnchorLines[[i]]$x1 - (AnnotationAnchorLines[[i]]$x0) / 2)
+        annotation[["x"]] <- AnnotationAnchorLines[[i]]$x0 +
+          ((AnnotationAnchorLines[[i]]$x1 - AnnotationAnchorLines[[i]]$x0) / 2)
         annotation[["y"]] <- 1.05
         annotation[["text"]] <- dplyr::case_when(
           is.na(stat_result) ~ "NA",
@@ -367,10 +367,8 @@ getGroupedStatAnnotations <- function(
 
   keyText <- ifelse(
     adjustmentMethod != "none",
-    "<span><b>Statistical Significance Key</b>:        ns q > 0.1
-     * q <= 0.1         ** q <= 0.01        *** q <= 0.001</span>",
-    "<span><b>Statistical Significance Key</b>:        ns p > 0.05
-      * p <= 0.05        ** p <= 0.01        *** p <= 0.001</span>"
+    "<span style='white-space: nowrap;'><b>Statistical Significance Key</b>: ns q > 0.1 | * q <= 0.1 | ** q <= 0.01 | *** q <= 0.001</span>",
+    "<span style='white-space: nowrap;'><b>Statistical Significance Key</b>: ns p > 0.05 | * p <= 0.05 | ** p <= 0.01 | *** p <= 0.001</span>"
   )
 
   adjLetterString <- ifelse(adjustmentMethod == "none", "p", "q")

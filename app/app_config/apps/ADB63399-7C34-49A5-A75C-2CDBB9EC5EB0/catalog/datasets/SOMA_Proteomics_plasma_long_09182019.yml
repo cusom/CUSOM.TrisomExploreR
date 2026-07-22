@@ -1,0 +1,22 @@
+id: soma_proteomics_plasma_long_09182019
+
+package: SOMA_Proteomics_plasma_long_09182019
+
+available_features: 
+
+    karyotype:
+        enabled: true
+
+    age:
+        enabled: true
+
+    sex:
+        enabled: true
+
+    bmi:
+        enabled: true
+        
+    comorbidity:
+        enabled: false
+        reason: "insufficient data available"
+

@@ -1,0 +1,20 @@
+schema_version: 1.0
+
+application:
+  id: ADB63399-7C34-49A5-A75C-2CDBB9EC5EB0
+  name: TrisomExplorer | Proteome - DEV
+  version: 0.9.0
+
+catalog:
+
+  analyses:
+    path: analyses/
+
+  features:
+    path: features/
+
+  datasets:
+    path: datasets/
+
+  statistics:
+    path: statistics/

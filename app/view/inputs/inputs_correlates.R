@@ -15,6 +15,7 @@ box::use(
 box::use(
     app/logic/shared/input_locking_utils,
     app/logic/shared/server_utils,
+    app/logic/shared/plot_utils[purge_plot],
     app/view/custom_ui/input_widgets[prettyRadioButtonsFieldSet],
     app/logic/correlates_analysis/inputs/CorrelatesInputs[getCorrelatesAnalysisInputs],
 )
@@ -89,7 +90,9 @@ ui <- function(id) {
                         choices = NULL,
                         position = "auto",
                         search = TRUE,
-                        maxOptions = 1
+                        maxOptions = 1,
+                        zIndex = 9999,
+                        dropboxWrapper = "body"
                     )
                 ),
                 hidden(
@@ -236,8 +239,8 @@ server <- function(id, app_config, analysis_config) {
 
                 disable(id = "CompareExperiment")
 
-                purge_plot(session, ns, "VolcanoPlot", r6)
-                purge_plot(session, ns, "AnalytePlot", r6)
+                purge_plot(session, ns(id), "plot", r6())
+                purge_plot(session, ns(id), "AnalytePlot", r6())
 
                 updateSelectizeInput(
                     session = session,

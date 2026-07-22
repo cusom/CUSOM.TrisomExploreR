@@ -1,0 +1,12 @@
+id: PAX_polyaRNA_P4C071320
+
+package: PAX_polyaRNA_P4C071320
+fact_name: transcriptomics
+
+available_features: 
+
+    karyotype:
+        enabled: true
+
+    age:
+        enabled: true
