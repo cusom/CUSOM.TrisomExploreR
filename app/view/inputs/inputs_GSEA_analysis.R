@@ -24,7 +24,7 @@ ui <- function(id, input_config) {
 }
 
 #' @export
-server <-  function(id, study, summary_data, parent) {
+server <-  function(id, study, summary_data, parent, ...) {
 
   moduleServer(id, function(input, output, session) {
 
