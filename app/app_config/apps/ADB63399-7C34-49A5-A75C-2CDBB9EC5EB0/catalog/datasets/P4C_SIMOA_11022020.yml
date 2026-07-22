@@ -1,0 +1,22 @@
+id: p4c_simoa_11022020
+
+package: P4C_SIMOA_11022020
+
+available_features: 
+
+    karyotype:
+        enabled: true
+
+    age:
+        enabled: true
+
+    sex:
+        enabled: true
+
+    bmi:
+        enabled: true
+        
+    comorbidity:
+        enabled: false
+        reason: "insufficient data available"
+

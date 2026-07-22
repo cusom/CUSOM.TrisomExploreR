@@ -1,0 +1,22 @@
+id: HTP_SomaScan11k_2025_core
+
+package: HTP_SomaScan11k_2025_core
+
+available_features: 
+
+    karyotype:
+        enabled: true
+
+    age:
+        enabled: true
+
+    sex:
+        enabled: true
+
+    bmi:
+        enabled: true
+        
+    comorbidity:
+        enabled: false
+        reason: "insufficient data available"
+

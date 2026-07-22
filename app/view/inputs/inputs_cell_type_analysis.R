@@ -1,13 +1,12 @@
 box::use(
     shiny[NS, moduleServer, tagList, tags, HTML, uiOutput, renderUI, htmlOutput,
-        actionButton, selectizeInput, updateSelectizeInput, icon, validate, need,
+        actionButton, icon, validate, need,
         observeEvent, reactive, bindEvent],
     shinydashboardPlus[box],
     shinyjs[hidden, disabled],
     shinyWidgets[prettyRadioButtons, awesomeCheckboxGroup, numericRangeInput,
-        pickerInput],
+        pickerInput, virtualSelectInput, prepare_choices, updateVirtualSelect],
     shinycustomloader[withLoader],
-    promises[future_promise, `%...!%`, `%...>%`],
     shinyjs[addClass, removeClass, disable, enable]
 )
 
@@ -51,21 +50,16 @@ ui <- function(id) {
                 tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
                 tags$div(
                     id = "AnalyteInput",
-                    selectizeInput(
+                    virtualSelectInput(
                         inputId = ns("Analyte"),
                         label = "Gene",
-                        choices = NULL,
+                        choices = list(),
+                        selected = character(0),
                         multiple = FALSE,
-                        options = list(
-                            placeholder = "Select gene",
-                            onInitialize = I('function() { this.setValue(""); }'),
-                            closeAfterSelect = TRUE,
-                            selectOnTab = TRUE,
-                            persist = FALSE,
-                            `live-search` = TRUE,
-                            dropupAuto = FALSE,
-                            maxOptions = 30
-                        )
+                        search = TRUE,
+                        placeholder = "Select gene",
+                        zIndex = 9999,
+                        dropboxWrapper = "body"
                     )
                 ),
                 tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
@@ -135,19 +129,16 @@ server <- function(id, r6) {
         })
 
         observeEvent(input$CellType, {
-            disable(id = "Analyte")
-            future_promise(
-                r6()$Analytes
-            )  %...!% warning() %...>% {
-                updateSelectizeInput(
-                    session = session,
-                    inputId = "Analyte",
-                    choices = .,
-                    selected = character(0),
-                    server = TRUE
-                )
-                enable(id = "Analyte")
-            }
+            updateVirtualSelect(
+                inputId = "Analyte",
+                session = session,
+                choices = prepare_choices(
+                    r6()$AnalytesData,
+                    label = AnalyteName,
+                    value = AnalyteName
+                ),
+                selected = character(0)
+            )
         }, once = TRUE)
 
         output$Sex <- renderUI({

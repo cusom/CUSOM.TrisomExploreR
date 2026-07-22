@@ -1,15 +1,12 @@
 box::use(
     R6[R6Class],
-    glue[glue, glue_collapse],
-    tibble[tibble],
-    dplyr[select, filter, between, mutate, group_by, summarise, ungroup, rename_with,
-            distinct, n, pull, arrange, dense_rank, row_number, if_else, inner_join,
-            case_when],
+    glue[glue],
+    dplyr[select, filter, between, mutate, summarise,
+            pull, if_else, inner_join, left_join,
+            distinct, case_when],
     tidyr[drop_na],
-    forcats[fct_relevel],
-    purrr[pmap],
+    stringr[str_split_1],
     stringr[str_split, str_c],
-    rlang[sym]
 )
 
 #' @export
@@ -77,12 +74,7 @@ InputsDataPreparerBase <- R6Class(
 FeatureAnalysisInputsDataPreparer <- R6Class(
     "FeatureAnalysisInputsDataPreparer",
     inherit = InputsDataPreparerBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, app_config) {
-            super$initialize(analysis_config, app_config)
-        },
         prepare = function(.data, study, karyotypes, sexes, ages, ...) {
             k_vec <- self$parse_karyotypes(karyotypes)
 
@@ -103,24 +95,12 @@ FeatureAnalysisInputsDataPreparer <- R6Class(
 FeatureAnalysisInputsComorbidityDataPreparer <- R6Class(
     "FeatureAnalysisInputsComorbidityDataPreparer",
     inherit = InputsDataPreparerBase,
-    private = list(
-        app_config = NULL
-    ),
     active = list(
-        remote_files = function(value) {
-            return(private$app_config$remote_files)
-        },
         participant_conditions = function(value) {
-            return(
-                self$remote_files$get_remote_file_data("conditions")
-            )
+            private$app_config$condition_data
         }
     ),
     public = list(
-        initialize = function(analysis_config, app_config) {
-            super$initialize(analysis_config, app_config)
-            private$app_config <- app_config
-        },
         prepare = function(.data, study, karyotypes, sexes, ages, conditions) {
             k_vec <- self$parse_karyotypes(karyotypes)
 
@@ -170,19 +150,25 @@ FeatureAnalysisInputsComorbidityDataPreparer <- R6Class(
 PreCalculatedFeatureAnalysisInputsPreparer <- R6Class(
     "PreCalculatedFeatureAnalysisInputsPreparer",
     inherit = InputsDataPreparerBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, app_config) {
-            super$initialize(analysis_config, app_config)
-        },
         prepare = function(data, study, karyotypes, ages, sexes, params, ...) {
-            prepared <- data |>
-                filter(
-                    samples == str_c(karyotypes, collapse = ";"),
-                    selected_parameters == params
-                ) |>
-                select(-c(samples, selected_parameters)) |>
+            sample_col <- intersect(c("samples", "karyotypes"), names(data))
+            params_col <- intersect(c("selected_parameters", "params"), names(data))
+
+            prepared <- data
+
+            if (length(sample_col) > 0) {
+                prepared <- prepared |>
+                    filter(.data[[sample_col[[1]]]] == str_c(karyotypes, collapse = ";"))
+            }
+
+            if (length(params_col) > 0) {
+                prepared <- prepared |>
+                    filter(.data[[params_col[[1]]]] == params)
+            }
+
+            prepared <- prepared |>
+                select(-tidyselect::any_of(c("samples", "selected_parameters", "params"))) |>
                 mutate(
                     karyotypes = self$collapse_values(karyotypes),
                     ages = self$collapse_values(ages),
@@ -190,6 +176,133 @@ PreCalculatedFeatureAnalysisInputsPreparer <- R6Class(
                 )
 
             self$set_prepared_data(prepared)
+        }
+    )
+)
+
+#' @export
+TOFAAnalysisInputsDataPreparer <- R6Class(
+    "TOFAAnalysisInputsDataPreparer",
+    inherit = InputsDataPreparerBase,
+    active = list(
+        time_series_data = function(value) {
+            private$app_config$get_local_dataset_data(self$dataset)
+        }
+    ),
+    public = list(
+        dataset = NULL,
+        dataset_data = NULL,
+        visit_data = NULL,
+        statistic_id = "linear_model",
+        initialize = function(analysis_config, app_config, dataset, ...) {
+
+            super$initialize(analysis_config, app_config)
+            self$dataset <- dataset
+            self$visit_data <- app_config$encounter_data
+            self$dataset_data <- app_config$dataset_data
+
+            available_stats <- tryCatch(
+                private$app_config$get_dataset_statistic_ids(dataset),
+                error = function(e) character(0)
+            )
+
+            if (length(available_stats) > 0 && !"linear_model" %in% available_stats) {
+                self$statistic_id <- available_stats[[1]]
+            }
+        },
+        load_precalculated_summary = function() {
+            dataset_def <- private$app_config$get_catalog_dataset_definition(self$dataset)
+            package_id <- dataset_def$package
+            if (is.null(package_id) || !nzchar(package_id)) {
+                package_id <- dataset_def$id
+            }
+
+            artifact_rel_path <- private$app_config$package_resolver$resolve_precalculated_artifact(
+                package_id = package_id,
+                statistic_id = self$statistic_id,
+                feature_id = "timepoint"
+            )
+
+            if (is.null(artifact_rel_path) || !nzchar(artifact_rel_path)) {
+                stop(
+                    sprintf("No precalculated artifact found for dataset '%s' and statistic '%s'.", self$dataset, self$statistic_id),
+                    call. = FALSE
+                )
+            }
+
+            package_root <- private$app_config$package_resolver$get_package_root(package_id)
+            artifact_path <- file.path(package_root, artifact_rel_path)
+
+            if (!(file.exists(artifact_path) || dir.exists(artifact_path))) {
+                stop(sprintf("Precalculated artifact not found: %s", artifact_path), call. = FALSE)
+            }
+
+            source <- private$app_config$load_local_package_artifact(
+                package_id,
+                artifact_rel_path,
+                feature_id = "timepoint"
+            )
+
+            if (!"Analyte" %in% names(source) && "AnalyteID" %in% names(source)) {
+                analyte_rel_path <- private$app_config$package_resolver$resolve_dimension_file(
+                    package_id,
+                    "analytes"
+                )
+
+                if (!is.null(analyte_rel_path) && nzchar(analyte_rel_path)) {
+                    analytes_dim <- tryCatch(
+                        private$app_config$load_local_package_artifact(package_id, analyte_rel_path),
+                        error = function(e) NULL
+                    )
+
+                    if (!is.null(analytes_dim) && "AnalyteID" %in% names(analytes_dim)) {
+                        analyte_name_col <- intersect(
+                            c("Analyte", "AnalyteName", "Gene", "Gene_name", "Feature"),
+                            names(analytes_dim)
+                        )
+
+                        if (length(analyte_name_col) > 0) {
+                            analyte_map <- analytes_dim |>
+                                select(all_of(c("AnalyteID", analyte_name_col[[1]]))) |>
+                                distinct()
+
+                            names(analyte_map)[names(analyte_map) == analyte_name_col[[1]]] <- "Analyte"
+
+                            source <- source |>
+                                left_join(analyte_map, by = "AnalyteID")
+                        }
+                    }
+                }
+            }
+
+            source
+        },
+        prepare = function(data, sexes, races, ethnicities, karyotype, age_at_visit, age_groups,
+            conditions = NULL, comparison = NULL, ...) {
+            source <- self$load_precalculated_summary()
+
+            comparison_value <- comparison
+            if (is.null(comparison_value)) {
+                comparison_value <- ""
+            }
+
+            comparison_timepoints <- str_split_1(comparison_value, "\\|") |>
+                trimws() |>
+                (
+                    function(x) x[nzchar(x)]
+                )() |>
+                unique()
+
+            if (length(comparison_timepoints) > 0) {
+                source <- source |>
+                    filter(Timepoint %in% comparison_timepoints)
+            }
+
+            return(
+                source |>
+                    select("Analyte" = Analyte, Mean_difference, pvalue, "padj" = qvalue) |>
+                    mutate(Analyte = gsub(" ", "_", Analyte))
+            )
         }
     )
 )

@@ -1,0 +1,22 @@
+id: X01_2024_HTP_OLINK_core
+
+package: X01_2024_HTP_OLINK_core
+
+available_features: 
+
+    karyotype:
+        enabled: true
+
+    age:
+        enabled: true
+
+    sex:
+        enabled: true
+
+    bmi:
+        enabled: true
+        
+    comorbidity:
+        enabled: false
+        reason: "insufficient data available"
+

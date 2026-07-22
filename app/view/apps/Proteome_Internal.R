@@ -11,7 +11,8 @@ box::use(
     app/logic/shared/ui_utils[create_app_links],
     app/view/overviews/overview_proteome,
     app/view/layouts/feature_analysis,
-    app/view/layouts/correlates_analysis
+    app/view/layouts/correlates_analysis,
+    app/view/layouts/tofa_timeseries_analysis,
 )
 
 #' @export
@@ -23,7 +24,7 @@ ui <- function(id) {
         preloader = list(
             html = tagList(
                 spin_orbiter(),
-                glue("Loading TrisomExplorer...")
+                glue("Loading Proteome TrisomExplorer...")
             ),
             color = "#3c8dbc"
         ),
@@ -32,7 +33,7 @@ ui <- function(id) {
             title = tags$a(
                 href = "",
                 tags$img(
-                    src = "/static/htp_logo.png",
+                    src = "static/htp_logo.png",
                     height = "30"
                 ),
                 "TrisomExplorer",
@@ -59,7 +60,7 @@ ui <- function(id) {
                     selected = TRUE
                 ),
                 menuItem(
-                    text = "Feature Analysis",
+                    text = "HTP Analysis",
                     icon = icon("chart-line"),
                     tabName = ns("feature"),
                     href = NULL,
@@ -67,9 +68,17 @@ ui <- function(id) {
                     selected = FALSE
                 ),
                 menuItem(
-                    text = "Cross Omics Correlates",
+                    text = "HTP Cross-Omics Analysis",
                     icon = icon("circle-nodes"),
                     tabName = ns("correlates"),
+                    href = NULL,
+                    newtab = TRUE,
+                    selected = FALSE
+                ),
+                menuItem(
+                    text = "TOFA Trial Analysis",
+                    icon = icon("book-medical"),
+                    tabName = ns("tofa"),
                     href = NULL,
                     newtab = TRUE,
                     selected = FALSE
@@ -102,6 +111,12 @@ ui <- function(id) {
                     tabName = ns("correlates"),
                     tags$div(
                         correlates_analysis$ui(ns("correlates"))
+                    )
+                ),
+                tabItem(
+                    tabName = ns("tofa"),
+                    tags$div(
+                        tofa_timeseries_analysis$ui(ns("tofa"))
                     )
                 )
             )
@@ -142,6 +157,11 @@ server <- function(id, app_config) {
             app_config = app_config,
             analysis_config = app_config,
             input_config = app_config
+        )
+
+        tofa_timeseries_analysis$server(
+            id = "tofa",
+            app_config = app_config
         )
 
     })

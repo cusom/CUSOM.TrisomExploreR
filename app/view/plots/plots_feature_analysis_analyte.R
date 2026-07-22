@@ -77,8 +77,8 @@ ui <- function(id) {
 }
 
 #' @export
-server <- function(id, analysis_config, app_config, analyte, feature, study, study_data,
-  summary_data, analyte_input_name, analyte_session) {
+server <- function(id, analysis_config, app_config, analyte, feature, study, karyotype = NULL, study_data, study_plan = NULL,
+  summary_data, analyte_input_name, analyte_session, ...) {
 
   moduleServer(id, function(input, output, session) {
 
@@ -94,8 +94,11 @@ server <- function(id, analysis_config, app_config, analyte, feature, study, stu
         analyte = analyte(),
         app_config = app_config,
         study = study(),
+        selected_karyotypes = if (is.null(karyotype)) NULL else karyotype(),
         study_data = study_data(),
-        summary_data = summary_data()
+        study_plan = if (is.null(study_plan)) NULL else study_plan(),
+        summary_data = summary_data(),
+        ...
       )
       r6_obj(inst)
     })

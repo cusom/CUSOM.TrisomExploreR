@@ -1,0 +1,7 @@
+id: tofa_proteomics_endpoints
+
+package: TOFA_Proteomics_Endpoints
+
+available_features:
+    timepoint:
+        enabled: true

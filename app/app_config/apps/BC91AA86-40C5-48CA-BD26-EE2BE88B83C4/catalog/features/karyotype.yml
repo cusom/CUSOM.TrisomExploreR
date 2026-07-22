@@ -1,0 +1,9 @@
+id: karyotype
+display_name: Effect of Karyotype
+description: Chromosomal classification of the participant
+owner: participants
+column: Karyotype
+data_type: categorical
+label: Karyotype
+baseline_label: Control
+volcano_top_annotation: Up in Trisomy 21

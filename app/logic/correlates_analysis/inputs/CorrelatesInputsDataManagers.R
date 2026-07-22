@@ -49,19 +49,7 @@ InputsManagerCorrelates <- R6Class(
                 )
             return(
                 self$QueryAnalytes |>
-                    select(QueryAnalyte, QueryAnalyteKey) |>
-                    mutate(
-                        QueryAnalyte = as.character(QueryAnalyte),
-                        QueryAnalyteKey = as.character(QueryAnalyteKey)
-                    ) |>
-                    filter(
-                        !is.na(QueryAnalyte),
-                        !is.na(QueryAnalyteKey),
-                        QueryAnalyte != "",
-                        QueryAnalyteKey != ""
-                    ) |>
-                    distinct() |>
-                    arrange(QueryAnalyte)
+                    select(QueryAnalyte, QueryAnalyteKey)
             )
         },
         set_correlation_source_data = function(

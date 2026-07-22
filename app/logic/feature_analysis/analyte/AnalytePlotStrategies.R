@@ -19,6 +19,7 @@ box::use(
 box::use(
     app/logic/shared/statistical_analysis[formatPValue],
     app/logic/shared/string_utils[parse_delimited_string],
+    app/logic/shared/column_detection_utils[resolve_column_name],
     app/logic/shared/analyte_plots[getBoxPlotWithHighlightGroup, getScatterPlotByGroup,
         getScatterPlotWithSmoothing, getDensityColors],
 )
@@ -27,11 +28,48 @@ PlotStrategyBase <- R6Class(
     "PlotStrategyBase",
     private = list(
         remote_db = NULL,
-        analysis_config = NULL
+        analysis_config = NULL,
+        detect_measurement_var = function(data, preferred = NULL) {
+            return(
+                resolve_column_name(
+                    data = data,
+                    preferred = preferred,
+                    exact_candidates = c("log2MeasuredValue", "MeasuredValue", "CorrelationValue"),
+                    pattern_candidates = c(
+                        "(^|_)log2[_\\.]?measured[_\\.]?value($|_)",
+                        "(^|_)measured[_\\.]?value($|_)",
+                        "(^|_)correlation[_\\.]?value($|_)"
+                    ),
+                    output_name = "measurement_var",
+                    data_label = "plot-data"
+                )
+            )
+        },
+        detect_measurement_label_var = function(data, preferred = NULL) {
+            return(
+                resolve_column_name(
+                    data = data,
+                    preferred = preferred,
+                    exact_candidates = c("log2Measurement", "Measurement", "MeasurementLabel", "CorrelationLabel"),
+                    pattern_candidates = c(
+                        "(^|_)log2[_\\.]?measurement($|_)",
+                        "(^|_)measurement($|_)",
+                        "(^|_)measurement[_\\.]?label($|_)",
+                        "(^|_)correlation[_\\.]?label($|_)"
+                    ),
+                    output_name = "measurement_label",
+                    data_label = "plot-data"
+                )
+            )
+        }
     ),
     active = list(
         applicationName = function(value) {
-            return(private$analysis_config$ApplicationName)
+            if (!is.null(private$analysis_config) && "ApplicationName" %in% names(private$analysis_config)) {
+                return(private$analysis_config$ApplicationName)
+            }
+
+            return("")
         },
         namespace = function(value) {
             return(private$analysis_config$Namespace)
@@ -40,13 +78,29 @@ PlotStrategyBase <- R6Class(
             return(private$analysis_config$AnalysisVariableName)
         },
         analysisVariableLabel = function(value) {
-            return(private$analysis_config$AnalysisVariableLabel)
+            label <- private$analysis_config$AnalysisVariableLabel
+            label <- as.character(label)
+            label <- label[!is.na(label) & nzchar(label)]
+
+            if (length(label) > 0) {
+                return(label[[1]])
+            }
+
+            variable <- private$analysis_config$AnalysisVariableName
+            variable <- as.character(variable)
+            variable <- variable[!is.na(variable) & nzchar(variable)]
+
+            if (length(variable) > 0) {
+                return(variable[[1]])
+            }
+
+            return("Group")
         },
         analysisType = function(value) {
             return(private$analysis_config$AnalysisType)
         },
         is_precalculated = function(value) {
-            return(private$analysis_config$UsesPreCalculatedData)
+            return(FALSE)
         },
         experimentIDs = function(value) {
             return(
@@ -66,11 +120,28 @@ PlotStrategyBase <- R6Class(
             }
         },
         Karyotype = function(value) {
-            return(
-                self$analyte_data |>
-                    distinct(Karyotype) |>
-                    pull()
-            )
+            karyotypes <- self$analyte_data |>
+                distinct(Karyotype) |>
+                pull() |>
+                as.character()
+
+            karyotypes <- karyotypes[!is.na(karyotypes) & nzchar(karyotypes)]
+            karyotypes <- unique(karyotypes)
+
+            if (length(karyotypes) == 0) {
+                return("")
+            }
+
+            if (length(karyotypes) == 1) {
+                return(karyotypes[[1]])
+            }
+
+            # Keep canonical ordering for the most common contrast label.
+            if (all(c("Control", "Trisomy 21") %in% karyotypes)) {
+                return("Control vs. Trisomy 21")
+            }
+
+            paste(sort(karyotypes), collapse = " vs. ")
         },
         AnalytePlotTitle =  function(value) {
             if (missing(value)) {
@@ -90,22 +161,44 @@ PlotStrategyBase <- R6Class(
                 }
             }
         },
+        measurement_variable = function(value) {
+            return(
+                private$detect_measurement_var(self$analyte_data)
+            )
+        },
         measurement_label = function(value) {
             return(
-                as.character(
-                    self$analyte_data[1, "Measurement"]
-                )
+                private$detect_measurement_label_var(self$analyte_data)
             )
         },
         formattedGroupBaselineLabel = function(value) {
             if (missing(value)) {
-                return(
-                    self$analyte_data |>
-                        select(!!sym(self$analysisVariable)) |>
-                        distinct() |>
-                        filter(grepl(self$groupBaselineLabel, !!sym(self$analysisVariable))) |>
-                        pull()
-                )
+                groups <- self$analyte_data |>
+                    select(!!sym(self$analysisVariable)) |>
+                    distinct() |>
+                    pull() |>
+                    as.character()
+
+                groups <- groups[!is.na(groups) & nzchar(groups)]
+
+                if (length(groups) == 0) {
+                    return(character(0))
+                }
+
+                baseline_hint <- as.character(self$groupBaselineLabel)
+                baseline_hint <- baseline_hint[!is.na(baseline_hint) & nzchar(baseline_hint)]
+
+                if (length(baseline_hint) == 0) {
+                    return(groups[[1]])
+                }
+
+                matched <- groups[grepl(baseline_hint[[1]], groups, fixed = TRUE)]
+
+                if (length(matched) == 0) {
+                    return(groups[[1]])
+                }
+
+                return(matched[[1]])
             }
         }
     ),
@@ -115,14 +208,13 @@ PlotStrategyBase <- R6Class(
         analyte = NULL,
         summary_data = NULL,
         analyte_data = NULL,
-        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {
+        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data, ...) {
+            private$remote_db <- app_config$remote_db
+            private$analysis_config <- analysis_config
             self$study <- study
             self$study_data <- study_data
             self$analyte <- analyte
             self$summary_data <- summary_data
-
-            private$remote_db <- app_config$remote_db
-            private$analysis_config <- analysis_config
         },
         set_analyte_data = function(.data) {
             self$analyte_data <- .data
@@ -138,7 +230,6 @@ PlotStrategyBase <- R6Class(
 BoxPlotStrategy <- R6Class(
     "BoxPlotStrategy",
     inherit = PlotStrategyBase,
-    private = list(),
     active = list(
         AnalytePlotTitle =  function(value) {
             if (missing(value)) {
@@ -164,17 +255,19 @@ BoxPlotStrategy <- R6Class(
         }
     ),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {
-            super$initialize(analysis_config, app_config, study, study_data, analyte, summary_data)
-        },
         render = function(.data) {
-            self$set_analyte_data(.data) |>
+            self$set_analyte_data(.data)
+
+            measurement_var <- self$measurement_variable
+            measurement_label <- self$measurement_label
+
+            self$analyte_data |>
                 getBoxPlotWithHighlightGroup(
                     key = LabID,
                     group = !!sym(self$analysisVariable),
                     groupBaselineLabel = self$formattedGroupBaselineLabel,
-                    value = log2MeasuredValue,
-                    valueLabel = log2Measurement,
+                    value = !!sym(measurement_var),
+                    valueLabel = !!sym(measurement_label),
                     text = text,
                     highlightGroup = highlightGroup
                 ) |>
@@ -276,7 +369,6 @@ BoxPlotStrategy <- R6Class(
 ScatterPlotStrategy <- R6Class(
     "ScatterPlotStrategy",
     inherit = PlotStrategyBase,
-    private = list(),
     active = list(
         AnalytePlotTitle =  function(value) {
             if (missing(value)) {
@@ -298,9 +390,6 @@ ScatterPlotStrategy <- R6Class(
         }
     ),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {
-            super$initialize(analysis_config, app_config, study, study_data, analyte, summary_data)
-        },
         render = function(.data) {
             self$set_analyte_data(.data) |>
                 getScatterPlotByGroup(
@@ -389,7 +478,6 @@ ScatterPlotStrategy <- R6Class(
 HeatmapPlotStrategy <- R6Class(
     "HeatmapPlotStrategy",
     inherit = PlotStrategyBase,
-    private = list(),
     active = list(
         analyte_var_name = function(value) {
             if ("QueryAnalyte" %in% colnames(self$summary_data)) {
@@ -482,9 +570,6 @@ HeatmapPlotStrategy <- R6Class(
         }
     ),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {
-            super$initialize(analysis_config, app_config, study, study_data, analyte, summary_data)
-        },
         render = function(.data) {
 
             self$set_analyte_data(.data)
@@ -570,7 +655,6 @@ HeatmapPlotStrategy <- R6Class(
 ScatterPlotWithSmoothingStrategy <- R6Class(
     "ScatterPlotWithSmoothingStrategy",
     inherit = PlotStrategyBase,
-    private = list(),
     active = list(
         ComparisonAnalyteLabel = function(value) {
             return(self$analyte_data[1, "yLabel"])
@@ -615,9 +699,6 @@ ScatterPlotWithSmoothingStrategy <- R6Class(
         }
     ),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data, analyte, summary_data) {
-            super$initialize(analysis_config, app_config, study, study_data, analyte, summary_data)
-        },
         render = function(.data) {
             self$set_analyte_data(.data) |>
                 mutate(Density = getDensityColors(x, y, transform = TRUE)) |>

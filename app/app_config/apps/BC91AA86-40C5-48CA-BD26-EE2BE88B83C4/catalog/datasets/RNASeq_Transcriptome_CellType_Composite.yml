@@ -1,0 +1,9 @@
+id: RNASeq_Transcriptome_CellType_Composite
+
+package: RNASeq_Transcriptome_CellType_Composite
+fact_name: transcriptomics
+
+available_features: 
+
+    cell_type:
+        enabled: true
