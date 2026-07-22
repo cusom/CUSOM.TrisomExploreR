@@ -1,12 +1,12 @@
 box::use(
     shiny[NS, moduleServer, tags, tagList, bindEvent, actionButton, icon, uiOutput,
         selectizeInput, renderUI, reactive, updateSelectizeInput, observeEvent,
-        validate, need, showNotification],
+        validate, need, showNotification, req],
     shinydashboardPlus[box],
     htmltools[HTML],
     shinyWidgets[virtualSelectInput, updateVirtualSelect, prepare_choices],
-    shinyjs[disabled, disable, enable, removeClass, addClass, hidden],
-    bsplus[bs_embed_tooltip],
+    shinyjs[disabled, disable, enable, removeClass, addClass, hidden, click],
+    bsplus[bs_embed_tooltip, bs_accordion, bs_set_opts, bs_append],
     shinycustomloader[withLoader],
     shinybusy[show_modal_spinner, remove_modal_spinner],
     glue[glue],
@@ -24,66 +24,34 @@ box::use(
 ui <- function(id) {
     ns <- NS(id)
     tagList(
-        box(
-            title = HTML(
-                "<div class=\"dataset-options-title\">Dataset Options
-                    <span
-                        data-toggle=\"tooltip\"
-                        data-placement=\"auto right\"
-                        title = \"\"
-                        class = \"fas fa-filter\"
-                        data-original-title=\"Set options below to generate volcano plot\">
-                    </span>
-                </div>"
-            ),
-            height = "auto",
-            width = NULL,
-            closable = FALSE,
-            solidHeader = FALSE,
-            collapsible = FALSE,
-            headerBorder = FALSE,
-            disabled(
-                actionButton(
-                    ns("PrimaryTutorial"),
-                    label = "Take Tutorial",
-                    class = "tutorial-btn",
-                    icon = icon("question-circle")
-                ) |>
-                bs_embed_tooltip(
-                    title = "Click here to learn about setting dataset options
-                        to generate the volcano plot",
-                    placement = "top",
-                    html = TRUE
-                )
-            ),
-            tags$div(
-                id = ns("scrollableOptions"),
-                style = "height:70vh;padding-left:2px;max-height:700px;overflow-y:auto;overflow-x:hidden;",
-                tags$hr(style = "margin-top:5px;margin-bottom:10px;"),
-                tags$b("1) Select Query Dataset"),
-                tags$div(
-                    id = ns("QueryStudies"),
+        tags$h3("Inputs"),
+        bs_accordion(id = ns("AccordionInputs")) |>
+            bs_set_opts(panel_type = "default", use_heading_link = TRUE) |>
+            bs_append(
+                title = "1) Select Query Dataset",
+                content = list(
                     withLoader(
                         uiOutput(ns("QueryExperiment")),
                         type = "html",
                         loader = "loader6",
                         proxy.height = "20px"
                     )
-                ),
-                tags$hr(),
-                tags$div(
-                    id = ns("CompareExperiments"),
+                )
+            ) |>
+            bs_append(
+                title = "2) Choose Comparison Dataset",
+                content = list(
                     withLoader(
                         uiOutput(ns("CompareExperiment")),
                         type = "html",
                         loader = "loader6",
                         proxy.height = "20px"
                     )
-                ),
-                tags$hr(),
-                tags$b("3) Select Query Analyte"),
-                tags$div(
-                    id = ns("QueryAnalyteInput"),
+                )
+            ) |>
+            bs_append(
+                title = "3) Choose Query Analyte",
+                content = list(
                     virtualSelectInput(
                         inputId = ns("QueryAnalyte"),
                         label = NULL,
@@ -94,7 +62,9 @@ ui <- function(id) {
                         zIndex = 9999,
                         dropboxWrapper = "body"
                     )
-                ),
+                )
+            ),
+            tags$div(
                 hidden(
                     tags$div(
                         id = "internals",
@@ -119,7 +89,7 @@ ui <- function(id) {
                     )
                 )
             ),
-            footer = tagList(
+            tags$div(
                 actionButton(
                     ns("getData"),
                     label = "Analyze & Plot",
@@ -128,8 +98,6 @@ ui <- function(id) {
                 )
             )
         )
-    )
-
 }
 
 #' @export
@@ -168,8 +136,13 @@ server <- function(id, app_config, analysis_config) {
 
         })
 
-        ComparisonExperiments <- reactive({
+        observeEvent(c(input$QueryExperiment), {
+            req(input$QueryExperiment)
+            click(glue("AccordionInputs-1-heading"), asis = FALSE)
+        }, ignoreInit = FALSE, priority = 999)
 
+        ComparisonExperiments <- reactive({
+            req(input$QueryExperiment)
             show_modal_spinner(
                 spin = "atom",
                 color = "#3c8dbc",
@@ -180,13 +153,12 @@ server <- function(id, app_config, analysis_config) {
             r6()$getComparisonExperiments(input$QueryExperiment)
 
         }) |>
-            bindEvent(c(input$QueryExperiment), ignoreInit = TRUE, ignoreNULL = TRUE)
+            bindEvent(c(input$QueryExperiment), ignoreInit = FALSE, ignoreNULL = TRUE)
 
         output$CompareExperiment <- renderUI({
 
             if (!is.null(ComparisonExperiments())) {
                 tagList(
-                    tags$b("2) Select Comparison Dataset"),
                     prettyRadioButtonsFieldSet(
                         input_id = ns("CompareExperiment"),
                         label = NULL,
@@ -207,6 +179,8 @@ server <- function(id, app_config, analysis_config) {
 
         observeEvent(c(input$CompareExperiment), {
 
+            click(glue("AccordionInputs-2-heading"), asis = FALSE)
+
             show_modal_spinner(
                 spin = "atom",
                 color = "#3c8dbc",
@@ -221,7 +195,7 @@ server <- function(id, app_config, analysis_config) {
 
             updateVirtualSelect(
                 inputId = "QueryAnalyte",
-                label = "",
+                label = "Query Analyte",
                 choices = prepare_choices(
                     choice_data,
                     label = QueryAnalyte,
