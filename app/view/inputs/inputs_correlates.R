@@ -1,11 +1,10 @@
 box::use(
     shiny[NS, moduleServer, tags, tagList, bindEvent, actionButton, icon, uiOutput,
-        selectizeInput, renderUI, reactive, updateSelectizeInput, observeEvent,
-        validate, need, showNotification, req],
+        selectizeInput, renderUI, reactive, reactiveVal, updateSelectizeInput, observeEvent,
+        validate, need, req],
     shinydashboardPlus[box],
-    htmltools[HTML],
     shinyWidgets[virtualSelectInput, updateVirtualSelect, prepare_choices],
-    shinyjs[disabled, disable, enable, removeClass, addClass, hidden, click],
+    shinyjs[disable, enable, hidden, click],
     bsplus[bs_embed_tooltip, bs_accordion, bs_set_opts, bs_append],
     shinycustomloader[withLoader],
     shinybusy[show_modal_spinner, remove_modal_spinner],
@@ -14,7 +13,6 @@ box::use(
 
 box::use(
     app/logic/shared/input_locking_utils,
-    app/logic/shared/server_utils,
     app/logic/shared/plot_utils[purge_plot],
     app/view/custom_ui/input_widgets[prettyRadioButtonsFieldSet],
     app/logic/correlates_analysis/inputs/CorrelatesInputs[getCorrelatesAnalysisInputs],
@@ -136,7 +134,7 @@ server <- function(id, app_config, analysis_config) {
 
         })
 
-        observeEvent(c(input$QueryExperiment), {
+        observeEvent(input$QueryExperiment, {
             req(input$QueryExperiment)
             click(glue("AccordionInputs-1-heading"), asis = FALSE)
         }, ignoreInit = FALSE, priority = 999)
@@ -153,7 +151,7 @@ server <- function(id, app_config, analysis_config) {
             r6()$getComparisonExperiments(input$QueryExperiment)
 
         }) |>
-            bindEvent(c(input$QueryExperiment), ignoreInit = FALSE, ignoreNULL = TRUE)
+            bindEvent(input$QueryExperiment, ignoreInit = FALSE, ignoreNULL = TRUE)
 
         output$CompareExperiment <- renderUI({
 
@@ -177,7 +175,7 @@ server <- function(id, app_config, analysis_config) {
 
         })
 
-        observeEvent(c(input$CompareExperiment), {
+        observeEvent(input$CompareExperiment, {
 
             click(glue("AccordionInputs-2-heading"), asis = FALSE)
 
@@ -207,14 +205,16 @@ server <- function(id, app_config, analysis_config) {
 
         }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
-        observeEvent(c(input$QueryAnalyte), {
+        observeEvent(input$QueryAnalyte, {
+
+            module_namespace <- sub("-$", "", session$ns(""))
 
             if (input$QueryAnalyte == "") {
 
                 disable(id = "CompareExperiment")
 
-                purge_plot(session, ns(id), "plot", r6())
-                purge_plot(session, ns(id), "AnalytePlot", r6())
+                purge_plot(session, module_namespace, "plot", r6())
+                purge_plot(session, module_namespace, "AnalytePlot", r6())
 
                 updateSelectizeInput(
                     session = session,
@@ -229,6 +229,9 @@ server <- function(id, app_config, analysis_config) {
             }
 
         }, ignoreInit = TRUE, ignoreNULL = TRUE)
+
+        last_request_signature <- reactiveVal(NULL)
+        last_correlation_data <- reactiveVal(NULL)
 
         input_locking_utils$bind_action_button_state(
             session = session,
@@ -254,6 +257,18 @@ server <- function(id, app_config, analysis_config) {
                 need(input$CompareExperiment != "", "")
             )
 
+            request_signature <- paste(
+                input$QueryExperiment,
+                input$CompareExperiment,
+                input$QueryAnalyte,
+                sep = "::"
+            )
+
+            if (identical(last_request_signature(), request_signature) &&
+                !is.null(last_correlation_data())) {
+                return(last_correlation_data())
+            }
+
             show_modal_spinner(
                 spin = "atom",
                 color = "#3c8dbc",
@@ -261,14 +276,19 @@ server <- function(id, app_config, analysis_config) {
             )
             on.exit(remove_modal_spinner(), add = TRUE)
 
-            r6()$get_correlation_data(
+            data <- r6()$get_correlation_data(
                 input$QueryExperiment,
                 input$CompareExperiment,
                 input$QueryAnalyte
             )
 
+            last_request_signature(request_signature)
+            last_correlation_data(data)
+
+            data
+
         }) |>
-            bindEvent(c(input$getData), ignoreInit = TRUE)
+            bindEvent(input$getData, ignoreInit = TRUE)
 
         return(
             list(
