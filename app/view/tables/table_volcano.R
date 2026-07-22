@@ -1,6 +1,6 @@
 
 box::use(
-    shiny[NS, tagList, tags, moduleServer, reactive, renderUI, validate, need, observe, observeEvent,
+    shiny[NS, tagList, tags, moduleServer, reactive, renderUI, validate, need, req, observe, observeEvent,
         fluidRow, column, uiOutput, bindEvent, sliderInput, actionButton, icon],
     shinyWidgets[prettyRadioButtons],
     shinycustomloader[withLoader],
@@ -14,7 +14,8 @@ box::use(
 
 box::use(
     app/logic/shared/file_utils[download_file],
-    app/logic/shared/table_volcano_utils[get_fold_change_slider_settings, prepare_volcano_table_data]
+    app/logic/shared/table_volcano_utils[get_fold_change_column_label, 
+    get_fold_change_slider_settings, prepare_volcano_table_data]
 )
 
 #' @export
@@ -74,7 +75,7 @@ ui <- function(
 }
 
 #' @export
-server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, study, ...) {
+server <- function(id, summary_data, adjusted, stat_test, study, ...) {
 
     moduleServer(id, function(input, output, session) {
 
@@ -82,6 +83,11 @@ server <- function(id, summary_data, fold_change_variable, adjusted, stat_test, 
 
         observe({
             toggleState(id = "data", condition = !is.null(summary_data()))
+        })
+
+        fold_change_variable <- reactive({
+            req(summary_data())
+            get_fold_change_column_label(summary_data())
         })
 
         output$fold_change <- renderUI({
