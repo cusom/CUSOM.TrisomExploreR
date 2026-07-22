@@ -3,32 +3,24 @@ box::use(
         NS,
         actionButton,
         bindEvent,
-        HTML,
+        eventReactive,
         icon,
         moduleServer,
-        need,
         observe,
         observeEvent,
         reactive,
         reactiveVal,
         renderUI,
         req,
-        selectizeInput,
         tagList,
         uiOutput,
-        validate,
         tags
     ],
-    shinydashboardPlus[box],
     shinyjs[addClass, disable, disabled, enable, removeClass, click],
     bsplus[bs_embed_tooltip, bs_accordion, bs_set_opts, bs_append],
     shinycustomloader[withLoader],
-    shinyWidgets[awesomeCheckboxGroup, numericRangeInput, prettyRadioButtons, virtualSelectInput,
-        prepare_choices, updatePrettyRadioButtons],
-    shinybusy[remove_modal_spinner, show_modal_spinner],
-    glue[glue],
-    dplyr[arrange, filter, pull],
-    rlang[set_names]
+    shinyWidgets[awesomeCheckboxGroup, prettyRadioButtons, virtualSelectInput, prepare_choices],
+    glue[glue]
 )
 
 box::use(
@@ -89,7 +81,7 @@ ui <- function(id) {
                     proxy.height = "20px"
                 )
             )
-        ), 
+        ),
         tags$div(
             actionButton(
                 ns("run_analysis"),
@@ -107,6 +99,17 @@ server <- function(id, app_config, analysis_config) {
     moduleServer(id, function(input, output, session) {
 
         ns <- session$ns
+
+        ANALYSIS_CONST <- list(
+            feature_id = "timepoint",
+            analysis_id = "tofa_feature_association",
+            statistic_id = "linear_model",
+            feature_label = "Timepoint",
+            stat_test_label = "Linear Model",
+            covariates = c("Sex", "Age"),
+            adjustment_method = "BH",
+            fold_change_variable = "Event_Name"
+        )
 
         output$dataset <- renderUI({
 
@@ -129,11 +132,46 @@ server <- function(id, app_config, analysis_config) {
         })
 
         r6_obj <- reactiveVal(NULL)
+        study_plan_cache <- reactiveVal(list())
+        accordion_opened <- reactiveVal(FALSE)
 
-        # Recreate the R6 instance when Dataset changes (including initial selection)
+        build_study_plan <- function(dataset_id) {
+            context <- app_config$feature_association_planner$create_context(
+                feature_id = ANALYSIS_CONST$feature_id,
+                dataset_id = dataset_id,
+                statistic_id = ANALYSIS_CONST$statistic_id,
+                filters = list(),
+                covariates = character(0),
+                visualization = list(),
+                analysis_id = ANALYSIS_CONST$analysis_id
+            )
+
+            app_config$feature_association_planner$plan(context)
+        }
+
+        get_or_build_study_plan <- function(dataset_id) {
+            req(dataset_id)
+
+            cache <- study_plan_cache()
+            if (!is.null(cache[[dataset_id]])) {
+                return(cache[[dataset_id]])
+            }
+
+            plan <- build_study_plan(dataset_id)
+            cache[[dataset_id]] <- plan
+            study_plan_cache(cache)
+            plan
+        }
+
+        # Recreate the R6 instance when Dataset changes (including initial selection).
         observeEvent(input$dataset, ignoreInit = FALSE, {
             req(input$dataset)
-            click(glue("AccordionInputs-1-heading"), asis = FALSE)
+
+            if (!accordion_opened()) {
+                click(glue("AccordionInputs-1-heading"), asis = FALSE)
+                accordion_opened(TRUE)
+            }
+
             inst <- getFeatureAnalysisInputs(
                 app_config = app_config,
                 analysis_config = app_config$get_analysis_config(input$dataset),
@@ -141,75 +179,69 @@ server <- function(id, app_config, analysis_config) {
                 dataset = input$dataset
             )
             r6_obj(inst)
+
+            # Precompute once; subsequent runs read from cache.
+            get_or_build_study_plan(input$dataset)
         })
 
-        #expose a reactive that always reads the current instance
+        # Expose a reactive that always reads the current instance.
         r6 <- reactive({
             req(r6_obj())
             r6_obj()
         })
 
-        run_snapshot <- reactiveVal(NULL)
-
-        build_study_plan <- function(dataset_id) {
-            context <- app_config$feature_association_planner$create_context(
-                feature_id = "timepoint",
-                dataset_id = dataset_id,
-                statistic_id = "linear_model",
-                filters = list(),
-                covariates = character(0),
-                visualization = list(),
-                analysis_id = "tofa_feature_association"
-            )
-
-            app_config$feature_association_planner$plan(context)
-        }
-
         output$sexes <- renderUI({
+            source <- r6()
             disabled(
                 awesomeCheckboxGroup(
                     inputId = ns("sexes"),
                     label = "Sex",
-                    choices = r6()$Sexes,
-                    selected = r6()$Sexes,
+                    choices = source$Sexes,
+                    selected = source$Sexes,
                     inline = TRUE,
                     width = "90%"
                 )
             )
-        })
+        }) |>
+            bindEvent(r6_obj(), ignoreNULL = TRUE)
 
         output$karyotype <- renderUI({
+            source <- r6()
             disabled(
                 prettyRadioButtons(
                     inputId = ns("karyotype"),
                     label = "Karyotype",
-                    choiceNames = r6()$Karyotypes,
-                    choiceValues = r6()$Karyotypes,
+                    choiceNames = source$Karyotypes,
+                    choiceValues = source$Karyotypes,
                     inline = TRUE,
                     width = "90%"
                 )
             )
-        })
+        }) |>
+            bindEvent(r6_obj(), ignoreNULL = TRUE)
 
         output$age_group <- renderUI({
+            source <- r6()
             disabled(
                 awesomeCheckboxGroup(
                     inputId = ns("age_group"),
                     label = "Age Groups",
-                    choices = r6()$Age_Groups,
-                    selected = r6()$Age_Groups,
+                    choices = source$Age_Groups,
+                    selected = source$Age_Groups,
                     inline = FALSE,
                     width = "90%"
                 )
             )
-        })
+        }) |>
+            bindEvent(r6_obj(), ignoreNULL = TRUE)
 
         output$comparison <- renderUI({
+            source <- r6()
             virtualSelectInput(
                 inputId = ns("comparison"),
                 label = "Comparisons Available",
                 choices = prepare_choices(
-                    r6()$baseline_comparisons,
+                    source$baseline_comparisons,
                     label = analysis,
                     value = events
                 ),
@@ -217,7 +249,8 @@ server <- function(id, app_config, analysis_config) {
                 multiple = FALSE,
                 search = FALSE
             )
-        })
+        }) |>
+            bindEvent(r6_obj(), ignoreNULL = TRUE)
 
         is_ready_to_analyze <- reactive({
             source_ready <- !is.null(r6_obj())
@@ -237,65 +270,66 @@ server <- function(id, app_config, analysis_config) {
             }
         })
 
-        observeEvent(input$run_analysis, ignoreInit = TRUE, {
+        analysis_run <- eventReactive(input$run_analysis, {
             req(is_ready_to_analyze())
 
             dataset_id <- input$dataset
             comparison_value <- input$comparison
 
-            data <- r6()$get_study_data(
-                study = input$dataset,
-                input$sexes,
-                input$races,
-                input$ethnicities,
-                input$karyotype,
-                input$age,
-                input$age_group,
-                input$conditions,
-                input$comparison,
-                stat_test = "Linear Model",
-                covariates = c("Sex", "Age"),
-                adjustment_method = "BH"
+            filters <- list(
+                sexes = input$sexes,
+                karyotype = input$karyotype,
+                age_groups = input$age_group,
+                comparison = comparison_value
             )
 
-            plan <- build_study_plan(dataset_id)
-
-            run_snapshot(
-                list(
-                    study_data = data,
-                    study_plan = plan,
-                    comparison = comparison_value,
-                    study = dataset_id
+            data <- do.call(
+                r6()$get_study_data,
+                c(
+                    list(
+                        study = dataset_id,
+                        stat_test = ANALYSIS_CONST$stat_test_label,
+                        covariates = ANALYSIS_CONST$covariates,
+                        adjustment_method = ANALYSIS_CONST$adjustment_method
+                    ),
+                    filters
                 )
             )
-        })
+
+            list(
+                study_data = data,
+                study_plan = get_or_build_study_plan(dataset_id),
+                comparison = comparison_value,
+                study = dataset_id
+            )
+        }, ignoreInit = TRUE)
 
         study_data <- reactive({
-            req(run_snapshot())
-            run_snapshot()$study_data
+            req(analysis_run())
+            analysis_run()$study_data
         })
 
         study_plan <- reactive({
-            req(run_snapshot())
-            run_snapshot()$study_plan
+            req(analysis_run())
+            analysis_run()$study_plan
         })
 
         selected_comparison <- reactive({
-            req(run_snapshot())
-            run_snapshot()$comparison
+            req(analysis_run())
+            analysis_run()$comparison
         })
 
         return(
             list(
-                feature = reactive({"Timepoint"}),
+                feature = reactive({ANALYSIS_CONST$feature_label}),
                 study = reactive({input$dataset}),
                 study_label = reactive({input$dataset}),
                 study_data = study_data,
                 study_plan = study_plan,
-                stat_test = reactive({"Linear Model"}),
-                covariates = reactive({c("Sex", "Age")}),
-                adjustment_method = reactive({"BH"}),
-                fold_change_variable = reactive({"Event_Name"}),
+                stat_test = reactive({ANALYSIS_CONST$stat_test_label}),
+                covariates = reactive({ANALYSIS_CONST$covariates}),
+                adjustment_method = reactive({ANALYSIS_CONST$adjustment_method}),
+                fold_change_variable = reactive({ANALYSIS_CONST$fold_change_variable}),
                 adjusted = reactive(TRUE),
                 comparison = selected_comparison
             )
