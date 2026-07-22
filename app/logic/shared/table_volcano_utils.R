@@ -91,6 +91,34 @@ filter_volcano_table_data <- function(
     summary_df[keep_rows, , drop = FALSE]
 }
 
+#' @export
+get_fold_change_column_label <- function(summary_df) {
+    fold_change_candidates <- c("log2FoldChange", "log2(Fold Change)", "logFC", "log2FC", 
+        "log2 fold change", "log fold change", "Fold Change", "fold change", "log(fold change)", "logfc", "logfc")
+
+    for (candidate in fold_change_candidates) {
+        matching_columns <- find_matching_columns(colnames(summary_df), candidate, exclude_log = TRUE)
+        if (length(matching_columns) > 0) {
+            return(matching_columns[[1]])
+        }
+    }
+
+    NULL
+}
+
+#' @export
+get_significance_column_label <- function(summary_df) {
+    significance_candidates <- c("q-value", "q.value" , "p.value", "p-value", "p")
+
+    for (candidate in significance_candidates) {
+        matching_columns <- find_matching_columns(colnames(summary_df), candidate, exclude_log = TRUE)
+        if (length(matching_columns) > 0) {
+            return(matching_columns[[1]])
+        }
+    }
+
+    NULL
+}
 
 #' @export
 get_fold_change_slider_settings <- function(summary_df, fold_change_label) {
