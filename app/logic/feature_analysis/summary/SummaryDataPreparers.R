@@ -1,18 +1,17 @@
 box::use(
     R6[R6Class],
-    glue[glue, glue_collapse],
-    tibble[tibble],
+    glue[glue],
     dplyr[select, mutate, mutate_at, group_by, summarise, ungroup, rename_with, rename,
             distinct, n, pull, arrange, dense_rank, row_number, vars, filter, if_else, slice_max],
     forcats[fct_relevel],
-    purrr[pmap, map2_chr],
-    stringr[str_split_1, str_replace],
+    purrr[map2_chr],
+    stringr[str_replace],
     rlang[sym]
 )
 
 box::use(
     app/logic/shared/statistical_analysis[getStatTestByKeyGroup, getLinearModelWithInteraction,
-        formatPValue, addGroupCount],
+        formatPValue],
 )
 
 SummaryDataPreparerBase <- R6Class(
@@ -129,14 +128,7 @@ SummaryDataPreparerBase <- R6Class(
 CategoricalSummaryPreparer <- R6Class(
     "CategoricalSummaryPreparer",
     inherit = SummaryDataPreparerBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data,
-            stat_test, covariates, adjustment_method) {
-            super$initialize(analysis_config, app_config, study, study_data,
-                stat_test, covariates, adjustment_method)
-        },
         set_summary_data = function(source_data) {
             self$summary_data <- self$set_source_data(source_data) |>
                 select(LabID, Analyte, log2MeasuredValue, self$analysis_variable, self$covariates) |>
@@ -164,14 +156,7 @@ CategoricalSummaryPreparer <- R6Class(
 ContinuousSummaryPreparer <- R6Class(
     "ContinuousSummaryPreparer",
     inherit = SummaryDataPreparerBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data,
-            stat_test, covariates, adjustment_method) {
-            super$initialize(analysis_config, app_config, study, study_data,
-                stat_test, covariates, adjustment_method)
-        },
         set_summary_data = function(source_data) {
             self$summary_data <- self$set_source_data(source_data) |>
                 select(LabID, Analyte, log2MeasuredValue, self$analysis_variable, self$covariates, Karyotype) |>
@@ -199,7 +184,6 @@ ContinuousSummaryPreparer <- R6Class(
 CorrelatesSummaryPreparer <- R6Class(
     "CorrelatesSummaryPreparer",
     inherit = SummaryDataPreparerBase,
-    private = list(),
     active = list(
         summary_data_max_finite = function(value) {
             return(
@@ -247,11 +231,6 @@ CorrelatesSummaryPreparer <- R6Class(
         }
     ),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data,
-            stat_test, covariates, adjustment_method) {
-            super$initialize(analysis_config, app_config, study, study_data,
-                stat_test, covariates, adjustment_method)
-        },
         set_summary_data = function(source_data) {
             self$summary_data <- self$set_source_data(source_data)
         },
@@ -291,39 +270,152 @@ CorrelatesSummaryPreparer <- R6Class(
 PreCalculatedSummaryPreparer <- R6Class(
     "PreCalculatedSummaryPreparer",
     inherit = SummaryDataPreparerBase,
-    private = list(),
-    active = list(),
     public = list(
-        initialize = function(analysis_config, app_config, study, study_data,
-            stat_test, covariates, adjustment_method) {
-            super$initialize(analysis_config, app_config, study, study_data,
-                stat_test, covariates, adjustment_method)
-        },
         set_summary_data = function(source_data) {
             self$summary_data <- self$set_source_data(source_data)
         },
         prepare = function(source_data) {
-            self$prepared_data <- self$set_summary_data(source_data) |>
-                select("AnalyteID" = Geneid, "Analyte" = Gene_name, FoldChange, pvalue, padj) |>
-                rename(
-                    "p.value.original" = pvalue,
-                    "p.value" = padj
-                ) |>
+            source <- self$set_summary_data(source_data)
+
+            first_present <- function(candidates) {
+                hits <- intersect(candidates, names(source))
+
+                if (length(hits) == 0) {
+                    return(NULL)
+                }
+
+                hits[[1]]
+            }
+
+            analyte_col <- first_present(c("Analyte", "AnalyteName", "Feature", "Gene_name", "Gene", "feature", "analyte"))
+
+            if (all(c("FoldChange", "pvalue", "padj") %in% names(source))) {
+                if (is.null(analyte_col)) {
+                    stop("Precalculated summary artifact is missing an analyte column.", call. = FALSE)
+                }
+
+                self$prepared_data <- source |>
+                    mutate(Analyte = .data[[analyte_col]]) |>
+                    select(Analyte, FoldChange, pvalue, padj) |>
+                    rename(
+                        "p.value.original" = pvalue,
+                        "p.value" = padj
+                    ) |>
+                    mutate(
+                        shape = "circle",
+                        selectedPoint = 0L,
+                        log2FoldChange = log2(FoldChange),
+                        `-log10pvalue` = -log10(p.value),
+                        `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
+                        formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
+                        text = glue(
+                            "Gene: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"
+                        ),
+                        lmFormula = "
+                        <a
+                            href='https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html'
+                            target='_blank'>DESeq2 model
+                        </a>",
+                        ivs = ""
+                    )
+            } else {
+                fold_col <- first_present(c("FoldChange", "log<sub>2</sub>(Fold Change)", "log2FoldChange"))
+                p_orig_col <- first_present(c("p.value.original", "p-value (original)", "pvalue"))
+                p_adj_col <- first_present(c("p.value", "q-value", "padj"))
+
+                if (is.null(analyte_col) || is.null(fold_col) || is.null(p_adj_col)) {
+                    stop("Precalculated summary artifact is missing required columns.", call. = FALSE)
+                }
+
+                self$prepared_data <- source |>
+                    mutate(
+                        Analyte = .data[[analyte_col]],
+                        FoldChange = ifelse(grepl("log", fold_col, ignore.case = TRUE), 2 ^ as.numeric(.data[[fold_col]]), as.numeric(.data[[fold_col]])),
+                        `p.value.original` = if (!is.null(p_orig_col)) as.numeric(.data[[p_orig_col]]) else as.numeric(.data[[p_adj_col]]),
+                        `p.value` = as.numeric(.data[[p_adj_col]]),
+                        shape = "circle",
+                        selectedPoint = 0L,
+                        log2FoldChange = log2(FoldChange),
+                        `-log10pvalue` = -log10(p.value),
+                        `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
+                        formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
+                        text = glue("Analyte: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"),
+                        lmFormula = "",
+                        ivs = "",
+                        AnalyteID = dense_rank(Analyte)
+                    ) |>
+                    select(AnalyteID, Analyte, FoldChange, `p.value.original`, `p.value`, shape, selectedPoint,
+                        log2FoldChange, `-log10pvalue`, `p.value.adjustment.method`, formattedPValue, text,
+                        lmFormula, ivs)
+            }
+            return(invisible(self$prepared_data))
+        }
+    )
+)
+
+#' @export
+PreCalculatedTOFASummaryPreparer <- R6Class(
+    "PreCalculatedTOFASummaryPreparer",
+    inherit = SummaryDataPreparerBase,
+    public = list(
+        set_summary_data = function(source_data) {
+            self$summary_data <- self$set_source_data(source_data)
+        },
+        prepare = function(source_data, comparison = NULL, ...) {
+            source <- self$set_summary_data(source_data)
+
+            first_present <- function(candidates) {
+                hits <- intersect(candidates, names(source))
+
+                if (length(hits) == 0) {
+                    return(NULL)
+                }
+
+                hits[[1]]
+            }
+
+            if (!is.null(comparison) && nzchar(trimws(comparison)) && "Timepoint" %in% names(source)) {
+                comparison_parts <- strsplit(as.character(comparison), "\\|")[[1]]
+                comparison_parts <- trimws(comparison_parts)
+                comparison_parts <- comparison_parts[nzchar(comparison_parts)]
+
+                selected_timepoint <- NULL
+                if (length(comparison_parts) >= 2) {
+                    selected_timepoint <- comparison_parts[[2]]
+                } else if (length(comparison_parts) == 1) {
+                    selected_timepoint <- comparison_parts[[1]]
+                }
+
+                if (!is.null(selected_timepoint) && nzchar(selected_timepoint)) {
+                    source <- source |>
+                        filter(Timepoint == selected_timepoint)
+                }
+            }
+
+            analyte_col <- first_present(c("Analyte", "AnalyteName", "Score_name", "Feature"))
+            fold_col <- first_present(c("Mean_difference", "FoldChange", "log2FoldChange"))
+            p_orig_col <- first_present(c("pvalue", "p.value.original", "p.value"))
+            p_adj_col <- first_present(c("padj", "qvalue", "p.value", "p_adj"))
+
+            if (is.null(analyte_col) || is.null(fold_col) || is.null(p_adj_col)) {
+                stop("TOFA precalculated artifact is missing required columns.", call. = FALSE)
+            }
+
+            self$prepared_data <- source |>
                 mutate(
+                    Analyte = .data[[analyte_col]],
+                    FoldChange = as.numeric(.data[[fold_col]]),
+                    `p.value.original` = if (!is.null(p_orig_col)) as.numeric(.data[[p_orig_col]]) else as.numeric(.data[[p_adj_col]]),
+                    `p.value` = as.numeric(.data[[p_adj_col]]),
                     shape = "circle",
                     selectedPoint = 0L,
-                    log2FoldChange = log2(FoldChange),
                     `-log10pvalue` = -log10(p.value),
                     `p.value.adjustment.method` = "Benjamini-Hochberg (FDR)",
                     formattedPValue = map2_chr(p.value, `p.value.adjustment.method`, formatPValue),
                     text = glue(
-                        "Gene: {Analyte}<br />fold change: {round(FoldChange,2)}<br />{formattedPValue}"
+                        "Score: {Analyte}<br />Difference: {round(FoldChange,2)}<br />{formattedPValue}"
                     ),
-                    lmFormula = "
-                    <a
-                        href='https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html'
-                        target='_blank'>DESeq2 model
-                    </a>",
+                    lmFormula = "",
                     ivs = ""
                 )
             return(invisible(self$prepared_data))

@@ -1,0 +1,6 @@
+id: timepoint
+display_name: Comparison to baseline
+description: Timepoint of the visit
+owner: visits
+column: Event_Name
+data_type: categorical

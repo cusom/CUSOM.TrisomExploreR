@@ -1,3 +1,8 @@
+options(box.path = unique(c(
+  normalizePath(getwd(), winslash = "/", mustWork = TRUE),
+  getOption("box.path") %||% character(0)
+)))
+
 box::use(
   config[get],
   glue[glue],
@@ -5,18 +10,23 @@ box::use(
 )
 
 box::use(
-  app/logic/app_resources/app_configs[TrisomExplorerAppManager]
+  app/logic/shared/global_utils[`%||%`]
+)
+
+box::use(
+  app/logic/app_resources/app_configs[create_app_settings, load_application_config]
 )
 
 #load configs
 application_id <- config::get(file = "config.yml", "application_id")
-app_config <- config::get(file = "app/app_configs.yml", config = application_id)
+app_config <- load_application_config(application_id = application_id)
 
 # dynamically load entrypoint module
 eval(parse(text = glue("box::use({app_config$entry_point_path}/{app_config$entry_point})")))
 
-app_settings <- TrisomExplorerAppManager$new(
-  application_id = application_id
+app_settings <- create_app_settings(
+  application_id = application_id,
+  app_config = app_config
 )
 
 #' @export

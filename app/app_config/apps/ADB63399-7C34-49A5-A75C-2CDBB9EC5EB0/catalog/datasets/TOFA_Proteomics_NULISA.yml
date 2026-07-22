@@ -1,0 +1,7 @@
+id: tofa_proteomics_nulisa
+
+package: TOFA_Proteomics_NULISA
+
+available_features:
+    timepoint:
+        enabled: true

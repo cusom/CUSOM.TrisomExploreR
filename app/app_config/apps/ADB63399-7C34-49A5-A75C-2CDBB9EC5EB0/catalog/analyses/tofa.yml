@@ -1,0 +1,68 @@
+id: tofa_feature_association
+
+display_name: TOFA Trial Feature Association
+
+description: >
+  Evaluate the association between a selected biological or clinical feature
+  and analyte abundance across one or more experiments.
+
+version: 1.0
+
+category: Differential Analysis
+
+icon: feature_association
+
+enabled: true
+
+features:
+  timepoint:
+    datasets:
+    - TOFA_Proteomics_Endpoints
+    - TOFA_Proteomics_NULISA
+    
+supported_statistics:
+  source: package
+
+supports:
+
+  filtering: true
+
+  covariates: true
+
+  subgroup_analysis: true
+
+  multiple_testing_correction: true
+
+  precalculated_statistics: true
+
+  generated_statistics: true
+
+default_outputs:
+
+  summary_plot: volcano
+
+  drilldown_plot: boxplot
+
+planner:
+
+  feature_source: feature_registry
+
+  dataset_source: dataset_registry
+
+  statistic_source: package
+
+  feature_dimension: feature_definition
+
+  measurement_source: package
+
+execution:
+
+  strategy: feature_association
+
+  drilldown: analyte_measurements
+
+tags:
+  - differential
+  - feature
+  - statistics
+
