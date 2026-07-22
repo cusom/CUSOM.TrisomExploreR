@@ -35,7 +35,7 @@ ui <- function(id) {
             class = "col-xs-12 col-lg-12 vh-95 pl-0 pr-0 ml-0 mr-0",
             tags$div(
               class = "container-fluid plot-toolbar-row",
-              style = "padding-bottom: 10px;",
+              style = "padding-bottom: 2px;",
               tags$div(
                 class = "container d-flex align-items-left justify-content-between flex-wrap",
                 tags$ul(
@@ -62,7 +62,7 @@ ui <- function(id) {
               withLoader(
                 plotlyOutput(
                   ns("AnalytePlot"),
-                  height = "605px",
+                  height = "600px",
                   width = "99%"
                 ),
                 type = "html",

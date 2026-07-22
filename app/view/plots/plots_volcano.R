@@ -3,7 +3,7 @@ box::use(
     isolate, reactiveVal, observeEvent, req],
   shinydashboardPlus[box],
   shinycustomloader[withLoader],
-  plotly[plotlyOutput, renderPlotly, event_data, toWebGL],
+  plotly[plotlyOutput, renderPlotly, event_data, toWebGL, plotly_empty, layout],
   shinybusy[show_modal_spinner, remove_modal_spinner],
 )
 
@@ -32,7 +32,7 @@ ui <- function(id) {
             class = "col-xs-12 col-lg-12 vh-95 pl-0 pr-0 ml-0 mr-0",
             tags$div(
               class = "container-fluid plot-toolbar-row",
-              style = "padding-bottom: 10px;",
+              style = "padding-bottom: 2px;",
               tags$div(
                 class = "container d-flex align-items-left justify-content-between flex-wrap",
                 tags$ul(
@@ -134,8 +134,27 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
         bindEvent(study_data(), comparison(), ignoreInit = FALSE)
     }
 
-    output$plot <- renderPlotly({
+    empty_plot <- function() {
+      plotly_empty() |>
+        layout(
+          xaxis = list(visible = FALSE),
+          yaxis = list(visible = FALSE),
+          annotations = list(list(
+            text = "Loading new study...",
+            x = 0.5,
+            y = 0.5,
+            showarrow = FALSE
+          ))
+        )
+      }
 
+    rendered_plot <- reactiveVal(empty_plot())
+
+    observeEvent(study(), {
+      rendered_plot(empty_plot())
+    }, ignoreInit = TRUE, priority = 100)
+
+    observeEvent(summary_data(), {
       validate(
         need(!is.null(summary_data()), "")
       )
@@ -149,13 +168,17 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
         )
         on.exit(remove_modal_spinner(), add = TRUE)
 
-        summary_data() |>
-          r6()$get_summary_plot() |>
-          set_plot_source(ns("plot")) |>
-          toWebGL()
-
+        rendered_plot(
+          summary_data() |>
+            r6()$get_summary_plot() |>
+            set_plot_source(ns("plot")) |>
+            toWebGL()
+        )
       })
+    }, ignoreInit = FALSE)
 
+    output$plot <- renderPlotly({
+      rendered_plot()
     })
 
     plot_click_data <- reactive({
@@ -200,13 +223,18 @@ server <- function(id, analysis_config, app_config, feature, study, study_data, 
     )
 
     table_data <- reactive({
+      req(summary_data())
       r6()$get_table_data()
+    }) |>
+    bindEvent(summary_data(), ignoreInit = FALSE)
+
+    adjusted <- reactive({
+      adjustment_method() != "none"
     })
 
     table_volcano$server(
       id = "summary-data",
       summary_data = table_data,
-      fold_change_variable = fold_change_variable,
       adjusted = adjusted,
       stat_test = stat_test,
       study = study,
