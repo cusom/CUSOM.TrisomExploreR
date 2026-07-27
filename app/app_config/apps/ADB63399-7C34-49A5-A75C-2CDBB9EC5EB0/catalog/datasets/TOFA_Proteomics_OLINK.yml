@@ -1,0 +1,7 @@
+id: tofa_proteomics_olink
+
+package: TOFA_Proteomics_OLINK
+
+available_features:
+    timepoint:
+        enabled: true

@@ -19,6 +19,7 @@ features:
     datasets:
     - TOFA_Proteomics_Endpoints
     - TOFA_Proteomics_NULISA
+    - TOFA_Proteomics_OLINK
     
 supported_statistics:
   source: package
