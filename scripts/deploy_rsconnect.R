@@ -103,6 +103,132 @@ collect_paths <- function(paths) {
   unique(gsub("\\\\", "/", collected))
 }
 
+resolve_app_config_app_dir <- function(application_id, apps_root = "app/app_config/apps") {
+  if (!dir.exists(apps_root)) {
+    stop(sprintf("App config apps directory not found: %s", apps_root), call. = FALSE)
+  }
+
+  candidates <- list.dirs(apps_root, recursive = FALSE, full.names = TRUE)
+
+  if (length(candidates) == 0) {
+    stop(sprintf("No app config directories found under: %s", apps_root), call. = FALSE)
+  }
+
+  candidate_ids <- vapply(basename(candidates), normalize_app_id, character(1))
+  requested_id <- normalize_app_id(application_id)
+  matched <- which(candidate_ids == requested_id)
+
+  if (length(matched) == 0) {
+    stop(
+      sprintf("No app config directory matched application_id '%s' under %s", application_id, apps_root),
+      call. = FALSE
+    )
+  }
+
+  candidates[[matched[[1]]]]
+}
+
+read_dataset_package <- function(dataset_file) {
+  lines <- readLines(dataset_file, warn = FALSE)
+  package_line <- grep("^\\s*package\\s*:", lines, value = TRUE)
+
+  if (length(package_line) == 0) {
+    return("")
+  }
+
+  value <- sub("^\\s*package\\s*:\\s*", "", package_line[[1]])
+  value <- sub("\\s+#.*$", "", value)
+  value <- trimws(value)
+  value <- gsub("^['\"]|['\"]$", "", value)
+
+  if (!nzchar(value)) "" else value
+}
+
+clean_yaml_scalar <- function(value) {
+  cleaned <- trimws(value)
+  cleaned <- sub("\\s+#.*$", "", cleaned)
+  cleaned <- gsub("^['\"]|['\"]$", "", cleaned)
+  trimws(cleaned)
+}
+
+get_app_meta_for_application <- function(application_id, app_configs_file = "app/app_configs.yml") {
+  if (file.exists(app_configs_file) && !dir.exists(app_configs_file)) {
+    app_meta <- config::get(file = app_configs_file, config = application_id)
+    return(list(application_name = app_meta$application_name %||% ""))
+  }
+
+  app_dir <- resolve_app_config_app_dir(application_id)
+  app_meta_file <- file.path(app_dir, "app.yml")
+
+  if (!file.exists(app_meta_file)) {
+    return(list(application_name = ""))
+  }
+
+  lines <- readLines(app_meta_file, warn = FALSE)
+  app_title_line <- grep("^\\s*application_title\\s*:", lines, value = TRUE)
+  app_name_line <- grep("^\\s*name\\s*:", lines, value = TRUE)
+
+  app_title <- ""
+  app_name <- ""
+
+  if (length(app_title_line) > 0) {
+    app_title <- clean_yaml_scalar(sub("^\\s*application_title\\s*:\\s*", "", app_title_line[[1]]))
+  }
+
+  if (length(app_name_line) > 0) {
+    app_name <- clean_yaml_scalar(sub("^\\s*name\\s*:\\s*", "", app_name_line[[1]]))
+  }
+
+  list(application_name = first_non_empty(app_title, app_name, ""))
+}
+
+get_app_config_include_paths <- function(application_id) {
+  app_config_root <- "app/app_config"
+  apps_root <- file.path(app_config_root, "apps")
+  packages_root <- file.path(app_config_root, "packages")
+  app_dir <- resolve_app_config_app_dir(application_id, apps_root = apps_root)
+
+  datasets_dir <- file.path(app_dir, "catalog", "datasets")
+
+  if (!dir.exists(datasets_dir)) {
+    stop(
+      sprintf("Datasets directory not found for application_id '%s': %s", application_id, datasets_dir),
+      call. = FALSE
+    )
+  }
+
+  dataset_files <- list.files(
+    datasets_dir,
+    pattern = "\\.(yml|yaml)$",
+    full.names = TRUE
+  )
+
+  package_names <- unique(vapply(dataset_files, read_dataset_package, character(1)))
+  package_names <- package_names[nzchar(package_names)]
+
+  if (length(package_names) == 0) {
+    package_names <- unique(tools::file_path_sans_ext(basename(dataset_files)))
+  }
+
+  package_dirs <- file.path(packages_root, package_names)
+  missing_package_dirs <- package_dirs[!dir.exists(package_dirs)]
+
+  if (length(missing_package_dirs) > 0) {
+    stop(
+      sprintf(
+        "Package directories referenced by datasets are missing: %s",
+        paste(gsub("\\\\", "/", missing_package_dirs), collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+
+  c(
+    gsub("\\\\", "/", app_dir),
+    gsub("\\\\", "/", package_dirs)
+  )
+}
+
 stage_app_bundle <- function(files, target_server = "") {
   stage_dir <- file.path(tempdir(), paste0("rsconnect-stage-", as.integer(Sys.time())))
   dir.create(stage_dir, recursive = TRUE, showWarnings = FALSE)
@@ -166,7 +292,7 @@ get_target_for_app_id <- function(deploy_targets, app_id) {
   deploy_targets[[target_names[[matched_idx[[1]]]]]]
 }
 
-build_app_file_manifest <- function(use_renv_lock = FALSE) {
+build_app_file_manifest <- function(application_id, use_renv_lock = FALSE) {
   include_paths <- c(
     "app.R",
     "config.yml",
@@ -181,11 +307,22 @@ build_app_file_manifest <- function(use_renv_lock = FALSE) {
 
   files <- collect_paths(include_paths)
 
-  excluded <- grepl("(^|/)app/logic/legacy_logic(/|$)", files) |
+  app_config_include_paths <- get_app_config_include_paths(application_id)
+  app_config_files <- collect_paths(app_config_include_paths)
+
+  excluded_base <- grepl("(^|/)app/logic/legacy_logic(/|$)", files) |
     grepl("(^|/)[^/]*__ignore__[^/]*(/|$)", files) |
+    grepl("(^|/)app/app_config(/|$)", files) |
     files %in% c("DESCRIPTION", "NAMESPACE", "app/.rscignore")
 
-  files <- files[!excluded]
+  files <- unique(c(files[!excluded_base], app_config_files))
+
+  excluded_final <- grepl("(^|/)app/logic/legacy_logic(/|$)", files) |
+    grepl("(^|/)[^/]*__ignore__[^/]*(/|$)", files) |
+    grepl("(^|/)\\.DS_Store$", files) |
+    files %in% c("DESCRIPTION", "NAMESPACE", "app/.rscignore")
+
+  files <- files[!excluded_final]
 
   required_paths <- c("app.R", "config.yml")
   if (isTRUE(use_renv_lock)) {
@@ -245,10 +382,10 @@ deploy_rsconnect <- function(dry_run = FALSE,
     stop("No application_id found. Set it in config.yml or pass --app-id=...", call. = FALSE)
   }
 
-  app_meta <- config::get(file = app_configs_file, config = application_id)
+  app_meta <- get_app_meta_for_application(application_id, app_configs_file = app_configs_file)
   target <- resolve_target(runtime_config, app_meta, application_id)
 
-  app_files <- build_app_file_manifest(use_renv_lock = use_renv_lock)
+  app_files <- build_app_file_manifest(application_id = application_id, use_renv_lock = use_renv_lock)
 
   message(sprintf("Application ID: %s", application_id))
   message(sprintf("Server: %s", target$server))
