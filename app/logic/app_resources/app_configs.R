@@ -423,6 +423,20 @@ TrisomExplorerAppManager <- R6Class(
 
       bind_rows(rows)
     },
+    ensure_dimension_cache = function(cache_field, dimension_name) {
+      if (is.null(self[[cache_field]])) {
+        self[[cache_field]] <- private$load_dimension_rows(dimension_name)
+      }
+
+      self[[cache_field]] %||% tibble()
+    },
+    ensure_measurement_cache = function() {
+      if (is.null(self$package_measurements_cache)) {
+        self$package_measurements_cache <- private$load_measurement_rows()
+      }
+
+      self$package_measurements_cache %||% tibble()
+    },
     build_study_choices = function() {
       dataset_defs <- self$catalog_registry$datasets
 
@@ -541,19 +555,19 @@ TrisomExplorerAppManager <- R6Class(
       self$inputs_data
     },
     participant_data = function(value) {
-      self$participant_data_cache
+      private$ensure_dimension_cache("participant_data_cache", "participants")
     },
     encounter_data = function(value) {
-      self$encounter_data_cache
+      private$ensure_dimension_cache("encounter_data_cache", "visits")
     },
     condition_data = function(value) {
-      self$condition_data_cache
+      private$ensure_dimension_cache("condition_data_cache", "conditions")
     },
     cell_types_data = function(value) {
-      self$cell_types_data_cache %||% tibble()
+      private$ensure_dimension_cache("cell_types_data_cache", "cell_types")
     },
     analytes_data = function(value) {
-      self$analytes_data_cache %||% tibble()
+      private$ensure_dimension_cache("analytes_data_cache", "analytes")
     }
   ),
   public = list(
@@ -594,25 +608,25 @@ TrisomExplorerAppManager <- R6Class(
       adjustmentMethodsTibble = NULL,
       adjustmentMethodsNames = NULL,
 
-      platforms = NULL,
-      PlatformExperiments = NULL,
-      Queryplatforms = NULL,
-      Comparisonplatforms = NULL,
-      experimentIDs = NULL,
-      studies = NULL,
-      studiesTibble = NULL,
-      studyChoiceNames = NULL,
-      studyNames= NULL,
-      LabIDs = NULL,
-      karyotypes = NULL,
-      sexes = NULL,
-      ages = NULL,
-      Conditions = NULL,
-      ConditionClasses = NULL,
-      ConditionChoices = NULL,
-      CellTypes = NULL,
-      Genes = NULL,
-      Analytes = NULL
+      platforms = character(0),
+      PlatformExperiments = character(0),
+      Queryplatforms = character(0),
+      Comparisonplatforms = character(0),
+      experimentIDs = character(0),
+      studies = data.frame(),
+      studiesTibble = tibble(),
+      studyChoiceNames = list(),
+      studyNames = character(0),
+      LabIDs = character(0),
+      karyotypes = character(0),
+      sexes = character(0),
+      ages = integer(0),
+      Conditions = character(0),
+      ConditionClasses = character(0),
+      ConditionChoices = tibble(),
+      CellTypes = character(0),
+      Genes = character(0),
+      Analytes = character(0)
     ),
 
     #' @description
@@ -625,9 +639,9 @@ TrisomExplorerAppManager <- R6Class(
       config_file_name = "config.yml",
       app_definition = NULL,
       load_inputs = TRUE,
-      load_participant_data = TRUE,
-      load_encounter_data = TRUE,
-      load_condition_data = TRUE,
+      load_participant_data = FALSE,
+      load_encounter_data = FALSE,
+      load_condition_data = FALSE,
       clear_data_dir = TRUE
     ) {
       self$application_id <- application_id
@@ -673,7 +687,10 @@ TrisomExplorerAppManager <- R6Class(
         conn_args = get(file = self$config_file_name, "database")
       )
 
-      self$refresh_local_inputs_cache()
+      self$refresh_local_inputs_cache(
+        load_dimensions = FALSE,
+        load_measurements = FALSE
+      )
 
       self$app_config$application_id <- application_id
 
@@ -745,7 +762,7 @@ TrisomExplorerAppManager <- R6Class(
 
     },
 
-    refresh_local_inputs_cache = function() {
+    refresh_local_inputs_cache = function(load_dimensions = TRUE, load_measurements = TRUE) {
       studies <- private$build_study_choices()
 
       platforms <- studies |>
@@ -765,12 +782,17 @@ TrisomExplorerAppManager <- R6Class(
           pull(Values)
       )
 
-      self$participant_data_cache <- private$load_dimension_rows("participants")
-      self$encounter_data_cache <- private$load_dimension_rows("visits")
-      self$condition_data_cache <- private$load_dimension_rows("conditions")
-      self$cell_types_data_cache <- private$load_dimension_rows("cell_types")
-      self$analytes_data_cache <- private$load_dimension_rows("analytes")
-      self$package_measurements_cache <- private$load_measurement_rows()
+      if (isTRUE(load_dimensions)) {
+        self$participant_data_cache <- private$load_dimension_rows("participants")
+        self$encounter_data_cache <- private$load_dimension_rows("visits")
+        self$condition_data_cache <- private$load_dimension_rows("conditions")
+        self$cell_types_data_cache <- private$load_dimension_rows("cell_types")
+        self$analytes_data_cache <- private$load_dimension_rows("analytes")
+      }
+
+      if (isTRUE(load_measurements)) {
+        self$package_measurements_cache <- private$load_measurement_rows()
+      }
 
       invisible(self)
     },
@@ -972,7 +994,7 @@ TrisomExplorerAppManager <- R6Class(
 
     get_package_measurements_data = function(dataset_ids = NULL) {
       if (is.null(dataset_ids) || length(dataset_ids) == 0) {
-        return(self$package_measurements_cache %||% tibble())
+        return(private$ensure_measurement_cache())
       }
 
       requested <- unique(as.character(dataset_ids))

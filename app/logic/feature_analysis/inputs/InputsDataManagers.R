@@ -565,19 +565,52 @@ InputsManagerBase <- R6Class(
             )
         },
         Sexes = function() {
-            return(
-                self$input_config$sexes
-            )
+            sexes <- sanitize_choice_vector(self$input_config$sexes)
+
+            if (length(sexes) > 0) {
+                return(sexes)
+            }
+
+            data <- self$StudyData
+
+            if (!is.null(data) && nrow(data) > 0) {
+                sex_col <- intersect(c("Sex", "sex", "Gender", "gender"), names(data))
+
+                if (length(sex_col) > 0) {
+                    sex_values <- data[[sex_col[[1]]]]
+
+                    return(
+                        sanitize_choice_vector(sex_values)
+                    )
+                }
+            }
+
+            character(0)
         },
         Ages = function() {
             ages <- suppressWarnings(as.numeric(self$input_config$ages))
             ages <- ages[is.finite(ages)]
 
-            if (length(ages) == 0) {
-                return(c(0, 0))
+            if (length(ages) > 0) {
+                return(c(min(ages), max(ages)))
             }
 
-            return(c(min(ages), max(ages)))
+            data <- self$StudyData
+
+            if (!is.null(data) && nrow(data) > 0) {
+                age_col <- intersect(c("Age", "AgeAtTimeOfVisit", "Age_at_visit_in_days"), names(data))
+
+                if (length(age_col) > 0) {
+                    age_values <- suppressWarnings(as.numeric(data[[age_col[[1]]]]))
+                    age_values <- age_values[is.finite(age_values)]
+
+                    if (length(age_values) > 0) {
+                        return(c(min(age_values), max(age_values)))
+                    }
+                }
+            }
+
+            c(0, 0)
         },
         CovariateChoices = function(value) {
             return(c("Age", "Sex"))
@@ -658,6 +691,31 @@ InputsManagerKaryotype <- R6Class(
     active = list(
         Karyotypes = function(value) {
             karyotypes <- sanitize_choice_vector(self$input_config$karyotypes)
+
+            if (length(karyotypes) == 0) {
+                data <- self$StudyData
+
+                if (!is.null(data) && nrow(data) > 0 && "Karyotype" %in% names(data)) {
+                    karyotypes <- data |>
+                        distinct(Karyotype) |>
+                        pull(Karyotype) |>
+                        sanitize_choice_vector()
+                }
+            }
+
+            if (length(karyotypes) == 0) {
+                counts <- tryCatch(self$KaryotypeCounts, error = function(e) tibble())
+
+                if (!is.null(counts) && nrow(counts) > 0 && "Karyotype" %in% names(counts)) {
+                    karyotypes <- counts |>
+                        pull(Karyotype) |>
+                        sanitize_choice_vector()
+                }
+            }
+
+            if (length(karyotypes) == 0) {
+                return(tibble(choiceNames = character(0), choiceValues = character(0)))
+            }
 
             make_collapsed_karyotype_choices(
                 karyotypes,

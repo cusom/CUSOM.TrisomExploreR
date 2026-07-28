@@ -201,9 +201,8 @@ RuntimeSummaryDataSource <- R6Class(
     inherit = SummaryDataSourceBase,
     public = list(
         get_data = function(source_data) {
-            precalc_data <- self$load_precalculated_artifact()
-            if (!is.null(precalc_data)) {
-                self$study_data <- precalc_data
+            if (!is.null(source_data) && nrow(source_data) > 0) {
+                self$study_data <- source_data
                 return(invisible(self$study_data))
             }
 
@@ -239,7 +238,11 @@ CorrelatesSummaryDataSource <- R6Class(
     "CorrelatesSummaryDataSource",
     inherit = SummaryDataSourceBase,
     public = list(
-        get_data = function(study_data) {
+        get_data = function(source_data) {
+            if (!is.null(source_data) && nrow(source_data) > 0) {
+                self$study_data <- source_data
+            }
+
             return(invisible(self$study_data))
         }
     )
