@@ -239,20 +239,9 @@ stage_app_bundle <- function(files, target_server = "") {
 
     dir.create(dirname(target_file), recursive = TRUE, showWarnings = FALSE)
 
-    if (identical(file, "dependencies.R") && identical(target_server, "shinyapps.io")) {
-      lines <- readLines(source_file, warn = FALSE)
-      lines <- lines[!grepl("^\\s*library\\(odbc\\)\\s*$", lines)]
-      writeLines(lines, target_file)
-    } else if (identical(file, "app/logic/app_resources/data_services.R") && identical(target_server, "shinyapps.io")) {
-      lines <- readLines(source_file, warn = FALSE)
-      lines <- lines[!grepl("^\\s*odbc\\[odbc\\],\\s*$", lines)]
-      lines <- gsub("\\bodbc\\(\\),", "getExportedValue(\"odbc\", \"odbc\")(),", lines)
-      writeLines(lines, target_file)
-    } else {
-      copied <- file.copy(source_file, target_file, overwrite = TRUE)
-      if (!copied) {
-        stop(sprintf("Failed to stage file: %s", file), call. = FALSE)
-      }
+    copied <- file.copy(source_file, target_file, overwrite = TRUE)
+    if (!copied) {
+      stop(sprintf("Failed to stage file: %s", file), call. = FALSE)
     }
   }
 
